@@ -6,8 +6,10 @@
 .memory-manager {
   display: flex;
   flex-direction: column;
-  gap: var(--space-xl);
+  gap: 10px;
   height: 100%;
+  width: 100%;
+  min-width: 0;
 }
 
 /* ==============================
@@ -18,14 +20,16 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-md);
+  gap: 10px;
   flex-shrink: 0;
+  min-height: 44px;
+  padding: 0 2px;
 }
 
 .memory-title {
   display: flex;
   align-items: center;
-  gap: var(--space-md);
+  gap: 10px;
 }
 
 .memory-title h1 {
@@ -47,7 +51,7 @@
 
 .mm-three-col {
   display: flex;
-  gap: var(--space-lg);
+  gap: 10px;
   flex: 1;
   min-height: 0;
   overflow: hidden;
@@ -58,15 +62,15 @@
    ============================== */
 
 .mm-left-tree {
-  width: 240px;
-  min-width: 220px;
-  max-width: 280px;
+  width: 224px;
+  min-width: 210px;
+  max-width: 248px;
   flex-shrink: 0;
   overflow-y: auto;
   background: var(--surface);
   border: 1px solid var(--line-soft);
   border-radius: var(--radius);
-  padding: var(--space-md);
+  padding: 10px;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -78,8 +82,8 @@
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  padding: 6px 8px;
-  margin-bottom: var(--space-sm);
+  padding: 4px 7px;
+  margin-bottom: 6px;
 }
 
 /* Tree node */
@@ -91,7 +95,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 8px;
+  padding: 5px 7px;
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: all var(--transition-fast);
@@ -147,14 +151,14 @@
 }
 
 .mm-tree-node-children {
-  padding-left: 16px;
+  padding-left: 12px;
   border-left: 1px solid var(--line-soft);
-  margin-left: 12px;
+  margin-left: 10px;
 }
 
 .mm-tree-node-kb {
-  margin-top: var(--space-md);
-  padding-top: var(--space-sm);
+  margin-top: 8px;
+  padding-top: 6px;
   border-top: 1px solid var(--line-soft);
 }
 
@@ -167,7 +171,7 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-md);
+  gap: 10px;
   overflow: hidden;
 }
 
@@ -176,7 +180,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-md);
+  gap: 8px;
   flex-wrap: wrap;
   flex-shrink: 0;
 }
@@ -187,8 +191,8 @@
 }
 
 .mm-search-input-wrap input {
-  min-height: 36px;
-  width: 300px;
+  min-height: 34px;
+  width: min(300px, 36vw);
   padding: 0 14px 0 36px;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
@@ -219,7 +223,7 @@
 .mm-batch-actions {
   display: flex;
   align-items: center;
-  gap: var(--space-sm);
+  gap: 6px;
 }
 
 .mm-batch-checkbox {
@@ -242,8 +246,8 @@
   display: flex;
   align-items: center;
   gap: 5px;
-  min-height: 32px;
-  padding: 0 12px;
+  min-height: 30px;
+  padding: 0 10px;
   border: 1px solid var(--line-soft);
   border-radius: var(--radius-sm);
   background: var(--surface);
@@ -272,8 +276,8 @@
   display: flex;
   align-items: center;
   gap: 5px;
-  min-height: 32px;
-  padding: 0 14px;
+  min-height: 30px;
+  padding: 0 12px;
   border: 1px solid rgba(147, 112, 219, 0.35);
   border-radius: var(--radius-sm);
   background: rgba(147, 112, 219, 0.08);
@@ -295,14 +299,14 @@
 
 .mm-kpi-row {
   display: flex;
-  gap: var(--space-sm);
+  gap: 8px;
   flex-shrink: 0;
 }
 
 .mm-kpi-card {
   flex: 1;
   min-width: 0;
-  padding: var(--space-md);
+  padding: 10px 12px;
   background: var(--surface);
   border: 1px solid var(--line-soft);
   border-radius: var(--radius-sm);
@@ -320,7 +324,7 @@
 }
 
 .mm-kpi-card-value {
-  font-size: 1.35rem;
+  font-size: 1.2rem;
   font-weight: 640;
   color: var(--text);
 }
@@ -340,8 +344,8 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  min-height: 32px;
-  padding: 0 14px;
+  min-height: 30px;
+  padding: 0 11px;
   border: 1px solid var(--line-soft);
   border-radius: var(--radius-sm);
   background: var(--surface);
@@ -393,14 +397,14 @@
   flex: 1;
   overflow-y: auto;
   display: grid;
-  gap: var(--space-sm);
+  gap: 8px;
   align-content: start;
-  padding-right: var(--space-sm);
+  padding-right: 6px;
 }
 
 /* Memory card */
 .memory-card {
-  padding: var(--space-md);
+  padding: 10px 12px;
   border: 1px solid var(--line-soft);
   border-radius: var(--radius-sm);
   background: var(--surface);
@@ -421,8 +425,8 @@
 .memory-card-header {
   display: flex;
   align-items: flex-start;
-  gap: var(--space-sm);
-  margin-bottom: var(--space-xs);
+  gap: 8px;
+  margin-bottom: 4px;
 }
 
 .mm-card-check {
@@ -483,13 +487,13 @@
   font-size: 12.5px;
   color: var(--text-secondary);
   line-height: 1.45;
-  margin: var(--space-xs) 0 var(--space-sm);
+  margin: 4px 0 8px;
 }
 
 .memory-card-meta {
   display: flex;
   align-items: center;
-  gap: var(--space-sm);
+  gap: 8px;
   font-size: 11px;
   color: var(--muted);
   flex-wrap: wrap;
@@ -509,8 +513,8 @@
 
 .mm-card-timestamps {
   display: flex;
-  gap: var(--space-md);
-  margin-top: var(--space-xs);
+  gap: 10px;
+  margin-top: 4px;
   font-size: 10.5px;
   color: var(--muted);
 }
@@ -519,7 +523,7 @@
   display: flex;
   gap: 4px;
   flex-wrap: wrap;
-  margin-top: var(--space-xs);
+  margin-top: 4px;
 }
 
 .mm-card-tag {
@@ -536,13 +540,13 @@
    ============================== */
 
 .mm-card-expanded {
-  margin-top: var(--space-md);
-  padding-top: var(--space-md);
+  margin-top: 10px;
+  padding-top: 10px;
   border-top: 1px solid var(--line-soft);
 }
 
 .mm-card-expanded-body {
-  margin-bottom: var(--space-md);
+  margin-bottom: 10px;
 }
 
 .mm-card-expanded-body p {
@@ -689,24 +693,24 @@
    ============================== */
 
 .mm-right-intelligence {
-  width: 300px;
-  min-width: 260px;
-  max-width: 340px;
+  width: 286px;
+  min-width: 250px;
+  max-width: 310px;
   flex-shrink: 0;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: var(--space-md);
+  gap: 10px;
 }
 
 .mm-intel-section {
   background: var(--surface);
   border: 1px solid var(--line-soft);
   border-radius: var(--radius);
-  padding: var(--space-md);
+  padding: 10px 12px;
   display: flex;
   flex-direction: column;
-  gap: var(--space-sm);
+  gap: 8px;
 }
 
 .mm-intel-section-title {
@@ -720,7 +724,7 @@
 
 /* Insight card */
 .mm-insight-card {
-  padding: var(--space-sm) var(--space-md);
+  padding: 8px 10px;
   background: var(--bg);
   border: 1px solid var(--line-soft);
   border-radius: var(--radius-sm);
@@ -736,7 +740,7 @@
 
 /* Knowledge queue item */
 .mm-knowledge-queue-item {
-  padding: var(--space-sm) var(--space-md);
+  padding: 8px 10px;
   background: var(--bg);
   border: 1px solid var(--line-soft);
   border-radius: var(--radius-sm);
@@ -798,7 +802,7 @@
 
 /* Reuse suggestion item */
 .mm-reuse-item {
-  padding: var(--space-sm) var(--space-md);
+  padding: 8px 10px;
   background: var(--bg);
   border: 1px solid var(--line-soft);
   border-radius: var(--radius-sm);
