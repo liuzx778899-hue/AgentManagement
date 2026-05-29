@@ -18,9 +18,9 @@ const NAV_ITEMS: {
   label: string;
   icon: LucideIcon;
 }[] = [
-  { view: "workbench", label: "工作台", icon: Home },
-  { view: "workflow-management", label: "流程管理", icon: GitBranch },
   { view: "project-management", label: "项目管理", icon: FolderGit2 },
+  { view: "workflow-management", label: "流程管理", icon: GitBranch },
+  { view: "workbench", label: "工作台", icon: Home },
   { view: "memory", label: "记忆管理", icon: MemoryStick },
   { view: "settings", label: "设置中心", icon: Settings },
 ];
