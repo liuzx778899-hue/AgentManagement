@@ -1,5 +1,59 @@
 # Handoff: Next Tasks
 
+## 2026-05-29 Phase 2 工程层启动计划
+
+本节是后续协作的最新入口，优先级高于后面的历史任务和旧页面差距段落。
+
+启动结论：
+
+- Phase 1 页面定稿基线已完成，可以进入 Phase 2 工程层开发。
+- 当前稳定分支：`main`
+- 远程仓库：`https://github.com/liuzx778899-hue/AgentManagement.git`
+- 最新工程层蓝图：`docs/PHASE_2_BLUEPRINT.md`
+- 验证基线：`npm --cache .npm-cache run build` 通过，`npm --cache .npm-cache test` 通过（14 个测试文件、109 个测试）。
+
+Phase 2 核心目标：
+
+- 从前端 fixtures / mock 行为升级到真实本地工程执行。
+- 打通真实 Git、worktree、CLI Runner、日志流、文件系统持久化和 AI/LLM 调用。
+- 保持 Phase 1 页面定稿样式，不再把视觉微调作为主线任务。
+
+Phase 2 技术选型：
+
+- 前端继续使用 `TypeScript + React + Vite`。
+- 本地工程层优先使用 `Node.js + TypeScript`，封装 Git、worktree、文件系统、CLI Runner 和配置读写。
+- 架构采用 `React UI -> UseCase / Service API -> Adapter -> 本地 workspace / CLI / GitHub / LLM`。
+- 主要设计模式：Adapter、UseCase/Application Service、Repository、Command、Event Log、State Machine、Strategy。
+- 数据先落到 `.agentmanagement/` 下的 JSON / JSONL / MD 文件，不引入数据库。
+- 详细定稿见 `docs/PHASE_2_BLUEPRINT.md` 的“Phase 2 技术选型定稿”。
+
+第一批开发 Issue 建议：
+
+| Issue | 名称 | 范围 | 验收 |
+|-------|------|------|------|
+| P2-01 | 本地工程服务骨架 | 建立 Git/文件系统/进程/配置 adapter，提供 mock fallback | 前端可通过统一接口调用本地能力，失败有错误态 |
+| P2-02 | 真实 Git 状态读取 | 读取 `git status`、branch、remote、log、worktree list | 项目管理/工作台能显示真实 Git 状态 |
+| P2-03 | Issue worktree 创建流程 | 基于 Issue 编号创建 branch + `.worktrees/issue-*` | 可创建、打开、清理独立 worktree |
+
+后续里程碑：
+
+1. P2-04 CLI Runner 进程管理：启动/停止/监控 Codex CLI、Claude Code CLI、Cursor CLI 等。
+2. P2-05 Workflow 执行引擎 MVP：步骤、角色、Runner、Gate 串起来。
+3. P2-06 文件系统持久化：项目配置、记忆、Role MD、Project MD、Workflow MD 落盘。
+4. P2-07 GitHub 同步恢复：Issue/PR/CI 读取真实 GitHub 数据。
+5. P2-08 LLM/API 接入：模型配置真实验证，AI 助手调用真实模型。
+6. P2-09 安全与审计：命令白名单、超时、日志脱敏、高风险操作确认。
+7. P2-10 演示闭环：从 Issue 到 worktree、Runner、日志、记忆、PR 的端到端演示。
+
+协作规则：
+
+- 每个 Phase 2 任务必须先有 Issue 编号；GitHub 插件/CLI 不可用时，可先在 GitHub 网页手动创建 Issue。
+- 每个 Issue 使用独立分支：`issue-<number>-<slug>`。
+- 每个 Issue 使用独立 worktree：`.worktrees/issue-<number>-<slug>`。
+- 不同 AI 工具不得共用同一个 worktree。
+- `main` 只保存稳定基线，不直接开发。
+- 每个任务提交前至少跑 `npm --cache .npm-cache run build`；涉及状态/逻辑必须跑 `npm --cache .npm-cache test`。
+
 ## 2026-05-29 页面定稿基线 / Git 初始快照
 
 本节作为后续所有 AI 工具继续工作的最新入口，优先级高于本文档后面的历史任务段落。
