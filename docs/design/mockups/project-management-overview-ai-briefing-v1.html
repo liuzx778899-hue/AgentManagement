@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>项目管理总览 - HTML 原型</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand"><div class="brand-icon">AG</div><span>Agent 工程管理系统</span></div>
+      <nav class="nav">
+        <a class="nav-item" href="./workbench-v1.html"><div class="icon">▣</div><span>工作台</span></a>
+        <a class="nav-item active" href="./project-management-overview-ai-briefing-v1.html"><div class="icon">▤</div><span>项目管理</span></a>
+        <a class="nav-item" href="./workflow-builder-dual-mode-v1.html"><div class="icon">◇</div><span>流程编排</span></a>
+        <a class="nav-item" href="./memory-management-knowledge-center-v1.html"><div class="icon">◫</div><span>记忆管理</span></a>
+      </nav>
+    </aside>
+    <main class="main">
+      <header class="topbar"><div class="breadcrumb">AgentDevelop / 项目管理</div><div class="row"><button class="btn">导入已有项目</button><a class="btn primary" href="./ai-project-initiation-v1.html">AI 建项</a></div></header>
+      <section class="page">
+        <div class="page-title">
+          <div><h1>项目组合总览</h1><p class="muted">管理所有项目的健康度、进度、风险和计划变更，不承载具体开发执行。</p></div>
+          <button class="btn success">Check 最新进度</button>
+        </div>
+        <div class="grid grid-4">
+          <div class="card metric"><span class="small">运行项目</span><strong>6</strong><span class="chip ok">4 个健康</span></div>
+          <div class="card metric"><span class="small">待确认变更</span><strong>12</strong><span class="chip warn">需要 PM 确认</span></div>
+          <div class="card metric"><span class="small">高风险事项</span><strong>3</strong><span class="chip warn">跨项目依赖</span></div>
+          <div class="card metric"><span class="small">本周完成率</span><strong>78%</strong><div class="progress"><div class="bar ok" style="width:78%"></div></div></div>
+        </div>
+        <div class="split-wide">
+          <div class="panel stack">
+            <div class="between"><h2>项目看板</h2><div class="row"><span class="chip">全部</span><span class="chip">运行中</span><span class="chip">高风险</span></div></div>
+            <div class="grid grid-2">
+              <a class="card stack" href="./project-detail-gantt-v1.html"><div class="between"><h3>AgentDevelop</h3><span class="chip ok">健康</span></div><p class="muted">个人本地版 Web MVP，当前重点是工作台、项目管理、流程编排和记忆管理。</p><div class="progress"><div class="bar ok" style="width:72%"></div></div><div class="row"><span class="chip">Phase 1</span><span class="chip">99 tests</span><span class="chip warn">1 个 build 警告</span></div></a>
+              <div class="card stack"><div class="between"><h3>CLI Runner 工程层</h3><span class="chip">规划中</span></div><p class="muted">真实 Shell、Runner、Git、MCP、会话恢复进入 Phase 2。</p><div class="progress"><div class="bar" style="width:18%"></div></div><div class="row"><span class="chip">Phase 2</span><span class="chip">待启动</span></div></div>
+              <div class="card stack"><div class="between"><h3>团队/桌面版本</h3><span class="chip">后续</span></div><p class="muted">团队权限、多人协作、桌面客户端和后台服务。</p><div class="progress"><div class="bar" style="width:8%"></div></div></div>
+              <div class="card stack"><div class="between"><h3>Memory Knowledge Base</h3><span class="chip warn">推进中</span></div><p class="muted">跨项目知识提炼、角色记忆复用、Prompt 模板资产化。</p><div class="progress"><div class="bar warn" style="width:55%"></div></div></div>
+            </div>
+          </div>
+          <aside class="stack">
+            <div class="panel stack"><div class="between"><h2>AI Check</h2><span class="chip ai">自动解析</span></div><p class="muted">读取协同文件、测试结果和工作台进度，生成项目最新状态。</p><button class="btn primary">同步到最新进度</button></div>
+            <div class="panel stack"><h2>组合风险</h2><div class="card">项目管理页面存在 Unicode 显示问题</div><div class="card">主包体积超过建议阈值</div><div class="card">流程编排缺少能力授权矩阵</div></div>
+            <div class="panel stack"><h2>计划变更</h2><div class="timeline"><div class="timeline-item"><strong>今天</strong><span>工作台与项目管理职责拆分已冻结。</span></div><div class="timeline-item"><strong>昨天</strong><span>AI 建项入口合并为统一上下文工作区。</span></div></div></div>
+          </aside>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>
+

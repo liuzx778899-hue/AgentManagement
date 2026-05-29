@@ -1,0 +1,857 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI 软件项目经理工作台 UI 效果图</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #101215;
+      --surface: #171a1f;
+      --surface-2: #20242b;
+      --surface-3: #282e37;
+      --line: #343b46;
+      --line-soft: #262c35;
+      --text: #f4f7fb;
+      --muted: #a8b0bd;
+      --faint: #747f8e;
+      --primary: #4f8cff;
+      --primary-2: #7cdbb5;
+      --warn: #f2b85b;
+      --danger: #f97066;
+      --ok: #51d6a1;
+      --violet: #b697ff;
+      --shadow: 0 18px 54px rgba(0, 0, 0, 0.34);
+      --radius: 8px;
+      --font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { min-height: 100%; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 14px;
+      line-height: 1.5;
+      letter-spacing: 0;
+    }
+
+    button, input, select, textarea {
+      font: inherit;
+      color: inherit;
+    }
+
+    button {
+      min-height: 36px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--surface-2);
+      cursor: pointer;
+    }
+
+    button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+      outline: 2px solid var(--primary);
+      outline-offset: 2px;
+    }
+
+    .app-shell {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 244px minmax(0, 1fr);
+      background:
+        linear-gradient(90deg, rgba(79, 140, 255, 0.10), transparent 38%),
+        linear-gradient(180deg, rgba(124, 219, 181, 0.08), transparent 34%),
+        var(--bg);
+    }
+
+    .sidebar {
+      border-right: 1px solid var(--line);
+      background: rgba(16, 18, 21, 0.82);
+      padding: 14px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow: auto;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 44px;
+      padding: 6px 6px 12px;
+      border-bottom: 1px solid var(--line-soft);
+    }
+
+    .brand-mark {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, var(--primary), var(--primary-2));
+      color: #06121d;
+      font-weight: 800;
+    }
+
+    .brand strong { display: block; font-size: 14px; }
+    .brand span { display: block; color: var(--muted); font-size: 12px; }
+
+    .side-section { padding: 14px 0; border-bottom: 1px solid var(--line-soft); }
+    .side-label {
+      color: var(--faint);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      margin: 0 8px 8px;
+    }
+
+    .nav-item, .project-item, .agent-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 10px;
+      border-radius: 6px;
+      color: var(--muted);
+      min-height: 38px;
+    }
+
+    .nav-item.active, .project-item.active {
+      color: var(--text);
+      background: rgba(79, 140, 255, 0.14);
+      border: 1px solid rgba(79, 140, 255, 0.30);
+    }
+
+    .symbol {
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      display: grid;
+      place-items: center;
+      background: var(--surface-2);
+      color: var(--muted);
+      font-weight: 700;
+      font-size: 12px;
+      flex: none;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--faint);
+      margin-left: auto;
+    }
+    .status-dot.ok { background: var(--ok); }
+    .status-dot.warn { background: var(--warn); }
+    .status-dot.busy { background: var(--primary); }
+
+    .main {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .topbar {
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 0 22px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(16, 18, 21, 0.72);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      backdrop-filter: blur(12px);
+    }
+
+    .search {
+      flex: 1;
+      max-width: 520px;
+      min-height: 40px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--surface);
+      color: var(--muted);
+      padding: 0 12px;
+    }
+
+    .search input {
+      width: 100%;
+      border: 0;
+      outline: 0;
+      background: transparent;
+    }
+
+    .top-actions { display: flex; align-items: center; gap: 8px; }
+    .primary {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+      padding: 0 14px;
+      font-weight: 700;
+    }
+    .ghost { padding: 0 12px; color: var(--muted); }
+    .icon-btn { width: 40px; padding: 0; display: grid; place-items: center; }
+
+    .workspace {
+      padding: 18px 22px 22px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .hero-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 420px;
+      gap: 14px;
+    }
+
+    .panel {
+      background: rgba(23, 26, 31, 0.94);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      min-width: 0;
+    }
+
+    .panel-header {
+      min-height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line-soft);
+    }
+
+    .panel-title { display: flex; align-items: center; gap: 10px; }
+    .panel-title h2, .panel-title h3 {
+      margin: 0;
+      font-size: 15px;
+      line-height: 1.3;
+    }
+    .panel-title span { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
+
+    .tabs {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      padding: 3px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: var(--surface);
+    }
+    .tab {
+      min-height: 30px;
+      padding: 0 11px;
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+    }
+    .tab.active { background: var(--surface-3); color: var(--text); }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      padding: 14px;
+    }
+    .metric {
+      border: 1px solid var(--line-soft);
+      border-radius: 7px;
+      padding: 12px;
+      background: var(--surface);
+    }
+    .metric span { color: var(--muted); font-size: 12px; }
+    .metric strong { display: block; margin-top: 4px; font-size: 22px; line-height: 1.1; }
+    .metric small { display: block; margin-top: 6px; color: var(--faint); }
+
+    .board {
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr) 360px;
+      gap: 14px;
+    }
+
+    .task-tree { padding: 10px; }
+    .task-card {
+      padding: 11px;
+      border: 1px solid var(--line-soft);
+      border-radius: 7px;
+      background: var(--surface);
+      margin-bottom: 8px;
+    }
+    .task-card.active { border-color: rgba(79, 140, 255, 0.45); background: rgba(79, 140, 255, 0.10); }
+    .task-card strong { display: block; margin-bottom: 4px; }
+    .task-card p { margin: 0; color: var(--muted); font-size: 12px; }
+    .badge-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      min-height: 24px;
+      padding: 0 8px;
+      border-radius: 999px;
+      background: var(--surface-2);
+      color: var(--muted);
+      font-size: 12px;
+      border: 1px solid var(--line-soft);
+    }
+    .badge.blue { color: #b8ccff; background: rgba(79, 140, 255, 0.14); border-color: rgba(79, 140, 255, 0.30); }
+    .badge.green { color: #bcf4dc; background: rgba(81, 214, 161, 0.12); border-color: rgba(81, 214, 161, 0.28); }
+    .badge.orange { color: #ffe0aa; background: rgba(242, 184, 91, 0.12); border-color: rgba(242, 184, 91, 0.28); }
+    .badge.violet { color: #ddceff; background: rgba(182, 151, 255, 0.12); border-color: rgba(182, 151, 255, 0.28); }
+
+    .timeline { padding: 14px; }
+    .stepper {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(70px, 1fr));
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .step {
+      border: 1px solid var(--line-soft);
+      border-radius: 7px;
+      padding: 9px;
+      min-height: 70px;
+      background: var(--surface);
+    }
+    .step.done { border-color: rgba(81, 214, 161, 0.30); }
+    .step.active { border-color: rgba(79, 140, 255, 0.56); background: rgba(79, 140, 255, 0.10); }
+    .step small { display: block; color: var(--faint); }
+    .step strong { display: block; margin-top: 5px; font-size: 13px; }
+
+    .run-item {
+      display: grid;
+      grid-template-columns: 32px minmax(0, 1fr) auto;
+      gap: 12px;
+      padding: 12px 0;
+      border-top: 1px solid var(--line-soft);
+    }
+    .run-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 7px;
+      display: grid;
+      place-items: center;
+      background: var(--surface-2);
+      font-weight: 800;
+      color: var(--primary-2);
+    }
+    .run-item h4 { margin: 0; font-size: 14px; }
+    .run-item p { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+    .time { color: var(--faint); font-family: var(--mono); font-size: 12px; }
+
+    .gate {
+      margin-top: 14px;
+      border: 1px solid rgba(242, 184, 91, 0.34);
+      border-radius: 7px;
+      padding: 12px;
+      background: rgba(242, 184, 91, 0.10);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .gate strong { display: block; }
+    .gate span { color: var(--muted); font-size: 12px; }
+    .gate-actions { display: flex; gap: 8px; flex: none; }
+
+    .inspector { display: grid; grid-template-rows: auto 1fr; min-height: 560px; }
+    .inspector-body { padding: 12px; display: grid; gap: 10px; align-content: start; }
+    .diff-file {
+      border: 1px solid var(--line-soft);
+      border-radius: 7px;
+      padding: 10px;
+      background: var(--surface);
+    }
+    .diff-file header { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+    .diff-file code { color: #cfdaeb; font-family: var(--mono); font-size: 12px; }
+    .diff-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .mini-box {
+      min-height: 72px;
+      border: 1px solid var(--line-soft);
+      border-radius: 7px;
+      padding: 9px;
+      background: rgba(32, 36, 43, 0.64);
+    }
+    .mini-box strong { display: block; font-size: 13px; }
+    .mini-box span { display: block; color: var(--muted); font-size: 12px; margin-top: 4px; }
+    .terminal {
+      background: #0b0d10;
+      border: 1px solid var(--line-soft);
+      border-radius: 7px;
+      padding: 12px;
+      font-family: var(--mono);
+      color: #c3d3e9;
+      min-height: 132px;
+      white-space: pre-wrap;
+      font-size: 12px;
+    }
+
+    .settings-layout {
+      display: grid;
+      grid-template-columns: 260px minmax(0, 1fr);
+      gap: 14px;
+      padding: 14px;
+    }
+    .settings-nav {
+      border: 1px solid var(--line-soft);
+      border-radius: 7px;
+      background: var(--surface);
+      padding: 8px;
+      align-self: start;
+    }
+    .settings-nav .nav-item { min-height: 40px; }
+    .settings-content { display: grid; gap: 12px; }
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .field {
+      display: grid;
+      gap: 6px;
+    }
+    .field label { color: var(--muted); font-size: 12px; font-weight: 700; }
+    .field input, .field select, .field textarea {
+      min-height: 40px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #111419;
+      padding: 8px 10px;
+    }
+    .field textarea { min-height: 86px; resize: vertical; }
+    .profile-row {
+      display: grid;
+      grid-template-columns: 42px minmax(0, 1fr) 136px 120px auto;
+      gap: 10px;
+      align-items: center;
+      padding: 10px;
+      border: 1px solid var(--line-soft);
+      border-radius: 7px;
+      background: var(--surface);
+    }
+    .toggle {
+      width: 42px;
+      height: 24px;
+      border-radius: 999px;
+      background: rgba(81, 214, 161, 0.24);
+      border: 1px solid rgba(81, 214, 161, 0.42);
+      position: relative;
+    }
+    .toggle::after {
+      content: "";
+      position: absolute;
+      top: 3px;
+      left: 20px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--ok);
+    }
+
+    .split-settings {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .workflow-list { display: grid; gap: 8px; }
+    .workflow-step {
+      display: grid;
+      grid-template-columns: 30px minmax(0, 1fr) 108px 108px;
+      gap: 10px;
+      align-items: center;
+      padding: 10px;
+      border: 1px solid var(--line-soft);
+      border-radius: 7px;
+      background: var(--surface);
+    }
+    .number {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      display: grid;
+      place-items: center;
+      background: var(--surface-2);
+      color: var(--muted);
+      font-family: var(--mono);
+    }
+
+    .footer-log {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 340px;
+      gap: 14px;
+    }
+
+    @media (max-width: 1200px) {
+      .app-shell { grid-template-columns: 72px minmax(0, 1fr); }
+      .brand div:last-child, .side-label, .nav-item span:not(.symbol), .project-item div:not(.symbol), .agent-item div:not(.symbol) { display: none; }
+      .sidebar { padding: 12px 10px; }
+      .hero-row, .board, .footer-log { grid-template-columns: 1fr; }
+      .inspector { min-height: auto; }
+    }
+
+    @media (max-width: 760px) {
+      .app-shell { display: block; }
+      .sidebar { position: static; height: auto; display: flex; gap: 8px; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--line); }
+      .side-section { display: flex; gap: 8px; padding: 0; border-bottom: 0; }
+      .brand { border-bottom: 0; padding: 0; }
+      .topbar { height: auto; align-items: stretch; flex-direction: column; padding: 12px; }
+      .top-actions { flex-wrap: wrap; }
+      .workspace { padding: 12px; }
+      .metrics, .stepper, .form-grid, .split-settings, .settings-layout, .diff-grid { grid-template-columns: 1fr; }
+      .profile-row, .workflow-step { grid-template-columns: 1fr; align-items: start; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="主导航">
+      <div class="brand">
+        <div class="brand-mark">A</div>
+        <div>
+          <strong>AgentOS Workbench</strong>
+          <span>个人本地模式</span>
+        </div>
+      </div>
+
+      <section class="side-section">
+        <p class="side-label">导航</p>
+        <div class="nav-item active"><span class="symbol">W</span><span>工作台</span></div>
+        <div class="nav-item"><span class="symbol">T</span><span>任务队列</span></div>
+        <div class="nav-item"><span class="symbol">M</span><span>记忆库</span></div>
+        <div class="nav-item"><span class="symbol">S</span><span>设置中心</span></div>
+      </section>
+
+      <section class="side-section">
+        <p class="side-label">项目</p>
+        <div class="project-item active">
+          <span class="symbol">PM</span>
+          <div><strong>AI 工作台</strong><br><span>feature/workflow</span></div>
+          <span class="status-dot busy"></span>
+        </div>
+        <div class="project-item">
+          <span class="symbol">CRM</span>
+          <div><strong>客户系统</strong><br><span>main</span></div>
+          <span class="status-dot ok"></span>
+        </div>
+        <div class="project-item">
+          <span class="symbol">WEB</span>
+          <div><strong>官网改版</strong><br><span>review/ui</span></div>
+          <span class="status-dot warn"></span>
+        </div>
+      </section>
+
+      <section class="side-section">
+        <p class="side-label">Agent 占用</p>
+        <div class="agent-item"><span class="symbol">PM</span><div>产品经理<br><span>DeepSeek Pro</span></div><span class="status-dot ok"></span></div>
+        <div class="agent-item"><span class="symbol">AR</span><div>架构师<br><span>Tencent Code</span></div><span class="status-dot busy"></span></div>
+        <div class="agent-item"><span class="symbol">FE</span><div>前端<br><span>Codex 登录</span></div><span class="status-dot warn"></span></div>
+      </section>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="search" role="search">
+          <span class="symbol">/</span>
+          <input aria-label="搜索项目、任务、Agent、日志" placeholder="搜索项目、任务、Agent、日志">
+        </div>
+        <div class="top-actions">
+          <button class="ghost">导入仓库</button>
+          <button class="ghost">打开终端</button>
+          <button class="icon-btn" aria-label="通知">!</button>
+          <button class="primary">新建任务</button>
+        </div>
+      </header>
+
+      <div class="workspace">
+        <section class="hero-row">
+          <article class="panel">
+            <div class="panel-header">
+              <div class="panel-title">
+                <span class="symbol">D</span>
+                <div>
+                  <h2>多项目 Agent 控制台</h2>
+                  <span>同时管理任务、分支、worktree、Agent Run 与人工 gate</span>
+                </div>
+              </div>
+              <div class="tabs" aria-label="工作台视图">
+                <button class="tab active">总览</button>
+                <button class="tab">运行中</button>
+                <button class="tab">待确认</button>
+              </div>
+            </div>
+            <div class="metrics">
+              <div class="metric"><span>活跃项目</span><strong>3</strong><small>2 个有运行任务</small></div>
+              <div class="metric"><span>运行 Agent</span><strong>7</strong><small>1 个等待人工确认</small></div>
+              <div class="metric"><span>测试通过率</span><strong>92%</strong><small>最近 24 小时</small></div>
+              <div class="metric"><span>待合并分支</span><strong>5</strong><small>包含 2 个 UI 任务</small></div>
+            </div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-header">
+              <div class="panel-title">
+                <span class="symbol">Q</span>
+                <div>
+                  <h3>全局队列</h3>
+                  <span>跨项目任务优先级与资源占用</span>
+                </div>
+              </div>
+              <button class="ghost">调度规则</button>
+            </div>
+            <div class="task-tree">
+              <div class="task-card active">
+                <strong>AI 工作台 / UI 设计升级</strong>
+                <p>前端 Agent 正在生成设置中心与工作台布局。</p>
+                <div class="badge-row"><span class="badge blue">P0</span><span class="badge green">FE 运行中</span><span class="badge orange">Manual Gate</span></div>
+              </div>
+              <div class="task-card">
+                <strong>客户系统 / 登录审计</strong>
+                <p>后端 Agent 等待测试 Runner 空闲。</p>
+                <div class="badge-row"><span class="badge violet">后端</span><span class="badge">排队 12m</span></div>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <section class="board">
+          <article class="panel">
+            <div class="panel-header">
+              <div class="panel-title"><span class="symbol">P</span><h3>项目任务树</h3></div>
+            </div>
+            <div class="task-tree">
+              <div class="task-card active">
+                <strong>主工作台信息架构</strong>
+                <p>需求 → 设计 → 前端 → Review → 测试</p>
+                <div class="badge-row"><span class="badge blue">feature/ui-shell</span></div>
+              </div>
+              <div class="task-card"><strong>Agent Profile 配置</strong><p>多 provider、多模型、普通/高级模式。</p></div>
+              <div class="task-card"><strong>Workflow Builder</strong><p>步骤可定义 auto/manual gate。</p></div>
+              <div class="task-card"><strong>记忆层</strong><p>项目、角色、任务三层记忆。</p></div>
+            </div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-header">
+              <div class="panel-title">
+                <span class="symbol">R</span>
+                <div><h3>当前任务执行区</h3><span>UI 设计升级 / frontend-agent-run-1042</span></div>
+              </div>
+              <div class="tabs"><button class="tab active">Timeline</button><button class="tab">会话</button><button class="tab">产物</button></div>
+            </div>
+            <div class="timeline">
+              <div class="stepper">
+                <div class="step done"><small>01</small><strong>需求</strong><span class="badge green">done</span></div>
+                <div class="step done"><small>02</small><strong>架构</strong><span class="badge green">done</span></div>
+                <div class="step active"><small>03</small><strong>UI</strong><span class="badge blue">running</span></div>
+                <div class="step"><small>04</small><strong>前端</strong><span class="badge">queued</span></div>
+                <div class="step"><small>05</small><strong>测试</strong><span class="badge">auto</span></div>
+                <div class="step"><small>06</small><strong>合并</strong><span class="badge orange">gate</span></div>
+              </div>
+
+              <div class="run-item">
+                <div class="run-avatar">PM</div>
+                <div><h4>产品经理 Agent 归纳 MVP 范围</h4><p>确认个人模式优先，团队能力作为数据模型预留。</p></div>
+                <div class="time">10:58</div>
+              </div>
+              <div class="run-item">
+                <div class="run-avatar">AR</div>
+                <div><h4>架构师 Agent 输出 Runner 边界</h4><p>Web 工作台只负责调度和展示，本地 Runner 管理进程、worktree 与日志。</p></div>
+                <div class="time">11:24</div>
+              </div>
+              <div class="run-item">
+                <div class="run-avatar">FE</div>
+                <div><h4>前端 Agent 生成高保真效果图</h4><p>工作台采用三栏密集布局，设置中心采用分区配置与渐进披露。</p></div>
+                <div class="time">12:28</div>
+              </div>
+
+              <div class="gate">
+                <div>
+                  <strong>Manual Gate: UI 方向确认</strong>
+                  <span>确认后进入前端实现计划；也可以改派给 UI Agent 继续打磨。</span>
+                </div>
+                <div class="gate-actions">
+                  <button class="ghost">重跑</button>
+                  <button class="ghost">改派</button>
+                  <button class="primary">继续</button>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="panel inspector">
+            <div class="panel-header">
+              <div class="panel-title"><span class="symbol">I</span><h3>工程反馈</h3></div>
+              <div class="tabs"><button class="tab active">Diff</button><button class="tab">测试</button><button class="tab">预览</button></div>
+            </div>
+            <div class="inspector-body">
+              <div class="diff-file">
+                <header><code>mockups/agent-workbench-ui.html</code><span class="badge green">+624</span></header>
+                <div class="diff-grid">
+                  <div class="mini-box"><strong>视觉</strong><span>高密度三栏工作台，保持扫描效率。</span></div>
+                  <div class="mini-box"><strong>交互</strong><span>Gate、改派、重跑、继续都在当前任务上下文内。</span></div>
+                </div>
+              </div>
+              <div class="diff-grid">
+                <div class="mini-box"><strong>测试</strong><span>UI snapshot 待跑；无阻塞错误。</span></div>
+                <div class="mini-box"><strong>记忆建议</strong><span>保存“个人模式优先，团队模式预留”。</span></div>
+              </div>
+              <div class="terminal">runner ui-design --project agent-workbench
+12:28:14 design-system loaded
+12:28:22 rendering dashboard view
+12:28:35 rendering settings center
+12:28:41 waiting for manual gate</div>
+            </div>
+          </article>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <div class="panel-title">
+              <span class="symbol">S</span>
+              <div><h2>设置中心与工作流设计</h2><span>Role Library、Workflow Library、Project Workflow 独立拆分；项目选择模板并可覆盖</span></div>
+            </div>
+            <button class="primary">保存配置</button>
+          </div>
+
+          <div class="settings-layout">
+            <nav class="settings-nav" aria-label="设置导航">
+              <div class="nav-item active"><span class="symbol">U</span><span>User 设置</span></div>
+              <div class="nav-item"><span class="symbol">P</span><span>Project 覆盖</span></div>
+              <div class="nav-item"><span class="symbol">R</span><span>Role Library</span></div>
+              <div class="nav-item"><span class="symbol">W</span><span>Workflow Library</span></div>
+              <div class="nav-item"><span class="symbol">PW</span><span>Project Workflow</span></div>
+              <div class="nav-item"><span class="symbol">M</span><span>Memory</span></div>
+              <div class="nav-item"><span class="symbol">C</span><span>Capabilities</span></div>
+            </nav>
+
+            <div class="settings-content">
+              <article class="panel">
+                <div class="panel-header">
+                  <div class="panel-title"><span class="symbol">G</span><h3>全局偏好</h3></div>
+                  <span class="badge green">个人模式</span>
+                </div>
+                <div class="timeline">
+                  <div class="form-grid">
+                    <div class="field">
+                      <label for="mode">默认使用模式</label>
+                      <select id="mode"><option>个人本地模式</option><option>团队协作模式</option></select>
+                    </div>
+                    <div class="field">
+                      <label for="worktree">默认 worktree 根目录</label>
+                      <input id="worktree" value="D:\agent-worktrees">
+                    </div>
+                    <div class="field">
+                      <label for="language">界面语言</label>
+                      <select id="language"><option>简体中文</option><option>English</option></select>
+                    </div>
+                    <div class="field">
+                      <label for="gate">高风险步骤默认 gate</label>
+                      <select id="gate"><option>人工确认后继续</option><option>自动继续并通知</option></select>
+                    </div>
+                  </div>
+                </div>
+              </article>
+
+              <article class="panel">
+                <div class="panel-header">
+                  <div class="panel-title"><span class="symbol">R</span><h3>Role Library</h3></div>
+                  <button class="ghost">新增角色</button>
+                </div>
+                <div class="timeline">
+                  <div class="profile-row">
+                    <div class="run-avatar">PM</div>
+                    <div><strong>产品经理</strong><br><span class="muted">需求拆解、验收标准、任务优先级；可被任意 workflow 步骤绑定</span></div>
+                    <span class="badge blue">DeepSeek</span>
+                    <span class="badge">角色模板</span>
+                    <span class="toggle" aria-label="已启用"></span>
+                  </div>
+                  <div class="profile-row">
+                    <div class="run-avatar">AR</div>
+                    <div><strong>架构师</strong><br><span class="muted">架构评审、数据模型、接口边界；可复制成项目专属角色</span></div>
+                    <span class="badge violet">Tencent</span>
+                    <span class="badge">高级配置</span>
+                    <span class="toggle" aria-label="已启用"></span>
+                  </div>
+                  <div class="profile-row">
+                    <div class="run-avatar">X</div>
+                    <div><strong>自定义角色</strong><br><span class="muted">用户可新增 UI、测试、部署、文档、Review、安全审查等任意角色</span></div>
+                    <span class="badge green">任意 Provider</span>
+                    <span class="badge">可绑定</span>
+                    <span class="toggle" aria-label="已启用"></span>
+                  </div>
+                </div>
+              </article>
+
+              <div class="split-settings">
+                <article class="panel">
+                  <div class="panel-header">
+                    <div class="panel-title"><span class="symbol">W</span><h3>Workflow Library</h3></div>
+                    <button class="ghost">新建模板</button>
+                  </div>
+                  <div class="timeline workflow-list">
+                    <div class="mini-box"><strong>软件开发完整流程</strong><span>需求 → 架构 → 实现 → Review → 测试 → UI → 合并发布</span><div class="badge-row"><span class="badge blue">默认模板</span><span class="badge orange">含 manual gate</span></div></div>
+                    <div class="mini-box"><strong>UI 快速迭代流程</strong><span>设计评审 → 前端实现 → 截图验证 → 视觉修复</span><div class="badge-row"><span class="badge green">可复制</span><span class="badge">v1.2</span></div></div>
+                    <div class="mini-box"><strong>Bug 修复流程</strong><span>复现 → 定位 → 修复 → 回归测试 → 合并</span><div class="badge-row"><span class="badge">项目可选择</span><span class="badge">可版本化</span></div></div>
+                  </div>
+                </article>
+
+                <article class="panel">
+                  <div class="panel-header">
+                    <div class="panel-title"><span class="symbol">PW</span><h3>Project Workflow</h3></div>
+                  </div>
+                  <div class="timeline">
+                    <div class="mini-box"><strong>AI 工作台</strong><span>默认选择“软件开发完整流程”，锁定模板版本 v1.0；前端步骤覆盖为 Codex 角色。</span><div class="badge-row"><span class="badge blue">模板引用</span><span class="badge green">角色覆盖</span></div></div>
+                    <div class="mini-box"><strong>客户系统</strong><span>选择“Bug 修复流程”；测试步骤使用项目专属测试角色和项目测试命令。</span><div class="badge-row"><span class="badge">项目覆盖</span><span class="badge orange">manual merge</span></div></div>
+                    <div class="mini-box"><strong>模板升级策略</strong><span>项目可跟随 Workflow Library 的新版本，也可锁定当前模板版本，避免影响正在跑的任务。</span></div>
+                  </div>
+                </article>
+              </div>
+
+              <article class="panel">
+                <div class="panel-header">
+                  <div class="panel-title"><span class="symbol">C</span><h3>Capability Packs</h3></div>
+                </div>
+                <div class="timeline">
+                  <div class="diff-grid">
+                    <div class="mini-box"><strong>MCP 连接器</strong><span>按项目授权，角色只看到允许的能力。</span><div class="badge-row"><span class="badge green">GitHub</span><span class="badge">Linear</span><span class="badge">Gmail</span></div></div>
+                    <div class="mini-box"><strong>Skills / Plugins</strong><span>用户级安装，项目级启用，步骤级授权；运行前展示风险等级。</span><div class="badge-row"><span class="badge blue">ui-ux-pro-max</span><span class="badge">browser</span></div></div>
+                  </div>
+                </div>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section class="footer-log">
+          <article class="panel">
+            <div class="panel-header"><div class="panel-title"><span class="symbol">L</span><h3>Runner Logs</h3></div></div>
+            <div class="terminal">[project: AI 工作台] [task: UI 设计升级]
+worktree: D:\agent-worktrees\agent-workbench-ui
+agent: frontend / Codex 登录
+gate: UI direction confirmation
+next: 写入正式设计文档，然后进入实现计划</div>
+          </article>
+          <article class="panel">
+            <div class="panel-header"><div class="panel-title"><span class="symbol">N</span><h3>下一步建议</h3></div></div>
+            <div class="timeline">
+              <div class="mini-box"><strong>保存设计系统</strong><span>把布局、色彩、组件规则写入项目文档。</span></div>
+              <div class="mini-box"><strong>拆分实现计划</strong><span>先做 shell、Role Library、Workflow Library、Project Workflow、Runner 日志。</span></div>
+            </div>
+          </article>
+        </section>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

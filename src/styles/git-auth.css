@@ -1,0 +1,119 @@
+/* ==============================
+   Git Auth Config
+   ============================== */
+
+.git-auth-config {
+  display: grid;
+  gap: var(--space-lg);
+}
+
+.git-auth-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+
+.git-auth-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.git-auth-title h3 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.git-auth-title span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.platform-groups {
+  display: grid;
+  gap: var(--space-md);
+}
+
+.platform-group {
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.platform-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md) var(--space-lg);
+  background: var(--surface-2);
+  cursor: pointer;
+  border: none;
+  width: 100%;
+  text-align: left;
+  transition: background var(--transition-fast);
+}
+
+.platform-header:hover {
+  background: var(--surface-3);
+}
+
+.platform-icon {
+  font-size: 18px;
+}
+
+.platform-name {
+  flex: 1;
+  font-weight: 600;
+}
+
+.platform-count {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.credential-list {
+  padding: var(--space-sm) var(--space-lg) var(--space-lg);
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.credential-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.credential-info {
+  display: grid;
+  gap: 2px;
+}
+
+.credential-name {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.credential-name strong {
+  font-size: 13.5px;
+}
+
+.credential-detail {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.credential-actions {
+  display: flex;
+  gap: var(--space-sm);
+}
+

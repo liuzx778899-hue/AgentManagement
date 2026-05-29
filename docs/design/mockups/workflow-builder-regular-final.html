@@ -1,0 +1,726 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Agent 工程管理系统 - 流程编排常规配置定稿</title>
+  <style>
+    :root {
+      --bg: #0b0f16;
+      --sidebar: #0f141c;
+      --topbar: #10161f;
+      --surface: #151a22;
+      --surface-2: #1b2230;
+      --surface-3: #222b3a;
+      --canvas: #0e141d;
+      --line: #263244;
+      --line-soft: #202939;
+      --text: #eef4fb;
+      --text-2: #c1cad8;
+      --muted: #8794a7;
+      --primary: #5f86ff;
+      --primary-2: #4fd1a5;
+      --accent: #8c78ff;
+      --warn: #f0b45b;
+      --danger: #f36b6b;
+      --ok: #45d391;
+      --radius: 8px;
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      overflow: hidden;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 292px 1fr;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      background: var(--sidebar);
+      border-right: 1px solid var(--line);
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 8px 20px;
+      border-bottom: 1px solid var(--line-soft);
+      font-weight: 800;
+    }
+
+    .brand-icon,
+    .nav-icon,
+    .mini-icon {
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      background: var(--surface-3);
+      color: var(--muted);
+      flex: 0 0 auto;
+    }
+
+    .brand-icon {
+      width: 42px;
+      height: 42px;
+      background: linear-gradient(135deg, #67a5ff, #52d3b1);
+      color: #071014;
+      font-weight: 900;
+    }
+
+    .nav {
+      display: grid;
+      gap: 8px;
+      margin-top: 24px;
+    }
+
+    .nav-item {
+      min-height: 48px;
+      padding: 0 12px;
+      border-radius: var(--radius);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--muted);
+      font-weight: 650;
+    }
+
+    .nav-item.active {
+      color: var(--text);
+      background: #202946;
+      border: 1px solid #35518f;
+    }
+
+    .nav-item.active .nav-icon {
+      background: #2d3c61;
+      color: #a9c3ff;
+    }
+
+    .nav-icon {
+      width: 28px;
+      height: 28px;
+    }
+
+    .main {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .topbar {
+      height: 78px;
+      background: var(--topbar);
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 28px;
+    }
+
+    .breadcrumb {
+      color: var(--muted);
+      font-weight: 650;
+    }
+
+    .row,
+    .chips {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      min-height: 28px;
+      padding: 0 10px;
+      border-radius: 7px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid var(--line);
+      background: #151c26;
+      color: var(--text-2);
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .chip.primary {
+      color: #b8ccff;
+      border-color: #3658a6;
+      background: rgba(95, 134, 255, 0.14);
+    }
+
+    .chip.ok {
+      color: #75e5b0;
+      border-color: rgba(69, 211, 145, 0.35);
+      background: rgba(69, 211, 145, 0.12);
+    }
+
+    .chip.warn {
+      color: #f4c77e;
+      border-color: rgba(240, 180, 91, 0.35);
+      background: rgba(240, 180, 91, 0.12);
+    }
+
+    .btn {
+      min-height: 36px;
+      padding: 0 13px;
+      border-radius: 7px;
+      border: 1px solid var(--line);
+      background: #1a2230;
+      color: var(--text-2);
+      font-weight: 750;
+      font-size: 13px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+
+    .btn.primary {
+      color: white;
+      background: var(--primary);
+      border-color: #6f94ff;
+    }
+
+    .page {
+      height: calc(100vh - 78px);
+      display: grid;
+      grid-template-rows: auto 1fr;
+      overflow: hidden;
+    }
+
+    .page-head {
+      padding: 22px 28px 16px;
+      display: grid;
+      gap: 16px;
+      border-bottom: 1px solid var(--line);
+      background: #0f151d;
+    }
+
+    .title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+    }
+
+    h1, h2, h3, p { margin: 0; }
+    h1 { font-size: 26px; line-height: 34px; }
+    h2 { font-size: 17px; line-height: 24px; }
+    h3 { font-size: 14px; line-height: 22px; }
+    .muted { color: var(--muted); }
+    .small { color: var(--muted); font-size: 12px; }
+
+    .mode-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .segmented {
+      width: 520px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5px;
+      padding: 5px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #151b25;
+    }
+
+    .segmented span {
+      min-height: 40px;
+      display: grid;
+      place-items: center;
+      border-radius: 7px;
+      color: var(--muted);
+      font-weight: 800;
+    }
+
+    .segmented span.active {
+      color: var(--text);
+      background: #26324f;
+      box-shadow: inset 0 0 0 1px #3d5a9e;
+    }
+
+    .workspace {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: 300px minmax(520px, 1fr) 360px;
+    }
+
+    .rail,
+    .inspector {
+      min-height: 0;
+      background: var(--surface);
+      border-right: 1px solid var(--line);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .inspector {
+      border-right: 0;
+      border-left: 1px solid var(--line);
+    }
+
+    .panel-head {
+      min-height: 58px;
+      padding: 0 16px;
+      border-bottom: 1px solid var(--line-soft);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #171d27;
+    }
+
+    .scroll {
+      overflow: auto;
+      padding: 14px;
+      display: grid;
+      gap: 12px;
+      align-content: start;
+      min-height: 0;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #111821;
+      padding: 13px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .card.active {
+      border-color: rgba(95, 134, 255, 0.55);
+      background: rgba(95, 134, 255, 0.1);
+    }
+
+    .template-card {
+      min-height: 96px;
+    }
+
+    .role-card {
+      display: grid;
+      grid-template-columns: 34px 1fr;
+      gap: 10px;
+      align-items: start;
+    }
+
+    .avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      background: #263451;
+      color: #bdd0ff;
+      display: grid;
+      place-items: center;
+      font-weight: 900;
+      font-size: 12px;
+    }
+
+    .canvas-wrap {
+      position: relative;
+      min-height: 0;
+      overflow: hidden;
+      background:
+        linear-gradient(rgba(95,134,255,.09) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(95,134,255,.09) 1px, transparent 1px),
+        radial-gradient(circle at 30% 20%, rgba(95, 134, 255, 0.06), transparent 30%),
+        var(--canvas);
+      background-size: 24px 24px, 24px 24px, auto, auto;
+    }
+
+    .canvas-toolbar {
+      height: 56px;
+      padding: 0 16px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(15, 21, 29, 0.92);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .canvas {
+      position: relative;
+      height: calc(100% - 56px);
+      min-height: 0;
+    }
+
+    .node {
+      position: absolute;
+      width: 220px;
+      min-height: 138px;
+      border: 1px solid var(--line);
+      background: #151b25;
+      border-radius: 10px;
+      padding: 14px;
+      display: grid;
+      gap: 10px;
+      box-shadow: 0 14px 42px rgba(0,0,0,.22);
+    }
+
+    .node.active {
+      border-color: #648cff;
+      background: #1b2440;
+      box-shadow: 0 0 0 3px rgba(95,134,255,.15), 0 18px 46px rgba(0,0,0,.32);
+    }
+
+    .node.done {
+      border-color: rgba(69, 211, 145, 0.45);
+    }
+
+    .node.gate {
+      border-color: rgba(240, 180, 91, 0.55);
+      background: rgba(240, 180, 91, 0.08);
+    }
+
+    .step-no {
+      color: var(--muted);
+      font-weight: 900;
+      letter-spacing: .04em;
+    }
+
+    .line {
+      position: absolute;
+      height: 2px;
+      background: #42506a;
+      transform-origin: left center;
+    }
+
+    .line::after {
+      content: "";
+      position: absolute;
+      right: -6px;
+      top: -4px;
+      border-left: 8px solid #42506a;
+      border-top: 5px solid transparent;
+      border-bottom: 5px solid transparent;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+    }
+
+    .label {
+      color: var(--muted);
+      font-weight: 750;
+      font-size: 12px;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      min-height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #0f151d;
+      color: var(--text);
+      padding: 0 10px;
+      font: inherit;
+      outline: none;
+    }
+
+    textarea {
+      min-height: 78px;
+      padding: 10px;
+      resize: none;
+      line-height: 1.5;
+    }
+
+    .matrix {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .matrix .cell {
+      min-height: 40px;
+      border: 1px solid var(--line-soft);
+      border-radius: 7px;
+      background: #0f151d;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 10px;
+      color: var(--text-2);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .switch {
+      width: 34px;
+      height: 18px;
+      border-radius: 999px;
+      background: #344057;
+      position: relative;
+    }
+
+    .switch.on {
+      background: rgba(69, 211, 145, 0.45);
+    }
+
+    .switch::after {
+      content: "";
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      left: 2px;
+      top: 2px;
+      background: #c7d0de;
+    }
+
+    .switch.on::after {
+      left: 18px;
+      background: white;
+    }
+
+    .inspector-actions {
+      margin-top: auto;
+      padding: 14px;
+      border-top: 1px solid var(--line-soft);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      background: #121821;
+    }
+
+    svg {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div>
+        <div class="brand">
+          <div class="brand-icon">
+            <svg viewBox="0 0 24 24"><rect x="5" y="8" width="14" height="10" rx="2"/><path d="M12 4v4M9 13h.01M15 13h.01M8 18v2M16 18v2"/></svg>
+          </div>
+          <span>Agent 工程管理系统</span>
+        </div>
+        <nav class="nav">
+          <div class="nav-item"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg></span>工作台</div>
+          <div class="nav-item"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h5"/></svg></span>项目管理</div>
+          <div class="nav-item active"><span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="12" cy="18" r="2"/><path d="M8 7l3 9M16 7l-3 9"/></svg></span>流程编排</div>
+          <div class="nav-item"><span class="nav-icon"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg></span>记忆管理</div>
+          <div class="nav-item"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 0 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V22h-4v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1A2 2 0 0 1 4.2 18l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H3v-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1A2 2 0 0 1 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.6V3h4v.1a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1A2 2 0 0 1 19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.1v4H21a1.7 1.7 0 0 0-1.6 1z"/></svg></span>设置中心</div>
+        </nav>
+      </div>
+      <button class="btn">收起侧栏</button>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="breadcrumb">AgentDevelop / 流程编排</div>
+        <div class="row">
+          <span class="chip">AgentDevelop</span>
+          <span class="chip ok">v1.3 已应用</span>
+          <button class="btn">校验流程</button>
+          <button class="btn primary">应用到项目</button>
+        </div>
+      </header>
+
+      <section class="page">
+        <div class="page-head">
+          <div class="title-row">
+            <div>
+              <h1>流程编排</h1>
+              <p class="muted">常规配置用于成熟流程的手动编排；AI 辅助生成只生成草案和优化建议。</p>
+            </div>
+            <button class="btn primary">AI 助手 · 流程设计模式</button>
+          </div>
+          <div class="mode-row">
+            <div class="segmented">
+              <span class="active">常规配置</span>
+              <span>AI 辅助生成</span>
+            </div>
+            <div class="chips">
+              <span class="chip">模板 3</span>
+              <span class="chip">角色 4</span>
+              <span class="chip warn">待确认 1</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="workspace">
+          <aside class="rail">
+            <div class="panel-head">
+              <h2>模板与角色</h2>
+              <button class="btn">新增</button>
+            </div>
+            <div class="scroll">
+              <h3>流程模板</h3>
+              <div class="card template-card active">
+                <div class="row"><span class="chip primary">默认</span><strong>软件开发完整流程</strong></div>
+                <p class="muted">需求分析、UI/UX、开发、审查、测试验收。</p>
+                <span class="small">5 个步骤 · 1 个 Gate</span>
+              </div>
+              <div class="card template-card">
+                <strong>轻量修复流程</strong>
+                <p class="muted">适合小型缺陷和样式修复。</p>
+                <span class="small">3 个步骤</span>
+              </div>
+              <h3 style="margin-top:8px">项目角色池</h3>
+              <div class="card role-card">
+                <div class="avatar">PM</div>
+                <div><strong>产品经理</strong><p class="small">需求分析和产品决策</p></div>
+              </div>
+              <div class="card role-card">
+                <div class="avatar">UX</div>
+                <div><strong>UI/UX 设计师</strong><p class="small">原型、布局和体验审查</p></div>
+              </div>
+              <div class="card role-card">
+                <div class="avatar">FE</div>
+                <div><strong>前端工程师</strong><p class="small">React 页面与组件实现</p></div>
+              </div>
+              <div class="card role-card">
+                <div class="avatar">QA</div>
+                <div><strong>测试工程师</strong><p class="small">验证、回归和验收标准</p></div>
+              </div>
+            </div>
+          </aside>
+
+          <section class="canvas-wrap">
+            <div class="canvas-toolbar">
+              <div class="row">
+                <strong>软件开发完整流程</strong>
+                <span class="chip ok">校验通过</span>
+              </div>
+              <div class="row">
+                <button class="btn">添加步骤</button>
+                <button class="btn">添加 Gate</button>
+                <button class="btn">版本记录</button>
+              </div>
+            </div>
+            <div class="canvas">
+              <div class="line" style="left:260px; top:165px; width:105px;"></div>
+              <div class="line" style="left:585px; top:165px; width:105px;"></div>
+              <div class="line" style="left:910px; top:165px; width:105px;"></div>
+              <div class="line" style="left:260px; top:390px; width:105px;"></div>
+              <div class="line" style="left:585px; top:390px; width:105px;"></div>
+
+              <div class="node done" style="left:48px; top:90px;">
+                <span class="step-no">01</span>
+                <h2>需求分析</h2>
+                <p class="muted">产品经理负责整理需求、范围和验收标准。</p>
+                <div class="row"><span class="chip">产品经理</span><span class="chip ok">已完成</span></div>
+              </div>
+
+              <div class="node done" style="left:372px; top:90px;">
+                <span class="step-no">02</span>
+                <h2>UI/UX 设计</h2>
+                <p class="muted">输出设计稿、页面规格和交互说明。</p>
+                <div class="row"><span class="chip">UI/UX</span><span class="chip ok">已完成</span></div>
+              </div>
+
+              <div class="node active" style="left:698px; top:90px;">
+                <span class="step-no">03</span>
+                <h2>前端开发</h2>
+                <p class="muted">根据设计稿实现 React 页面和组件。</p>
+                <div class="row"><span class="chip primary">前端工程师</span><span class="chip">Codex CLI</span></div>
+              </div>
+
+              <div class="node gate" style="left:1024px; top:90px;">
+                <span class="step-no">04</span>
+                <h2>代码审查</h2>
+                <p class="muted">人工 Gate，确认代码质量和设计对齐。</p>
+                <div class="row"><span class="chip warn">等待 Gate</span></div>
+              </div>
+
+              <div class="node" style="left:48px; top:315px;">
+                <span class="step-no">05</span>
+                <h2>测试验收</h2>
+                <p class="muted">执行 lint、typecheck、test 和浏览器验收。</p>
+                <div class="row"><span class="chip">测试工程师</span><span class="chip">未开始</span></div>
+              </div>
+
+              <div class="node" style="left:372px; top:315px;">
+                <span class="step-no">06</span>
+                <h2>同步工作台</h2>
+                <p class="muted">确认版本后进入工作台角色流程运行带。</p>
+                <div class="row"><span class="chip">系统</span><span class="chip">待同步</span></div>
+              </div>
+            </div>
+          </section>
+
+          <aside class="inspector">
+            <div class="panel-head">
+              <h2>步骤配置</h2>
+              <span class="chip primary">03 前端开发</span>
+            </div>
+            <div class="scroll">
+              <div class="field">
+                <span class="label">步骤名称</span>
+                <input value="前端开发" />
+              </div>
+              <div class="field">
+                <span class="label">绑定角色</span>
+                <select><option>前端工程师</option><option>UI/UX 设计师</option><option>产品经理</option></select>
+              </div>
+              <div class="field">
+                <span class="label">Runner Provider</span>
+                <select><option>Codex CLI</option><option>Claude Code CLI</option><option>Gemini CLI</option></select>
+              </div>
+              <div class="field">
+                <span class="label">模型配置</span>
+                <select><option>OpenAI / gpt-5.3-codex</option><option>Claude / Sonnet 3.5</option><option>Gemini / 1.5 Pro</option></select>
+              </div>
+              <div class="field">
+                <span class="label">能力授权</span>
+                <div class="matrix">
+                  <div class="cell"><span>MCP</span><span class="switch on"></span></div>
+                  <div class="cell"><span>Skills</span><span class="switch on"></span></div>
+                  <div class="cell"><span>Git</span><span class="switch on"></span></div>
+                  <div class="cell"><span>Local Shell</span><span class="switch"></span></div>
+                </div>
+              </div>
+              <div class="field">
+                <span class="label">验收标准</span>
+                <textarea>页面按设计稿实现
+测试通过
+无中文乱码
+无明显布局错位</textarea>
+              </div>
+              <div class="card">
+                <div class="row"><span class="chip warn">Gate 规则</span><strong>需要人工确认</strong></div>
+                <p class="muted">当代码审查或测试失败时，流程暂停并进入人工决策。</p>
+              </div>
+            </div>
+            <div class="inspector-actions">
+              <button class="btn">复制步骤</button>
+              <button class="btn primary">保存配置</button>
+            </div>
+          </aside>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

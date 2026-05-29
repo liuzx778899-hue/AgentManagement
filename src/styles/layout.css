@@ -1,0 +1,317 @@
+/* ==============================
+   Layout
+   Shell, Sidebar, Main Area, Topbar, Content
+   ============================== */
+
+.shell {
+  display: grid;
+  grid-template-columns: 256px minmax(0, 1fr);
+  height: 100vh;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--bg);
+  transition: grid-template-columns var(--transition-normal);
+}
+
+/* Sidebar collapsed state - matches design-tokens.md: 72px */
+.shell:has(.sidebar.collapsed) {
+  grid-template-columns: 72px minmax(0, 1fr);
+}
+
+/* Sidebar */
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-elevated);
+  border-right: 1px solid var(--line-subtle);
+  padding: 16px 12px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  transition: width var(--transition-normal), padding var(--transition-normal);
+}
+
+/* Collapsed sidebar state - icon-only mode per design-tokens.md */
+.sidebar.collapsed {
+  padding: 16px 8px;
+}
+
+.sidebar.collapsed .sidebar-title,
+.sidebar.collapsed .nav-label {
+  display: none;
+}
+
+.sidebar.collapsed .nav-item {
+  justify-content: center;
+  padding: 0;
+}
+
+.sidebar.collapsed .nav-shortcut {
+  margin: 0;
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 4px 14px;
+  border-bottom: 1px solid var(--line-subtle);
+  margin-bottom: 28px;
+}
+
+.sidebar-logo {
+  width: 34px;
+  height: 34px;
+  background: linear-gradient(135deg, #5b8def 0%, #4fd1a5 100%);
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: #d9fbff;
+  font-size: 12px;
+  font-weight: 800;
+  flex-shrink: 0;
+  box-shadow: 0 8px 20px rgba(70, 110, 255, 0.25);
+}
+
+.sidebar-title {
+  font-size: 15px;
+  font-weight: 820;
+  color: var(--text);
+  white-space: nowrap;
+  letter-spacing: -0.01em;
+}
+
+.sidebar-nav {
+  display: grid;
+  gap: 8px;
+  flex: 1;
+}
+
+.nav-item {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 12px;
+  background: transparent;
+  border: none;
+  border-radius: 7px;
+  color: #a8b6c8;
+  font-size: 13px;
+  font-weight: 680;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: all var(--transition-fast);
+  position: relative;
+}
+
+.nav-item::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 0;
+  background: var(--primary);
+  border-radius: 0 2px 2px 0;
+  transition: height var(--transition-fast);
+}
+
+.nav-item:hover {
+  background: rgba(91, 124, 255, 0.1);
+  color: #c8d4e4;
+}
+
+.nav-item.current {
+  color: #fff;
+  background: rgba(91, 124, 255, 0.18);
+  border: 1px solid rgba(91, 124, 255, 0.45);
+  box-shadow: inset 3px 0 0 #5c7cff;
+}
+
+.nav-item.current::before {
+  display: none;
+}
+
+.nav-shortcut {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  background: #1b2430;
+  color: var(--muted);
+  flex-shrink: 0;
+  transition: all var(--transition-fast);
+}
+
+.nav-item.current .nav-shortcut {
+  background: transparent;
+  color: #fff;
+  box-shadow: none;
+}
+
+.nav-shortcut svg {
+  display: block;
+}
+
+.nav-label {
+  white-space: nowrap;
+}
+
+/* Collapse Button - positioned at bottom of sidebar */
+.collapse-btn {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  background: var(--surface-2);
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.collapse-btn:hover {
+  background: var(--surface-3);
+  color: var(--text);
+  border-color: var(--line);
+}
+
+.sidebar.collapsed .collapse-btn {
+  width: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* Topbar */
+
+.main-area {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 100%;
+  min-height: 0;
+}
+
+.topbar {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-lg);
+  padding: 0 22px;
+  border-bottom: 1px solid var(--line-subtle);
+  background: rgba(18, 21, 26, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13.5px;
+}
+
+.topbar-breadcrumb {
+  color: var(--muted);
+}
+
+.topbar-separator {
+  color: var(--line);
+}
+
+.topbar-view-label {
+  color: var(--text);
+  font-weight: 620;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+}
+
+.topbar-status {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--faint);
+  background: var(--surface);
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-soft);
+}
+
+/* Content */
+
+.content {
+  flex: 1;
+  min-height: 0;
+  padding: var(--page-inset);
+  overflow: hidden;
+}
+
+/* Full-bleed pages override padding to 0 via :has() selectors in page CSS.
+   Workbench: .content:has(.wb-cockpit) { padding: 0; }
+   Workflow:  .content:has(.workflow-builder-v2) { padding: 0; }
+   Project M: .content:has(.pm-v2-page) { padding: 0; }
+   AI Briefing: .content:has(.briefing-page) { padding: 0; }
+*/
+
+/* Full-bleed pages - override content padding */
+.content:has(.briefing-page) {
+  padding: 0;
+  overflow: hidden;
+  height: 100%;
+  min-height: 0;
+}
+
+.content:has(.settings-page) {
+  padding: 0 var(--space-xl) var(--space-xl);
+  overflow-y: auto;
+}
+
+.content:has(.memory-manager) {
+  padding: var(--space-xl);
+  overflow: hidden;
+  height: 100%;
+  display: flex;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .shell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: fixed;
+    left: -256px;
+    z-index: 100;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .sidebar.open {
+    left: 0;
+  }
+
+  .content {
+    padding: var(--space-lg);
+  }
+}

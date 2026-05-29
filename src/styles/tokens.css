@@ -1,0 +1,224 @@
+/* ==============================
+   Design Tokens
+   CSS Variables, Base Reset, Typography
+   ============================== */
+
+:root {
+  color-scheme: dark;
+
+  /* Core Colors - Refined Palette */
+  --bg: #0c0e12;
+  --bg-elevated: #12151a;
+  --surface: #181c23;
+  --surface-2: #1f242d;
+  --surface-3: #272d38;
+  --surface-4: #2f3642;
+
+  /* Lines & Borders */
+  --line: #2a3140;
+  --line-soft: #222833;
+  --line-subtle: #1a1f28;
+
+  /* Text Colors - WCAG AA Compliant */
+  --text: #f0f4f8;
+  --text-secondary: #c4cdd8;
+  --muted: #8a96a8;
+  --faint: #5a6778;
+  --disabled: #4a5568;
+
+  /* Semantic Colors */
+  --primary: #5b8def;
+  --primary-hover: #6d9cf2;
+  --primary-glow: rgba(91, 141, 239, 0.15);
+  --primary-2: #4fd1a5;
+  --primary-2-glow: rgba(79, 209, 165, 0.12);
+  --accent: #7c6cf0;
+  --accent-glow: rgba(124, 108, 240, 0.12);
+  --warn: #f0a050;
+  --warn-glow: rgba(240, 160, 80, 0.12);
+  --danger: #f05050;
+  --danger-glow: rgba(240, 80, 80, 0.12);
+  --ok: #40d090;
+  --ok-glow: rgba(64, 208, 144, 0.12);
+  --violet: #a088f0;
+  --violet-glow: rgba(160, 136, 240, 0.12);
+
+  /* Shadows & Effects */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.45);
+  --shadow-glow: 0 0 24px rgba(91, 141, 239, 0.15);
+
+  /* Radii */
+  --radius-sm: 5px;
+  --radius: 7px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+
+  /* Typography */
+  --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", "SF Mono", "Fira Code", Consolas, monospace;
+  --font-size-base: 12px;
+  --line-height-base: 1.45;
+
+  /* Spacing */
+  --space-xs: 4px;
+  --space-sm: 6px;
+  --space-md: 10px;
+  --space-lg: 12px;
+  --space-xl: 18px;
+  --space-2xl: 24px;
+
+  /* Compact Density
+     Browser zoom must stay at 100%; these values intentionally match
+     the previous 80% browser-zoom visual density. */
+  --density-target: compact-80;
+  --control-height: 30px;
+  --control-height-sm: 26px;
+  --toolbar-height: 46px;
+  --secondary-toolbar-height: 46px;
+  --page-inset: 8px;
+  --panel-gap: 8px;
+  --card-padding: 10px;
+
+  /* Transitions */
+  --transition-fast: 100ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 180ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 280ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ==============================
+   Base Reset
+   ============================== */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  min-height: 100%;
+  background: var(--bg);
+  background-image:
+    radial-gradient(ellipse 80% 50% at 20% -10%, rgba(91, 141, 239, 0.08), transparent),
+    radial-gradient(ellipse 60% 40% at 80% 110%, rgba(79, 209, 165, 0.06), transparent);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+  background: transparent;
+}
+
+button {
+  min-height: var(--control-height);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+button:hover:not(:disabled) {
+  background: var(--surface-3);
+  border-color: var(--line);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+input,
+select,
+textarea {
+  min-height: var(--control-height);
+  padding: 0 var(--space-md);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  transition: all var(--transition-fast);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-glow);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--faint);
+}
+
+select {
+  cursor: pointer;
+  padding-right: var(--space-xl);
+}
+
+/* Focus Visible for Accessibility */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--line-soft);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--line);
+}
+
+/* Thin scrollbar for overlay panels */
+.pw-left-col::-webkit-scrollbar,
+.pw-progress-dashboard::-webkit-scrollbar,
+.pw-memory-panel::-webkit-scrollbar,
+.pw-overlay-panel::-webkit-scrollbar {
+  width: 5px;
+}
+
+/* Selection */
+::selection {
+  background: var(--primary);
+  color: var(--text);
+}

@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>项目管理 V2 — Agent Management</title>
+<style>
+:root {
+  --bg: #101215;
+  --surface: #171a1f;
+  --surface-2: #20242b;
+  --surface-3: #282e37;
+  --line: #343b46;
+  --line-soft: #262c35;
+  --text: #f4f7fb;
+  --muted: #a8b0bd;
+  --faint: #747f8e;
+  --primary: #4f8cff;
+  --primary-2: #7cdbb5;
+  --warn: #f2b85b;
+  --danger: #f97066;
+  --ok: #51d6a1;
+  --violet: #b697ff;
+  --radius: 10px;
+  --font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:var(--font); background:var(--bg); color:var(--text); font-size:13px; line-height:1.5; min-height:100vh; }
+svg.icon { width:16px; height:16px; stroke:currentColor; fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; flex-shrink:0; }
+svg.icon-sm { width:12px; height:12px; }
+svg.icon-lg { width:20px; height:20px; }
+svg.icon-xl { width:28px; height:28px; }
+
+.page { display:flex; flex-direction:column; height:100vh; overflow:hidden; }
+
+/* Top Bar */
+.topbar { display:flex; align-items:center; justify-content:space-between; padding:14px 24px; border-bottom:1px solid var(--line-soft); flex-shrink:0; }
+.topbar-left { display:flex; align-items:center; gap:12px; }
+.topbar-left h1 { font-size:18px; font-weight:700; }
+.topbar-right { display:flex; gap:8px; }
+
+/* Main Layout */
+.main { flex:1; overflow-y:auto; padding:24px 32px; display:flex; flex-direction:column; gap:24px; }
+
+/* Header area with actions */
+.pm-header { display:flex; align-items:center; justify-content:space-between; }
+.pm-header-left { display:flex; align-items:center; gap:12px; }
+.pm-header-left h2 { font-size:16px; font-weight:700; }
+.pm-header-left span { color:var(--muted); font-size:13px; }
+.pm-header-actions { display:flex; gap:8px; }
+
+/* ====== Stats Row ====== */
+.pm-stats { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:14px; }
+.pm-stat-card {
+  padding:16px 18px; border:1px solid var(--line-soft);
+  border-radius:var(--radius); background:var(--surface);
+  display:flex; align-items:center; gap:14px;
+}
+.pm-stat-icon {
+  width:44px; height:44px; border-radius:9px;
+  display:grid; place-items:center; flex-shrink:0;
+}
+.pm-stat-icon.blue { background:rgba(79,140,255,0.12); color:var(--primary); }
+.pm-stat-icon.green { background:rgba(81,214,161,0.10); color:var(--ok); }
+.pm-stat-icon.orange { background:rgba(242,184,91,0.12); color:var(--warn); }
+.pm-stat-icon.violet { background:rgba(182,151,255,0.12); color:var(--violet); }
+.pm-stat-info { display:flex; flex-direction:column; gap:2px; }
+.pm-stat-value { font-size:22px; font-weight:800; font-family:var(--mono); }
+.pm-stat-label { font-size:11.5px; color:var(--faint); font-weight:600; }
+
+/* ====== Project Cards Grid ====== */
+.pm-project-grid { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:14px; }
+
+/* Project Card */
+.project-card {
+  border:1px solid var(--line-soft); border-radius:var(--radius);
+  background:var(--surface); overflow:hidden;
+  cursor:pointer; transition:border-color 120ms, box-shadow 120ms;
+}
+.project-card:hover { border-color:var(--line); box-shadow:0 4px 20px rgba(0,0,0,0.2); }
+
+/* Card Top */
+.project-card-top { padding:18px 20px; display:flex; align-items:flex-start; gap:14px; }
+.project-card-avatar {
+  width:48px; height:48px; border-radius:10px;
+  background:linear-gradient(135deg, rgba(79,140,255,0.25), rgba(124,219,181,0.15));
+  display:grid; place-items:center;
+  font-weight:800; font-size:18px; color:var(--primary);
+  flex-shrink:0;
+}
+.project-card-info { flex:1; min-width:0; }
+.project-card-name { font-size:15px; font-weight:700; margin-bottom:4px; }
+.project-card-meta { display:flex; gap:10px; font-size:12px; color:var(--muted); margin-bottom:8px; }
+.project-card-meta span { display:flex; align-items:center; gap:4px; }
+
+/* Progress bar */
+.project-card-progress { margin-top:8px; }
+.project-card-progress-header { display:flex; justify-content:space-between; font-size:11px; margin-bottom:4px; }
+.project-card-progress-label { color:var(--muted); }
+.project-card-progress-val { color:var(--primary-2); font-weight:700; font-family:var(--mono); }
+.project-card-progress-bar {
+  height:4px; background:var(--surface-3); border-radius:2px; overflow:hidden;
+}
+.project-card-progress-fill {
+  height:100%; background:var(--primary-2); border-radius:2px;
+  transition:width 400ms ease;
+}
+
+/* Card Bottom - Status row */
+.project-card-bottom {
+  padding:12px 20px; border-top:1px solid var(--line-soft);
+  background:rgba(17,20,25,0.3);
+  display:flex; align-items:center; gap:16px;
+}
+.project-card-stat { display:flex; align-items:center; gap:5px; font-size:12px; color:var(--muted); }
+.project-card-stat.running { color:var(--primary); }
+.project-card-stat.warn { color:var(--warn); }
+.project-card-stat.ok { color:var(--ok); }
+
+/* ====== Badges ====== */
+.badge { display:inline-flex; align-items:center; gap:3px; padding:2px 7px; border-radius:999px; font-size:10.5px; font-weight:600; border:1px solid; }
+.badge-v { color:#ddceff; background:rgba(182,151,255,0.10); border-color:rgba(182,151,255,0.22); }
+.badge-b { color:#b8ccff; background:rgba(79,140,255,0.10); border-color:rgba(79,140,255,0.22); }
+.badge-g { color:#bcf4dc; background:rgba(81,214,161,0.08); border-color:rgba(81,214,161,0.20); }
+.badge-o { color:#ffe0aa; background:rgba(242,184,91,0.10); border-color:rgba(242,184,91,0.22); }
+.badge-r { color:#ffc7c4; background:rgba(249,112,102,0.10); border-color:rgba(249,112,102,0.22); }
+
+/* ====== Recent Tasks ====== */
+.pm-section-title {
+  font-size:14px; font-weight:700;
+  display:flex; align-items:center; gap:8px;
+  margin-bottom:0;
+}
+.pm-task-list { display:flex; flex-direction:column; gap:6px; }
+.pm-task-item {
+  display:flex; align-items:center; gap:12px;
+  padding:12px 16px; border:1px solid var(--line-soft);
+  border-radius:8px; background:var(--surface);
+  transition:border-color 120ms;
+}
+.pm-task-item:hover { border-color:var(--line); }
+.pm-task-status { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.pm-task-status.running { background:var(--primary); box-shadow:0 0 8px rgba(79,140,255,0.4); }
+.pm-task-status.gate { background:var(--warn); box-shadow:0 0 8px rgba(242,184,91,0.4); }
+.pm-task-status.done { background:var(--ok); }
+.pm-task-status.failed { background:var(--danger); }
+.pm-task-info { flex:1; min-width:0; }
+.pm-task-goal { font-size:13px; font-weight:600; }
+.pm-task-project { font-size:11px; color:var(--faint); margin-top:1px; }
+.pm-task-role { font-size:11.5px; color:var(--muted); }
+
+/* ====== Project Detail (modal-style overlay) ====== */
+.detail-overlay {
+  position:fixed; inset:0; z-index:100;
+  background:rgba(0,0,0,0.6);
+  display:flex; align-items:center; justify-content:center;
+}
+.detail-panel {
+  width:90vw; max-width:1000px; height:85vh;
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:12px;
+  box-shadow:0 24px 80px rgba(0,0,0,0.5);
+  display:flex; flex-direction:column; overflow:hidden;
+}
+.detail-header {
+  padding:16px 24px; border-bottom:1px solid var(--line-soft);
+  display:flex; align-items:center; gap:14px; flex-shrink:0;
+}
+.detail-header-avatar {
+  width:42px; height:42px; border-radius:9px;
+  background:linear-gradient(135deg, rgba(79,140,255,0.3), rgba(124,219,181,0.15));
+  display:grid; place-items:center;
+  font-weight:800; font-size:16px; color:var(--primary);
+}
+.detail-header-info { flex:1; }
+.detail-header-name { font-size:16px; font-weight:700; }
+.detail-header-meta { font-size:12px; color:var(--muted); display:flex; gap:10px; }
+.detail-tabs {
+  padding:0 24px; border-bottom:1px solid var(--line-soft);
+  display:flex; gap:0; flex-shrink:0;
+}
+.detail-tab {
+  padding:10px 16px; border:none; background:none;
+  color:var(--muted); font-size:13px; font-weight:600;
+  cursor:pointer; border-bottom:2px solid transparent;
+  transition:color 120ms, border-color 120ms;
+  display:flex; align-items:center; gap:6px;
+}
+.detail-tab:hover { color:var(--text); }
+.detail-tab.active { color:var(--primary); border-bottom-color:var(--primary); }
+.detail-body { flex:1; overflow-y:auto; padding:20px 24px; }
+
+/* Inside detail - mini panels */
+.detail-mini-list { display:flex; flex-direction:column; gap:6px; }
+.detail-mini-item {
+  display:flex; align-items:center; gap:10px;
+  padding:10px 14px; border:1px solid var(--line-soft);
+  border-radius:7px; background:rgba(32,36,43,0.4);
+}
+.detail-mini-item .item-left { flex:1; min-width:0; }
+.detail-mini-item .item-title { font-size:13px; font-weight:600; }
+.detail-mini-item .item-sub { font-size:11px; color:var(--faint); }
+.detail-empty { text-align:center; padding:48px; color:var(--faint); }
+
+/* Buttons */
+.btn { display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:7px; font-size:13px; font-weight:600; cursor:pointer; border:1px solid var(--line); background:var(--surface-2); color:var(--muted); transition:border-color 120ms, background 120ms; }
+.btn-primary { background:var(--primary); color:#fff; border-color:var(--primary); }
+.btn-ghost { background:none; border-color:transparent; }
+.btn-sm { padding:5px 10px; font-size:11.5px; border-radius:6px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Top Bar -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <svg class="icon" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+      <h1>项目管理</h1>
+    </div>
+    <div class="topbar-right">
+      <button class="btn btn-primary btn-sm">保存全部</button>
+    </div>
+  </div>
+
+  <!-- Main Content: Project Dashboard -->
+  <div class="main">
+
+    <!-- Header Row -->
+    <div class="pm-header">
+      <div class="pm-header-left">
+        <h2>项目看板</h2>
+        <span>共 3 个项目，2 个活跃</span>
+      </div>
+      <div class="pm-header-actions">
+        <button class="btn btn-sm"><svg class="icon-sm" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>导入项目</button>
+        <button class="btn btn-primary btn-sm"><svg class="icon-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>新建项目</button>
+      </div>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="pm-stats">
+      <div class="pm-stat-card">
+        <div class="pm-stat-icon blue"><svg class="icon-lg" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></div>
+        <div class="pm-stat-info"><span class="pm-stat-value">3</span><span class="pm-stat-label">项目总数</span></div>
+      </div>
+      <div class="pm-stat-card">
+        <div class="pm-stat-icon green"><svg class="icon-lg" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+        <div class="pm-stat-info"><span class="pm-stat-value">2</span><span class="pm-stat-label">运行中 Agent</span></div>
+      </div>
+      <div class="pm-stat-card">
+        <div class="pm-stat-icon orange"><svg class="icon-lg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+        <div class="pm-stat-info"><span class="pm-stat-value">1</span><span class="pm-stat-label">等待人工决策</span></div>
+      </div>
+      <div class="pm-stat-card">
+        <div class="pm-stat-icon violet"><svg class="icon-lg" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></div>
+        <div class="pm-stat-info"><span class="pm-stat-value">8</span><span class="pm-stat-label">已完成任务</span></div>
+      </div>
+    </div>
+
+    <!-- Project Cards -->
+    <div>
+      <h3 class="pm-section-title" style="margin-bottom:12px;">
+        <svg class="icon-sm" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        全部项目
+      </h3>
+      <div class="pm-project-grid">
+
+        <!-- Project 1 Card -->
+        <div class="project-card" onclick="document.getElementById('detail').style.display='flex'">
+          <div class="project-card-top">
+            <div class="project-card-avatar">Ag</div>
+            <div class="project-card-info">
+              <div class="project-card-name">Agent Management</div>
+              <div class="project-card-meta">
+                <span><svg class="icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>main</span>
+                <span class="badge badge-v">Vite + React + TS</span>
+              </div>
+              <div class="project-card-progress">
+                <div class="project-card-progress-header">
+                  <span class="project-card-progress-label">任务进度</span>
+                  <span class="project-card-progress-val">4/5</span>
+                </div>
+                <div class="project-card-progress-bar">
+                  <div class="project-card-progress-fill" style="width:80%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="project-card-bottom">
+            <div class="project-card-stat running"><svg class="icon-sm" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>1 运行中</div>
+            <div class="project-card-stat warn"><svg class="icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>1 等待决策</div>
+            <div class="project-card-stat ok"><svg class="icon-sm" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>3 已完成</div>
+          </div>
+        </div>
+
+        <!-- Project 2 Card -->
+        <div class="project-card">
+          <div class="project-card-top">
+            <div class="project-card-avatar">IC</div>
+            <div class="project-card-info">
+              <div class="project-card-name">Internal-CLI</div>
+              <div class="project-card-meta">
+                <span><svg class="icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>develop</span>
+                <span class="badge badge-b">Go + Cobra</span>
+              </div>
+              <div class="project-card-progress">
+                <div class="project-card-progress-header">
+                  <span class="project-card-progress-label">任务进度</span>
+                  <span class="project-card-progress-val">1/3</span>
+                </div>
+                <div class="project-card-progress-bar">
+                  <div class="project-card-progress-fill" style="width:33%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="project-card-bottom">
+            <div class="project-card-stat running"><svg class="icon-sm" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>1 运行中</div>
+            <div class="project-card-stat" style="color:var(--faint);"><svg class="icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>0 决策</div>
+            <div class="project-card-stat ok"><svg class="icon-sm" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>1 已完成</div>
+          </div>
+        </div>
+
+        <!-- Project 3 Card -->
+        <div class="project-card">
+          <div class="project-card-top">
+            <div class="project-card-avatar">DS</div>
+            <div class="project-card-info">
+              <div class="project-card-name">Design-System</div>
+              <div class="project-card-meta">
+                <span><svg class="icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>main</span>
+                <span class="badge badge-v">Storybook + React</span>
+              </div>
+              <div class="project-card-progress">
+                <div class="project-card-progress-header">
+                  <span class="project-card-progress-label">任务进度</span>
+                  <span class="project-card-progress-val">0/2</span>
+                </div>
+                <div class="project-card-progress-bar">
+                  <div class="project-card-progress-fill" style="width:0%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="project-card-bottom">
+            <div class="project-card-stat" style="color:var(--faint);"><svg class="icon-sm" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>0 运行中</div>
+            <div class="project-card-stat" style="color:var(--faint);"><svg class="icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>0 决策</div>
+            <div class="project-card-stat ok"><svg class="icon-sm" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>1 已完成</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Recent Tasks -->
+    <div>
+      <h3 class="pm-section-title" style="margin-bottom:8px;">
+        <svg class="icon-sm" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        近期任务
+      </h3>
+      <div class="pm-task-list">
+        <div class="pm-task-item">
+          <div class="pm-task-status running"></div>
+          <div class="pm-task-info">
+            <div class="pm-task-goal">完成 V1 产品闭环页面开发</div>
+            <div class="pm-task-project">Agent Management</div>
+          </div>
+          <span class="badge badge-b">产品经理</span>
+        </div>
+        <div class="pm-task-item">
+          <div class="pm-task-status gate"></div>
+          <div class="pm-task-info">
+            <div class="pm-task-goal">重构 CLI 命令解析模块</div>
+            <div class="pm-task-project">Internal-CLI</div>
+          </div>
+          <span class="badge badge-o">等待决策</span>
+        </div>
+        <div class="pm-task-item">
+          <div class="pm-task-status done"></div>
+          <div class="pm-task-info">
+            <div class="pm-task-goal">搭建 Design System 组件库基础</div>
+            <div class="pm-task-project">Design-System</div>
+          </div>
+          <span class="badge badge-g">已完成</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Project Detail Overlay (click project card to open) -->
+  <div class="detail-overlay" id="detail" style="display:none;" onclick="if(event.target===this)this.style.display='none'">
+    <div class="detail-panel" onclick="event.stopPropagation()">
+      <div class="detail-header">
+        <div class="detail-header-avatar">Ag</div>
+        <div class="detail-header-info">
+          <div class="detail-header-name">Agent Management</div>
+          <div class="detail-header-meta">
+            <span>main</span><span>·</span><span>Vite + React + TypeScript</span><span>·</span><span>D:/work/vibecode/Agent Management</span>
+          </div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('detail').style.display='none'">
+          <svg class="icon-sm" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>关闭
+        </button>
+      </div>
+
+      <!-- Detail Tabs -->
+      <div class="detail-tabs">
+        <button class="detail-tab active"><svg class="icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>Issues</button>
+        <button class="detail-tab"><svg class="icon-sm" viewBox="0 0 24 24"><path d="M6 3v18"/><circle cx="12" cy="6" r="3"/><path d="M18 3v18"/></svg>Pull Requests</button>
+        <button class="detail-tab"><svg class="icon-sm" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>CI/CD</button>
+        <button class="detail-tab"><svg class="icon-sm" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>工作流与角色</button>
+        <button class="detail-tab"><svg class="icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>设置</button>
+      </div>
+
+      <div class="detail-body">
+        <!-- Issues tab (active) -->
+        <div class="detail-mini-list">
+          <div class="detail-mini-item">
+            <span class="badge badge-o">Open</span>
+            <div class="item-left">
+              <div class="item-title">#12 feat: 支持工作流步骤覆盖</div>
+              <div class="item-sub">产品经理 · 2 天前</div>
+            </div>
+            <span class="badge badge-b">enhancement</span>
+          </div>
+          <div class="detail-mini-item">
+            <span class="badge badge-r">Open</span>
+            <div class="item-left">
+              <div class="item-title">#11 fix: 暗色主题显示异常</div>
+              <div class="item-sub">前端工程师 · 3 天前</div>
+            </div>
+            <span class="badge badge-r">bug</span>
+          </div>
+          <div class="detail-mini-item">
+            <span class="badge badge-g">Closed</span>
+            <div class="item-left">
+              <div class="item-title">#8 feat: 记忆管理 CRUD 完成</div>
+              <div class="item-sub">前端工程师 · 5 天前</div>
+            </div>
+            <span class="badge badge-b">feature</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

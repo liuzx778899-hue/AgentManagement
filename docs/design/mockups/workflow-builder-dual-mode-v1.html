@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Agent 工厂管理系统 - 流程编排</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<style data-purpose="custom-styles">
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: #0b1121; /* Dark navy background */
+      color: #e2e8f0;
+      overflow: hidden; /* Prevent body scroll, manage scrolling internally */
+    }
+
+    /* Custom scrollbar for webkit */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    /* Canvas Grid Background */
+    .canvas-bg {
+      background-color: #0f172a;
+      background-image: 
+        linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px);
+      background-size: 20px 20px;
+    }
+
+    /* Node connections */
+    .connection-line {
+      position: absolute;
+      top: 50%;
+      height: 2px;
+      background-color: #475569;
+      z-index: 0;
+      transform: translateY(-50%);
+    }
+    .connection-arrow {
+      position: absolute;
+      right: -5px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 0; 
+      height: 0; 
+      border-top: 5px solid transparent;
+      border-bottom: 5px solid transparent;
+      border-left: 5px solid #475569;
+    }
+
+    /* Role Tag Colors */
+    .role-purple { color: #c084fc; background-color: rgba(192, 132, 252, 0.1); border-color: rgba(192, 132, 252, 0.3); }
+    .role-blue { color: #60a5fa; background-color: rgba(96, 165, 250, 0.1); border-color: rgba(96, 165, 250, 0.3); }
+    .role-green { color: #4ade80; background-color: rgba(74, 222, 128, 0.1); border-color: rgba(74, 222, 128, 0.3); }
+    .role-yellow { color: #facc15; background-color: rgba(250, 204, 21, 0.1); border-color: rgba(250, 204, 21, 0.3); }
+    .role-teal { color: #2dd4bf; background-color: rgba(45, 212, 191, 0.1); border-color: rgba(45, 212, 191, 0.3); }
+
+    /* Custom Input Styles */
+    .dark-input {
+      background-color: #1e293b;
+      border-color: #334155;
+      color: #f8fafc;
+    }
+    .dark-input:focus {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 1px #3b82f6;
+    }
+  </style>
+</head>
+<body class="h-screen flex text-sm antialiased selection:bg-blue-500/30">
+<!-- BEGIN: Sidebar -->
+<aside class="w-56 bg-[#0f172a] border-r border-slate-800 flex flex-col justify-between shrink-0 h-full">
+<div>
+<!-- Logo & Title -->
+<div class="h-14 flex items-center px-4 border-b border-slate-800">
+<div class="w-6 h-6 bg-blue-600 rounded flex items-center justify-center mr-2">
+<svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+<span class="font-semibold text-slate-200">Agent 工厂管理系统</span>
+</div>
+<!-- Navigation Menu -->
+<nav class="mt-4 px-2 space-y-1">
+<a class="flex items-center px-3 py-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-md group" href="#">
+<svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+          工作台
+        </a>
+<a class="flex items-center px-3 py-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-md group" href="#">
+<svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+          项目管理
+        </a>
+<a class="flex items-center px-3 py-2 text-blue-400 bg-blue-900/20 rounded-md group relative" href="#">
+<div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-blue-500 rounded-r-md"></div>
+<svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+          流程编排
+        </a>
+<a class="flex items-center px-3 py-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-md group" href="#">
+<svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+          记忆管理
+        </a>
+<a class="flex items-center px-3 py-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-md group" href="#">
+<svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+          设置中心
+        </a>
+</nav>
+</div>
+<div class="p-4 border-t border-slate-800">
+<button class="w-full flex justify-center py-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-md">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M11 19l-7-7 7-7m8 14l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</button>
+</div>
+</aside>
+<!-- END: Sidebar -->
+<!-- BEGIN: Main Content Container -->
+<div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+<!-- BEGIN: Header -->
+<header class="h-14 px-4 flex items-center justify-between border-b border-slate-800 bg-[#0b1121] shrink-0">
+<div class="flex items-center text-slate-300">
+<span class="text-slate-400">AgentDevelop</span>
+<span class="mx-2 text-slate-600">/</span>
+<span class="font-medium text-slate-200">流程编排</span>
+<div class="ml-6 flex items-center">
+<span class="text-slate-500 mr-2 text-xs">项目:</span>
+<button class="flex items-center space-x-1 text-slate-300 hover:text-white px-2 py-1 rounded bg-slate-800/50 border border-slate-700/50">
+<span>AgentDevelop</span>
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</button>
+</div>
+<div class="ml-6 flex items-center">
+<span class="text-slate-500 mr-2 text-xs">当前版本:</span>
+<span class="px-2 py-0.5 rounded text-xs border border-green-500/30 text-green-400 bg-green-500/10 flex items-center">
+<span class="w-1.5 h-1.5 rounded-full bg-green-400 mr-1.5"></span>
+            v1.3 已应用
+          </span>
+</div>
+</div>
+<div class="flex items-center space-x-3">
+<button class="px-3 py-1.5 rounded border border-slate-700 text-slate-300 hover:bg-slate-800 flex items-center text-sm transition-colors">
+<svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+          校验流程
+        </button>
+<button class="px-3 py-1.5 rounded bg-blue-600/20 border border-blue-500/30 text-blue-400 hover:bg-blue-600/30 flex items-center text-sm transition-colors">
+<svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+          应用到项目
+        </button>
+<button class="px-4 py-1.5 rounded bg-blue-600 hover:bg-blue-700 text-white flex items-center text-sm font-medium transition-colors shadow-lg shadow-blue-900/20">
+<svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+          AI 助手 · 流程设计模式
+        </button>
+<button class="p-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-800 ml-1">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</button>
+</div>
+</header>
+<!-- END: Header -->
+<div class="flex-1 flex flex-col overflow-hidden">
+<!-- BEGIN: Top Area (Tabs & Stepper) -->
+<div class="border-b border-slate-800 bg-[#0f172a] shrink-0">
+<!-- Tabs -->
+<div class="flex p-2 gap-2">
+<button class="flex-1 py-2 text-center rounded border border-blue-500/50 bg-blue-900/20 text-blue-400 font-medium flex items-center justify-center">
+<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+            常规配置
+          </button>
+<button class="flex-1 py-2 text-center rounded text-slate-400 hover:bg-slate-800 flex items-center justify-center">
+<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+            AI 辅助生成
+          </button>
+</div>
+<!-- Stepper -->
+<div class="px-6 py-4 flex items-center justify-between overflow-x-auto">
+<!-- Step 1 -->
+<div class="flex items-center space-x-3 opacity-50">
+<div class="w-10 h-10 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-blue-400">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+<div>
+<div class="text-slate-300 font-medium text-sm">策略编排 / 手动编排</div>
+<div class="text-slate-500 text-xs mt-0.5">选择模板并手动编排步骤</div>
+</div>
+</div>
+<div class="text-slate-600 px-2">→</div>
+<!-- Step 2 -->
+<div class="flex items-center space-x-3 opacity-50">
+<div class="w-10 h-10 rounded-lg bg-green-900/20 border border-green-500/30 flex items-center justify-center text-green-400">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+<div>
+<div class="text-green-400 font-medium text-sm">AI 解析 / 优化建议</div>
+<div class="text-slate-500 text-xs mt-0.5">AI 解析需求，生成草案及建议</div>
+</div>
+</div>
+<div class="text-slate-600 px-2">→</div>
+<!-- Step 3 -->
+<div class="flex items-center space-x-3 opacity-50">
+<div class="w-10 h-10 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-purple-400">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+<div>
+<div class="text-slate-300 font-medium text-sm">流程草案</div>
+<div class="text-slate-500 text-xs mt-0.5">生成可执行的流程草案</div>
+</div>
+</div>
+<div class="text-slate-600 px-2">→</div>
+<!-- Step 4 (Active/Focus) -->
+<div class="flex items-center space-x-3">
+<div class="w-10 h-10 rounded-lg bg-orange-900/20 border border-orange-500/50 flex items-center justify-center text-orange-400">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+<div>
+<div class="text-orange-400 font-medium text-sm">用户确认</div>
+<div class="text-slate-500 text-xs mt-0.5">人工确认关键步骤及配置</div>
+</div>
+</div>
+<div class="text-slate-600 px-2">→</div>
+<!-- Step 5 -->
+<div class="flex items-center space-x-3 opacity-50">
+<div class="w-10 h-10 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-blue-400">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+<div>
+<div class="text-slate-300 font-medium text-sm">应用到项目</div>
+<div class="text-slate-500 text-xs mt-0.5">发布流程配置到项目</div>
+</div>
+</div>
+<div class="text-slate-600 px-2">→</div>
+<!-- Step 6 -->
+<div class="flex items-center space-x-3 opacity-50">
+<div class="w-10 h-10 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-teal-400">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+<div>
+<div class="text-slate-300 font-medium text-sm">同步工作区</div>
+<div class="text-slate-500 text-xs mt-0.5">流程生效，进入执行态</div>
+</div>
+</div>
+</div>
+</div>
+<!-- END: Top Area -->
+<!-- BEGIN: Main Workspace -->
+<div class="flex-1 flex overflow-hidden">
+<!-- BEGIN: Left Panel (Templates & Roles) -->
+<div class="w-64 border-r border-slate-800 bg-[#0f172a] flex flex-col shrink-0">
+<!-- Workflow Templates -->
+<div class="flex-1 border-b border-slate-800 flex flex-col min-h-0">
+<div class="p-3 flex justify-between items-center text-slate-300">
+<div class="flex items-center font-medium">
+<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+                流程模板
+              </div>
+<button class="text-slate-500 hover:text-slate-300"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg></button>
+</div>
+<div class="p-3 pt-0 overflow-y-auto space-y-3">
+<!-- Template Card 1 (Active) -->
+<div class="p-3 rounded-lg border border-blue-500/50 bg-blue-900/10 cursor-pointer relative group">
+<div class="flex justify-between items-start">
+<div class="flex items-center text-blue-400 mb-1">
+<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span class="font-medium text-slate-200 text-sm">软件开发完整流程</span>
+</div>
+<button class="text-slate-500 opacity-0 group-hover:opacity-100"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg></button>
+</div>
+<div class="text-xs text-slate-500 mb-2 line-clamp-2">从需求分析到测试部署的完整软件生命周期流程...</div>
+<div class="text-xs text-slate-400">5 个步骤</div>
+</div>
+<!-- Template Card 2 -->
+<div class="p-3 rounded-lg border border-slate-700 bg-slate-800/50 hover:border-slate-600 cursor-pointer">
+<div class="flex items-center text-slate-300 mb-1">
+<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span class="font-medium text-sm">设计评审流程</span>
+</div>
+<div class="text-xs text-slate-500 mb-2">设计稿评审与走查的轻量级流程</div>
+<div class="text-xs text-slate-400">4 个步骤</div>
+</div>
+<!-- Template Card 3 -->
+<div class="p-3 rounded-lg border border-slate-700 bg-slate-800/50 hover:border-slate-600 cursor-pointer">
+<div class="flex items-center text-slate-300 mb-1">
+<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span class="font-medium text-sm">Bug 修复流程</span>
+</div>
+<div class="text-xs text-slate-500 mb-2">缺陷修复及验证的快速流程</div>
+<div class="text-xs text-slate-400">4 个步骤</div>
+</div>
+</div>
+</div>
+<!-- Project Role Pool -->
+<div class="flex-1 flex flex-col min-h-0">
+<div class="p-3 flex justify-between items-center text-slate-300 border-b border-slate-800">
+<div class="flex items-center font-medium">
+<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+                项目角色池
+              </div>
+<svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+<div class="p-3 overflow-y-auto space-y-2">
+<div class="flex items-center justify-between p-2 rounded border role-purple cursor-grab">
+<div class="flex items-center">
+<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span class="text-xs">产品经理</span>
+</div>
+<svg class="w-3 h-3 text-slate-500" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+<div class="flex items-center justify-between p-2 rounded border role-blue cursor-grab">
+<div class="flex items-center">
+<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span class="text-xs">UI/UX 设计师</span>
+</div>
+<svg class="w-3 h-3 text-slate-500" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+<div class="flex items-center justify-between p-2 rounded border role-green cursor-grab">
+<div class="flex items-center">
+<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span class="text-xs">前端工程师</span>
+</div>
+<svg class="w-3 h-3 text-slate-500" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+<div class="flex items-center justify-between p-2 rounded border role-yellow cursor-grab">
+<div class="flex items-center">
+<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span class="text-xs">代码审查员</span>
+</div>
+<svg class="w-3 h-3 text-slate-500" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+<div class="flex items-center justify-between p-2 rounded border role-teal cursor-grab">
+<div class="flex items-center">
+<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span class="text-xs">测试工程师</span>
+</div>
+<svg class="w-3 h-3 text-slate-500" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+</div>
+<div class="p-3 text-xs text-slate-500 border-t border-slate-800">
+              拖拽角色到流程步骤进行绑定
+            </div>
+</div>
+</div>
+<!-- END: Left Panel -->
+<!-- BEGIN: Center Canvas -->
+<div class="flex-1 canvas-bg relative overflow-hidden flex items-center justify-center">
+<!-- Canvas Controls -->
+<div class="absolute top-4 left-4 text-slate-300 font-medium">流程画布</div>
+<div class="absolute top-4 right-4 flex items-center space-x-2 bg-[#1e293b] p-1 rounded-lg border border-slate-700 shadow-md">
+<button class="p-1 hover:bg-slate-700 rounded text-slate-400"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M20 12H4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg></button>
+<span class="text-xs text-slate-300 px-1">100%</span>
+<button class="p-1 hover:bg-slate-700 rounded text-slate-400"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M12 4v16m8-8H4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg></button>
+<div class="w-px h-4 bg-slate-600 mx-1"></div>
+<button class="p-1 hover:bg-slate-700 rounded text-slate-400"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg></button>
+<button class="p-1 hover:bg-slate-700 rounded text-slate-400 flex items-center text-xs"><svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>网格</button>
+</div>
+<!-- Workflow Graph Container -->
+<div class="relative flex items-center w-max p-10">
+<!-- Node 1 -->
+<div class="w-48 bg-[#1e293b] border border-slate-700 rounded-lg p-3 relative z-10 shadow-lg">
+<div class="flex items-center mb-3">
+<span class="text-slate-500 font-mono mr-2">01</span>
+<span class="font-medium text-slate-200 text-sm">需求分析</span>
+</div>
+<div class="space-y-2 text-xs">
+<div class="flex items-center justify-between">
+<span class="text-slate-500">角色:</span>
+<span class="px-1.5 py-0.5 rounded role-purple">产品经理</span>
+</div>
+<div class="flex items-center justify-between">
+<span class="text-slate-500">Runner:</span>
+<span class="text-slate-300">DeepSeek v4</span>
+</div>
+<div class="flex items-center justify-between">
+<span class="text-slate-500">模型:</span>
+<span class="text-slate-300 truncate w-24 text-right">Claude Code CLI</span>
+</div>
+</div>
+<div class="mt-3 pt-2 border-t border-slate-700 flex items-center text-green-500 text-xs">
+<svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+                已完成
+              </div>
+</div>
+<!-- Connection 1-2 -->
+<div class="w-12 relative z-0">
+<div class="connection-line w-full"></div>
+<div class="connection-arrow"></div>
+</div>
+<!-- Node 2 -->
+<div class="w-48 bg-[#1e293b] border border-slate-700 rounded-lg p-3 relative z-10 shadow-lg">
+<div class="flex items-center mb-3">
+<span class="text-slate-500 font-mono mr-2">02</span>
+<span class="font-medium text-slate-200 text-sm">UI/UX 设计</span>
+</div>
+<div class="space-y-2 text-xs">
+<div class="flex items-center justify-between">
+<span class="text-slate-500">角色:</span>
+<span class="px-1.5 py-0.5 rounded role-blue">UI/UX 设计师</span>
+</div>
+<div class="flex items-center justify-between">
+<span class="text-slate-500">Runner:</span>
+<span class="text-slate-300 truncate w-24 text-right">Claude Sonnet 3.5</span>
+</div>
+<div class="flex items-center justify-between">
+<span class="text-slate-500">模型:</span>
+<span class="text-slate-300 truncate w-24 text-right">Claude Code CLI</span>
+</div>
+</div>
+<div class="mt-3 pt-2 border-t border-slate-700 flex items-center text-green-500 text-xs">
+<svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+                已完成
+              </div>
+</div>
+<!-- Connection 2-3 -->
+<div class="w-12 relative z-0">
+<div class="connection-line w-full"></div>
+<div class="connection-arrow"></div>
+</div>
+<!-- Node 3 (Active) -->
+<div class="w-48 bg-[#1e293b] border-2 border-blue-500 rounded-lg p-3 relative z-10 shadow-[0_0_15px_rgba(59,130,246,0.3)]">
+<!-- Selection anchors -->
+<div class="absolute -top-1.5 left-1/2 -translate-x-1/2 w-2.5 h-2.5 bg-blue-500 rounded-full border border-white"></div>
+<div class="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-2.5 h-2.5 bg-white rounded-full border-2 border-blue-500"></div>
+<div class="absolute top-1/2 -left-1.5 -translate-y-1/2 w-2.5 h-2.5 bg-blue-500 rounded-full border border-white"></div>
+<div class="absolute top-1/2 -right-1.5 -translate-y-1/2 w-2.5 h-2.5 bg-blue-500 rounded-full border border-white"></div>
+<div class="flex items-center mb-3">
+<span class="text-blue-400 font-mono mr-2">03</span>
+<span class="font-medium text-white text-sm">前端开发</span>
+</div>
+<div class="space-y-2 text-xs">
+<div class="flex items-center justify-between">
+<span class="text-slate-400">角色:</span>
+<span class="px-1.5 py-0.5 rounded role-green">前端工程师</span>
+</div>
+<div class="flex items-center justify-between">
+<span class="text-slate-400">Runner:</span>
+<span class="text-slate-200">Coder CLI</span>
+</div>
+<div class="flex items-center justify-between">
+<span class="text-slate-400">模型:</span>
+<span class="text-slate-200 truncate w-24 text-right">OpenAI / GPT-5.3</span>
+</div>
+</div>
+<div class="mt-3 pt-2 border-t border-slate-700 flex items-center text-blue-400 text-xs">
+<svg class="w-3.5 h-3.5 mr-1 animate-spin" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+                运行中
+              </div>
+</div>
+<!-- Connection 3-4 -->
+<div class="w-12 relative z-0">
+<div class="connection-line w-full"></div>
+<div class="connection-arrow"></div>
+</div>
+<!-- Node 4 -->
+<div class="w-48 bg-[#1e293b] border border-orange-500/50 rounded-lg p-3 relative z-10 shadow-lg">
+<div class="flex items-center mb-3">
+<span class="text-slate-500 font-mono mr-2">04</span>
+<span class="font-medium text-slate-200 text-sm">代码审查</span>
+</div>
+<div class="space-y-2 text-xs">
+<div class="flex items-center justify-between">
+<span class="text-slate-500">角色:</span>
+<span class="px-1.5 py-0.5 rounded role-yellow">代码审查员</span>
+</div>
+<div class="flex items-center justify-between">
+<span class="text-slate-500">Runner:</span>
+<span class="text-slate-300">Claude Code CLI</span>
+</div>
+<div class="flex items-center justify-between">
+<span class="text-slate-500">模型:</span>
+<span class="text-slate-300 truncate w-24 text-right">Claude Code CLI</span>
+</div>
+</div>
+<div class="mt-3 pt-2 border-t border-slate-700 flex items-center text-orange-400 text-xs">
+<svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+                等待 Gate
+              </div>
+</div>
+<!-- Connection 4-5 -->
+<div class="w-12 relative z-0">
+<div class="connection-line w-full"></div>
+<div class="connection-arrow"></div>
+</div>
+<!-- Node 5 -->
+<div class="w-48 bg-[#1e293b] border border-slate-700 rounded-lg p-3 relative z-10 opacity-60 shadow-lg">
+<div class="flex items-center mb-3">
+<span class="text-slate-500 font-mono mr-2">05</span>
+<span class="font-medium text-slate-400 text-sm">测试验证</span>
+</div>
+<div class="space-y-2 text-xs">
+<div class="flex items-center justify-between">
+<span class="text-slate-600">角色:</span>
+<span class="px-1.5 py-0.5 rounded role-teal">测试工程师</span>
+</div>
+<div class="flex items-center justify-between">
+<span class="text-slate-600">Runner:</span>
+<span class="text-slate-500">Gemini 1.5 Pro</span>
+</div>
+<div class="flex items-center justify-between">
+<span class="text-slate-600">模型:</span>
+<span class="text-slate-500">Gemini CLI</span>
+</div>
+</div>
+<div class="mt-3 pt-2 border-t border-slate-700 flex items-center text-slate-500 text-xs">
+<div class="w-3.5 h-3.5 mr-1 border border-slate-500 rounded-full"></div>
+                待开始
+              </div>
+</div>
+</div>
+<!-- Mini Map -->
+<div class="absolute bottom-4 left-4 bg-[#0f172a]/90 backdrop-blur border border-blue-500/50 rounded p-2 shadow-lg flex">
+<div class="relative border border-slate-700 rounded w-40 h-24 p-2 flex items-center space-x-1">
+<!-- Viewport indicator -->
+<div class="absolute border border-blue-500/50 bg-blue-500/10 rounded w-28 h-16 left-4 top-4"></div>
+<!-- Mini nodes -->
+<div class="w-4 h-3 bg-slate-700 rounded-sm"></div>
+<div class="w-4 h-3 bg-slate-700 rounded-sm"></div>
+<div class="w-4 h-3 bg-blue-600 rounded-sm"></div>
+<div class="w-4 h-3 bg-orange-700 rounded-sm"></div>
+<div class="w-4 h-3 bg-slate-800 border border-slate-700 rounded-sm"></div>
+</div>
+<div class="flex flex-col justify-between ml-1 border-l border-slate-700 pl-1">
+<button class="text-slate-400 hover:text-white p-0.5"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg></button>
+<button class="text-slate-400 hover:text-white p-0.5"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M12 6v6m0 0v6m0-6h6m-6 0H6" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg></button>
+<button class="text-slate-400 hover:text-white p-0.5"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M20 12H4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg></button>
+</div>
+</div>
+</div>
+<!-- END: Center Canvas -->
+<!-- BEGIN: Right Panel (Step Config) -->
+<div class="w-80 border-l border-slate-800 bg-[#0f172a] flex flex-col shrink-0">
+<div class="p-4 border-b border-slate-800 flex justify-between items-center">
+<h2 class="font-medium text-slate-200">步骤配置 · <span class="text-blue-400">03 前端开发</span></h2>
+<button class="text-slate-500 hover:text-slate-300"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg></button>
+</div>
+<div class="flex-1 overflow-y-auto p-4 space-y-4">
+<!-- Bind Role -->
+<div>
+<label class="block text-xs text-slate-400 mb-1.5">绑定角色</label>
+<div class="relative">
+<select class="w-full dark-input rounded-md py-1.5 pl-3 pr-8 text-sm appearance-none border border-slate-700 bg-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500">
+<option>前端工程师</option>
+</select>
+<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+<div class="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none">
+<svg class="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+<div class="absolute inset-y-0 left-8 flex items-center">
+<span class="text-green-400 text-sm">前端工程师</span>
+</div>
+<!-- Hiding default text since custom absolute text is used for styled appearance -->
+<style>.dark-input option { color: transparent; }</style>
+</div>
+</div>
+<!-- Runner -->
+<div>
+<label class="block text-xs text-slate-400 mb-1.5">Runner</label>
+<div class="relative">
+<select class="w-full dark-input rounded-md py-1.5 pl-3 pr-8 text-sm appearance-none border border-slate-700 bg-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500">
+<option>Coder CLI</option>
+</select>
+<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+</div>
+</div>
+<!-- Model -->
+<div>
+<label class="block text-xs text-slate-400 mb-1.5">Model</label>
+<div class="relative">
+<select class="w-full dark-input rounded-md py-1.5 pl-3 pr-8 text-sm appearance-none border border-slate-700 bg-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500">
+<option>OpenAI / GPT-5.3 Codex</option>
+</select>
+<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+</div>
+</div>
+<!-- Capabilities -->
+<div>
+<div class="flex items-center text-xs text-slate-400 mb-1.5">
+                能力授权 <svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+<div class="flex flex-wrap gap-2">
+<span class="px-2 py-1 rounded text-xs border border-slate-600 bg-slate-800 text-slate-300 flex items-center"><svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>MCP</span>
+<span class="px-2 py-1 rounded text-xs border border-slate-600 bg-slate-800 text-slate-300 flex items-center"><svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>Skills</span>
+<span class="px-2 py-1 rounded text-xs border border-slate-600 bg-slate-800 text-slate-300 flex items-center"><svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>Git</span>
+<span class="px-2 py-1 rounded text-xs border border-slate-600 bg-slate-800 text-slate-300 flex items-center"><svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>Local Shell</span>
+</div>
+</div>
+<!-- Gate -->
+<div>
+<label class="block text-xs text-slate-400 mb-1.5">Gate (关卡)</label>
+<div class="relative">
+<select class="w-full dark-input rounded-md py-1.5 pl-8 pr-8 text-sm appearance-none border border-orange-500/50 bg-slate-800 focus:outline-none text-orange-400">
+<option>代码审查前人工确认</option>
+</select>
+<div class="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none text-orange-500">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+</div>
+</div>
+<!-- Acceptance Criteria -->
+<div>
+<div class="flex justify-between items-center mb-1.5">
+<label class="block text-xs text-slate-400">验收标准</label>
+<button class="text-blue-400 hover:text-blue-300 text-xs flex items-center"><svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M12 4v16m8-8H4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>添加</button>
+</div>
+<div class="space-y-1.5">
+<div class="flex items-center gap-2 bg-[#1e293b] border border-slate-700 rounded p-1.5">
+<span class="w-4 h-4 rounded-full bg-blue-600/30 text-blue-400 flex items-center justify-center text-[10px]">1</span>
+<input class="bg-transparent border-none text-sm text-slate-300 flex-1 focus:ring-0 p-0" readonly="" type="text" value="页面功能实现并通过自测"/>
+<svg class="w-4 h-4 text-slate-500 cursor-move" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M4 8h16M4 16h16" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<svg class="w-4 h-4 text-slate-500 hover:text-red-400 cursor-pointer" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+<div class="flex items-center gap-2 bg-[#1e293b] border border-slate-700 rounded p-1.5">
+<span class="w-4 h-4 rounded-full bg-blue-600/30 text-blue-400 flex items-center justify-center text-[10px]">2</span>
+<input class="bg-transparent border-none text-sm text-slate-300 flex-1 focus:ring-0 p-0" readonly="" type="text" value="组件单元测试覆盖率 ≥ 80%"/>
+<svg class="w-4 h-4 text-slate-500 cursor-move" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M4 8h16M4 16h16" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<svg class="w-4 h-4 text-slate-500 hover:text-red-400 cursor-pointer" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+<div class="flex items-center gap-2 bg-[#1e293b] border border-slate-700 rounded p-1.5">
+<span class="w-4 h-4 rounded-full bg-blue-600/30 text-blue-400 flex items-center justify-center text-[10px]">3</span>
+<input class="bg-transparent border-none text-sm text-slate-300 flex-1 focus:ring-0 p-0" readonly="" type="text" value="代码符合 ESLint 规范无错误"/>
+<svg class="w-4 h-4 text-slate-500 cursor-move" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M4 8h16M4 16h16" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<svg class="w-4 h-4 text-slate-500 hover:text-red-400 cursor-pointer" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+<div class="flex items-center gap-2 bg-[#1e293b] border border-slate-700 rounded p-1.5">
+<span class="w-4 h-4 rounded-full bg-blue-600/30 text-blue-400 flex items-center justify-center text-[10px]">4</span>
+<input class="bg-transparent border-none text-sm text-slate-300 flex-1 focus:ring-0 p-0" readonly="" type="text" value="构建成功，无 TypeScript 报错"/>
+<svg class="w-4 h-4 text-slate-500 cursor-move" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M4 8h16M4 16h16" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<svg class="w-4 h-4 text-slate-500 hover:text-red-400 cursor-pointer" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+</div>
+</div>
+<!-- AI Suggestion Box -->
+<div class="mt-4 p-3 rounded-lg border border-blue-500/30 bg-blue-900/10">
+<div class="flex items-center text-blue-400 mb-2 text-sm font-medium">
+<svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+                AI 建议
+              </div>
+<p class="text-xs text-slate-300 mb-1">检测到该步骤缺少组件测试验收标准</p>
+<p class="text-xs text-slate-500 mb-3">建议新增单元测试规范 E2E 覆盖率要求以提升质量保障。</p>
+<div class="flex space-x-2">
+<button class="flex-1 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs transition-colors">采纳建议</button>
+<button class="flex-1 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded text-xs transition-colors border border-slate-600">查看差异</button>
+</div>
+</div>
+</div>
+</div>
+<!-- END: Right Panel -->
+</div>
+<!-- END: Main Workspace -->
+<!-- BEGIN: Footer -->
+<footer class="h-10 border-t border-slate-800 bg-[#0f172a] px-4 flex items-center text-xs text-slate-500 shrink-0">
+<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+        普通流程为基础能力，AI 只生成草案和建议，所有关键变更须经人工确认。
+      </footer>
+<!-- END: Footer -->
+</div>
+</div>
+<!-- END: Main Content Container -->
+</body></html>

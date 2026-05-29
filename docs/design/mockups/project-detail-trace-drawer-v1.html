@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Agent 工程管理系统 - 项目详情</title>
+  <style>
+    :root{
+      --page-scale:.8;
+      --bg:#080d13;
+      --shell:#0c121b;
+      --panel:#121922;
+      --card:#151f2b;
+      --card-2:#101822;
+      --line:#273448;
+      --soft:#1e2a3a;
+      --text:#eef5ff;
+      --sub:#b8c5d7;
+      --muted:#8291a6;
+      --primary:#5d7cff;
+      --ok:#42d58f;
+      --warn:#f3aa3e;
+      --danger:#ff6861;
+      --violet:#9d73e7;
+      --shadow:0 18px 46px rgba(0,0,0,.34);
+      font-family:Inter,"Segoe UI","Microsoft YaHei",Arial,sans-serif;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;height:100vh;overflow:hidden;background:var(--bg);color:var(--text);font-size:13px}
+    .app{
+      width:calc(100vw / var(--page-scale));
+      height:calc(100vh / var(--page-scale));
+      transform:scale(var(--page-scale));
+      transform-origin:top left;
+      display:grid;
+      grid-template-columns:270px minmax(0,1fr) 525px;
+      background:radial-gradient(circle at 48% -18%,rgba(67,94,160,.18),transparent 34%),var(--bg);
+      position:relative;
+    }
+    svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+    .sidebar{padding:18px 12px;background:linear-gradient(180deg,#101720,#0b1119);border-right:1px solid var(--line);display:flex;flex-direction:column}
+    .brand{height:52px;display:flex;align-items:center;gap:12px;padding:0 6px 16px;border-bottom:1px solid var(--soft);font-size:16px;font-weight:850}
+    .logo{width:34px;height:34px;display:grid;place-items:center;border-radius:8px;background:linear-gradient(135deg,#6487ff,#55d3af);box-shadow:0 10px 26px rgba(80,117,255,.24)}
+    .nav{display:grid;gap:8px;margin-top:26px}
+    .nav-item{height:44px;display:flex;align-items:center;gap:12px;padding:0 14px;border-radius:7px;color:#a6b4c8;font-size:14px;font-weight:720}
+    .nav-item.active{color:#fff;background:rgba(92,124,255,.19);border:1px solid rgba(92,124,255,.46);box-shadow:inset 3px 0 0 var(--primary)}
+    .mini{margin-top:auto;border:1px solid var(--soft);border-radius:8px;padding:12px;background:#111923}
+    .avatar{width:34px;height:34px;display:grid;place-items:center;border-radius:8px;background:#273a66;color:#dce7ff;font-weight:850}
+    .collapse{height:34px;margin-top:10px;border:1px solid var(--soft);border-radius:7px;background:#101823;display:grid;place-items:center;color:#aab7ca}
+
+    .main{min-width:0;display:flex;flex-direction:column;border-right:1px solid var(--line);position:relative}
+    .topbar{height:75px;width:calc(100% + 525px);display:flex;align-items:center;justify-content:space-between;padding:0 27.5px;border-bottom:1px solid var(--soft);background:rgba(13,18,25,.94);position:relative;z-index:3}
+    .crumb{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:14px}
+    .crumb strong{color:#fff}
+    .actions{display:flex;gap:10px}
+    .top-status{position:absolute;right:27.5px;top:17.5px;height:28px;display:inline-flex;align-items:center;padding:0 10px;border:1px solid var(--soft);border-radius:6px;color:#8fa0b5;background:#101823;font-weight:760;z-index:5}
+    button{height:32px;border:1px solid var(--line);border-radius:6px;background:#101823;color:#c8d4e4;padding:0 12px;font:inherit;font-weight:700}
+    .primary{border-color:#5573ff;background:linear-gradient(180deg,#6d89ff,#4c68ee);color:#fff;box-shadow:0 10px 24px rgba(77,103,238,.22)}
+    .page{flex:1;min-height:0;padding:10px 12.5px 12.5px;display:grid;grid-template-rows:118px 230px 44px 1fr 174px;gap:10px;overflow:hidden}
+
+    .hero{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:1fr;gap:12px;position:relative;padding:0 12px}
+    .local-actions{grid-column:3;grid-row:1;align-self:start;justify-self:start;width:calc(100% - 12px);display:flex;justify-content:flex-end;gap:6px;padding:6px;border:1px solid var(--line);border-radius:8px;background:rgba(17,25,35,.9);box-shadow:var(--shadow);z-index:2;overflow:hidden}
+    .local-actions button{height:30px;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:0 9px;border-radius:6px;line-height:1;white-space:nowrap;font-size:12px}
+    .local-actions .icon-only{width:30px;padding:0}
+    .local-actions button svg{width:16px;height:16px;min-width:16px;flex:0 0 16px;display:block}
+    .local-actions .icon{width:16px;height:16px;display:inline-grid;place-items:center;color:#c8d7ee;font-size:15px;line-height:1}
+    .title{grid-column:1;grid-row:1;align-self:start;justify-self:stretch;width:100%;display:flex;gap:12px;padding:14px}
+    .title-icon{width:32px;height:32px;display:grid;place-items:center;color:#9fb1cc}
+    .title h1{font-size:28px;margin:0 0 6px;letter-spacing:0}
+    .title p{margin:0 0 10px;color:#c4d0df;font-size:14px}
+    .chips{display:flex;gap:8px;flex-wrap:wrap}
+    .chip{height:24px;display:inline-flex;align-items:center;gap:6px;padding:0 9px;border:1px solid var(--line);border-radius:6px;background:#111a25;color:#aebbd0;font-weight:750}
+    .chip.ok{border-color:#1e6b4c;color:#4ee19b;background:rgba(25,86,61,.24)}
+    .chip.warn{border-color:#7b561b;color:#f2b34c;background:rgba(86,58,20,.27)}
+    .chip.primary{border-color:#3a55b5;color:#98adff;background:rgba(48,70,152,.27);box-shadow:none}
+    .chip.danger{border-color:#74343b;color:#ff7670;background:rgba(100,38,44,.28)}
+    .metric-zone{grid-column:2;grid-row:1;justify-self:stretch;align-self:start;width:100%;padding:14px;box-shadow:none}
+    .kpis{display:grid;grid-template-columns:1.32fr repeat(2,1fr);gap:16px;align-items:start}
+    .kpi{padding:0;background:transparent;border:0;border-radius:0}
+    .kpi label{display:block;color:#9eacc1;margin-bottom:8px;font-weight:750}
+    .kpi strong{font-size:28px}
+    .ring{width:68px;height:68px;border-radius:50%;background:conic-gradient(var(--primary) 0 76%,#273247 76%);display:grid;place-items:center;margin:auto}
+    .ring:after{content:"76%";width:50px;height:50px;border-radius:50%;display:grid;place-items:center;background:#121922;font-weight:900;font-size:18px}
+
+    .panel{min-height:0;border:1px solid var(--line);border-radius:8px;background:rgba(18,25,34,.88);box-shadow:var(--shadow);overflow:hidden}
+    .panel-head{height:42px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;border-bottom:1px solid var(--soft)}
+    .panel-head h2{font-size:15px;margin:0}
+    .body{padding:12px}
+    .cockpit{padding:12px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+    .card{border:1px solid var(--line);border-radius:8px;background:#141d29;padding:14px}
+    .card h3{margin:0 0 12px;font-size:15px}
+    .card h4{margin:0 0 10px;font-size:17px}
+    .card p,.muted{color:#aab7ca;line-height:1.58}
+    .card-actions{display:flex;gap:8px;margin-top:10px}
+    .sync{font-size:28px;color:#54e99e;font-weight:900}
+
+    input[type=radio]{display:none}
+    .tabs{display:flex;align-items:center;gap:8px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:#111923}
+    .tabs label{height:44px;display:flex;align-items:center;gap:7px;padding:0 10px;color:#aebbd0;font-weight:780;border-bottom:2px solid transparent;cursor:pointer}
+    #overview:checked~.tabs label[for=overview],
+    #plan:checked~.tabs label[for=plan],
+    #progress:checked~.tabs label[for=progress],
+    #risk:checked~.tabs label[for=risk],
+    #role:checked~.tabs label[for=role],
+    #docs:checked~.tabs label[for=docs],
+    #change:checked~.tabs label[for=change]{color:#7895ff;border-color:#5c7cff;background:rgba(92,124,255,.08)}
+    .tab-content{min-height:0;overflow:hidden}
+    .tab-panel{height:100%;display:none;grid-template-columns:1fr 278px;gap:10px}
+    .tab-panel.single{grid-template-columns:1fr}
+    #overview:checked~.tab-content #p-overview,
+    #plan:checked~.tab-content #p-plan,
+    #progress:checked~.tab-content #p-progress,
+    #risk:checked~.tab-content #p-risk,
+    #role:checked~.tab-content #p-role,
+    #docs:checked~.tab-content #p-docs,
+    #change:checked~.tab-content #p-change{display:grid}
+
+    .overview-grid{display:grid;grid-template-columns:minmax(290px,.95fr) minmax(500px,1.35fr) minmax(260px,.72fr);gap:10px;height:100%}
+    .info-list{display:grid;gap:6px}
+    .info-row{display:grid;grid-template-columns:90px 1fr;padding-bottom:7px;border-bottom:1px solid var(--soft);color:#c6d2e2}
+    .info-row label{display:flex;align-items:center;gap:6px;color:#8e9caf}
+    .plan-row{display:grid;grid-template-columns:42px 1.45fr .72fr .95fr 72px;align-items:center;height:34px;border-bottom:1px solid var(--soft);gap:8px}
+    .plan-row:first-child{height:28px;color:#8c9bb0}
+    .prio{height:22px;display:inline-flex;align-items:center;justify-content:center;border-radius:5px;background:#173d2d;color:#50df99;font-weight:850}
+    .p2{background:#1f3b34;color:#66e1ae}.p3{background:#21346c;color:#8da5ff}.p4,.p5{background:#5c4115;color:#ffc55f}
+    .bar{height:7px;border-radius:999px;background:#2b3546;overflow:hidden}
+    .bar span{display:block;height:100%;border-radius:inherit;background:#4bdb93}
+    .bar.blue span{background:#5c7cff}.bar.warn span{background:#f1a93f}
+    .sources{display:grid;gap:8px}
+    .source{display:grid;grid-template-columns:26px 1fr;gap:8px;color:#b9c6d8;padding:8px;border:1px solid var(--soft);border-radius:7px;background:#121b27}
+    .source small{display:block;color:#7f8ea4;margin-top:3px;font-size:11px}
+    .file-icon{width:21px;height:25px;border:1px solid #40516a;border-radius:5px;display:inline-block;background:linear-gradient(180deg,#1a2534,#111a25);position:relative}
+    .file-icon:after{content:"";position:absolute;right:2px;top:2px;border-left:6px solid transparent;border-bottom:6px solid #40516a}
+
+    .task-head,.task-row{display:grid;grid-template-columns:70px 1.45fr .9fr 1fr .75fr .7fr;align-items:center;gap:10px;height:40px;border-bottom:1px solid var(--soft)}
+    .task-head{color:#8d9bb0}
+    .gantt{display:grid;grid-template-rows:38px repeat(5,50px);padding:0 12px 12px;position:relative}
+    .g-head,.g-row{display:grid;grid-template-columns:210px 110px repeat(7,1fr);align-items:center;border-bottom:1px solid var(--soft)}
+    .g-head{color:#93a2b6}
+    .track{position:relative;height:100%;border-left:1px solid rgba(255,255,255,.05)}
+    .gbar{height:18px;border-radius:999px;position:absolute;top:15px;background:linear-gradient(90deg,#44c982,#77d89c)}
+    .gbar.blue{background:linear-gradient(90deg,#5b78ff,#6f86ff)}
+    .gbar.purple{background:linear-gradient(90deg,#8d5bd6,#9d6dea)}
+    .gbar.orange{background:linear-gradient(90deg,#b76522,#db8937)}
+    .today{position:absolute;left:52%;top:38px;bottom:12px;width:1px;background:#5b78ff}
+    .swot{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:10px;height:100%;padding:12px}
+    .swot-card{border:1px solid var(--soft);border-radius:8px;padding:13px;background:#141d29}
+    .swot-card h3{margin:0 0 8px;font-size:15px}
+    .swot-card.s{border-color:#236849;background:rgba(30,78,56,.35)}
+    .swot-card.w{border-color:#7b561b;background:rgba(86,58,20,.28)}
+    .swot-card.o{border-color:#3557aa;background:rgba(42,63,132,.3)}
+    .swot-card.t{border-color:#79323a;background:rgba(87,35,42,.32)}
+    .swot-card li{margin:6px 0;color:#c5d1e1}
+    .risk-matrix{display:grid;grid-template-columns:60px 1fr 1fr;gap:8px;align-items:center}
+    .risk-cell{height:52px;display:grid;place-items:center;border-radius:7px;font-size:20px;font-weight:850}
+    .hi{background:rgba(214,80,70,.55);border:1px solid #884239}.mid{background:rgba(195,143,37,.55);border:1px solid #87611c}.lo{background:rgba(48,128,78,.5);border:1px solid #236849}
+    #p-role>.panel{height:100%;display:flex;flex-direction:column}
+    #p-role>.panel>.body{flex:1;min-height:0;overflow:hidden}
+    .role-flow-layout{height:100%;min-height:0;display:grid;grid-template-columns:320px 1fr;gap:12px}
+    .role-pool{border:1px solid var(--soft);border-radius:9px;background:#101823;overflow:hidden}
+    .role-pool-head,.workflow-zone-head{height:42px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;border-bottom:1px solid var(--soft)}
+    .role-pool-head h3,.workflow-zone-head h3{margin:0;font-size:14px}
+    .role-grid{padding:8px;display:grid;gap:7px}
+    .role-card{min-height:50px;display:grid;grid-template-columns:32px 1fr auto;gap:9px;align-items:center;border:1px solid var(--soft);border-radius:8px;padding:7px 9px;background:#141d29}
+    .role-badge{width:32px;height:32px;display:grid;place-items:center;border-radius:8px;background:#24345b;color:#cddaff;font-weight:900}
+    .role-card h3{margin:0 0 3px;font-size:13px}
+    .role-card p{margin:0;color:#93a2b8;line-height:1.25;font-size:12px}
+    .workflow-zone{min-width:0;border:1px solid var(--soft);border-radius:9px;background:linear-gradient(180deg,#121b27,#0f1620);overflow:hidden}
+    .workflow-map{height:calc(100% - 42px);min-height:0;display:grid;grid-template-columns:repeat(5,minmax(120px,1fr));gap:14px;align-items:center;padding:18px;position:relative}
+    .workflow-map:before{content:"";position:absolute;left:86px;right:86px;top:50%;height:1px;background:linear-gradient(90deg,transparent,#40506a 8%,#40506a 92%,transparent)}
+    .step{position:relative;z-index:1;border:1px solid var(--line);border-radius:9px;padding:14px;background:#101823;box-shadow:0 10px 24px rgba(0,0,0,.18)}
+    .step strong{display:block;margin:8px 0 6px;font-size:15px}
+    .step-num{width:28px;height:24px;display:grid;place-items:center;border-radius:6px;background:#173d2d;color:#55e69d;font-weight:900;font-size:12px}
+    .step:after{content:"";position:absolute;right:-15px;top:50%;width:12px;height:1px;background:#607089}
+    .step:last-child:after{display:none}
+    .source-list,.change-list{display:grid;gap:9px}
+    .source-card,.change-card{display:grid;grid-template-columns:32px 1fr auto;gap:10px;align-items:center;border:1px solid var(--soft);border-radius:8px;background:#141d29;padding:10px}
+    .tag{height:22px;display:inline-flex;align-items:center;padding:0 8px;border-radius:99px;background:#223047;color:#aabaff;font-size:11px;font-weight:780}
+
+    .timeline{padding:28px 42px 18px;display:grid;grid-template-columns:repeat(6,1fr);align-items:start;position:relative;border:1px solid var(--soft);border-radius:10px;background:#111923}
+    .timeline:before{content:"";position:absolute;left:88px;right:88px;top:47px;height:2px;background:linear-gradient(90deg,transparent,#46556d 10%,#46556d 90%,transparent)}
+    .mile{text-align:center;color:#aebbd0;position:relative}
+    .mile:before{content:"";width:18px;height:18px;border-radius:50%;display:block;margin:9px auto 12px;background:#101823;border:2px solid #657187;box-shadow:0 0 0 5px #111923}
+    .mile.done:before{background:#45d18f;border-color:#45d18f}
+    .mile.active:before{background:#25346d;border-color:#5c7cff;box-shadow:0 0 0 5px #111923,0 0 0 8px rgba(92,124,255,.16)}
+    .mile strong{display:block;color:#eef5ff;margin-top:5px}
+
+    .drawer{margin-top:75px;height:calc(100% - 75px);background:linear-gradient(180deg,#111923,#0c1119);box-shadow:-18px 0 48px rgba(0,0,0,.34);display:flex;flex-direction:column;min-height:0}
+    .drawer-head{height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-bottom:1px solid var(--soft);background:#0d131c}
+    .drawer-head h2{margin:0;font-size:15px}
+    .drawer-type{height:24px;display:inline-flex;align-items:center;padding:0 8px;border:1px solid var(--soft);border-radius:6px;color:#9fb1cc;background:#101823;font-size:12px;font-weight:760}
+    .drawer-body{flex:1;min-height:0;overflow:hidden;padding:12px 14px;display:grid;grid-template-rows:auto repeat(7,auto) 1fr;gap:9px}
+    .detail-hero{border:1px solid var(--line);border-radius:8px;background:#141d29;padding:10px}
+    .detail-hero h3{margin:8px 0 6px;font-size:16px}
+    .detail-row{border-bottom:1px solid var(--soft);padding:8px 0}
+    .detail-row label{display:flex;align-items:center;gap:7px;color:#9badc3;font-size:12px;margin-bottom:5px;font-weight:760}
+    .detail-row p,.detail-row li{margin:0;color:#b4c1d3;line-height:1.5}
+    .detail-row ul{margin:0;padding-left:18px}
+    .drawer-foot{height:62px;display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px 14px;border-top:1px solid var(--soft)}
+    .drawer-foot button{height:38px}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="top-status">个人本地版</div>
+    <aside class="sidebar">
+      <div class="brand"><div class="logo">AG</div>Agent 工程管理系统</div>
+      <nav class="nav">
+        <div class="nav-item"><svg viewBox="0 0 24 24"><path d="m3 11 9-8 9 8v9a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg>工作台</div>
+        <div class="nav-item active"><svg viewBox="0 0 24 24"><path d="M4 5h6v6H4zM14 5h6v6h-6zM4 15h6v4H4zM14 15h6v4h-6z"/></svg>项目管理</div>
+        <div class="nav-item"><svg viewBox="0 0 24 24"><path d="M6 3v6M6 9h12M18 9v12M6 21h12"/></svg>流程编排</div>
+        <div class="nav-item"><svg viewBox="0 0 24 24"><path d="M4 6c0-2 16-2 16 0v12c0 2-16 2-16 0zM4 6v6c0 2 16 2 16 0"/></svg>记忆管理</div>
+        <div class="nav-item"><svg viewBox="0 0 24 24"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM4 12h2m12 0h2M12 4v2m0 12v2"/></svg>设置中心</div>
+      </nav>
+      <div class="mini"><div style="display:flex;gap:10px;align-items:center"><div class="avatar">AG</div><div><b>AgentDevelop</b><br><span style="color:var(--muted)">个人本地版</span></div></div></div>
+      <div class="collapse">≪</div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="crumb"><span>AgentDevelop</span><span>/</span><span>项目管理</span><span>/</span><strong>AgentDevelop 详情</strong></div>
+      </header>
+
+      <section class="page">
+        <div class="hero">
+          <div class="local-actions"><button class="icon-only" title="返回总览" aria-label="返回总览"><svg viewBox="0 0 24 24"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg></button><button><svg viewBox="0 0 24 24"><path d="M15 3h6v6M21 3l-9 9"/><path d="M10 5H6a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3v-4"/></svg>进入工作台</button><button><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>检查最新进度</button><button class="primary"><svg viewBox="0 0 24 24"><path d="M12 3v18M5 10l7-7 7 7"/><path d="M5 21h14"/></svg>保存变更</button></div>
+          <div class="title">
+            <div class="title-icon"><svg style="width:30px;height:30px" viewBox="0 0 24 24"><path d="m12 3 3 6 6 .9-4.5 4.3 1.1 6.3L12 17.5 6.4 20.5l1.1-6.3L3 9.9 9 9z"/></svg></div>
+            <div>
+              <h1>AgentDevelop</h1>
+              <p>本地 Web MVP · Phase 1 · 前端主体已成型 · 个人本地版</p>
+              <div class="chips">
+                <span class="chip ok">运行中</span>
+              </div>
+            </div>
+          </div>
+          <div class="metric-zone">
+            <div class="kpis">
+              <div class="kpi"><label>总进度</label><div class="ring"></div></div>
+              <div class="kpi"><label>待确认</label><strong>2</strong></div>
+              <div class="kpi"><label style="color:var(--danger)">高风险</label><strong style="color:var(--danger)">1</strong></div>
+            </div>
+          </div>
+        </div>
+
+        <section class="panel cockpit">
+          <div class="card"><h3>项目目标</h3><h4>完成 V1 产品闭环页面开发与验收</h4><p>项目范围</p><div class="chips"><span class="chip">前端 Web</span><span class="chip">流程编排画布</span><span class="chip">IM/Git 适配</span><span class="chip">验收与性能</span></div></div>
+          <div class="card"><h3>AI 进度 Check</h3><h4>发现 5 项变更</h4><p>进度变化 <span style="color:#9facbf">70%</span> -> <span class="sync">76%</span></p><p>主要变更：AI 助手完成、IM/Git 完成、画布推进中等</p><div class="card-actions"><button class="primary">确认同步</button><button>查看差异</button></div></div>
+          <div class="card"><h3>下一验收点</h3><h4>流程编排画布 V2 + 产品验收</h4><p>预计完成 2026-05-20</p><p>负责人：测试工程师</p><button>查看验收标准</button></div>
+        </section>
+
+        <input id="overview" type="radio" name="tab" checked><input id="plan" type="radio" name="tab"><input id="progress" type="radio" name="tab"><input id="risk" type="radio" name="tab"><input id="role" type="radio" name="tab"><input id="docs" type="radio" name="tab"><input id="change" type="radio" name="tab">
+        <nav class="tabs">
+          <label for="overview">项目概况</label><label for="plan">计划与任务</label><label for="progress">进度视图</label><label for="risk">风险与决策</label><label for="role">角色与流程</label><label for="docs">协同文件</label><label for="change">变更记录</label>
+        </nav>
+
+        <div class="tab-content">
+          <section id="p-overview" class="tab-panel single">
+            <div class="overview-grid">
+              <div class="panel">
+                <div class="panel-head"><h2>项目基本信息</h2></div>
+                <div class="body info-list">
+                  <div class="info-row"><label>项目说明</label><span>构建本地 Web MVP，完成核心流程闭环，并通过产品验收与性能验证。</span></div>
+                  <div class="info-row"><label>当前 Phase</label><span>Phase 1 · Web MVP</span></div>
+                  <div class="info-row"><label>交付物</label><span>前端应用、流程编排画布、适配器、文档</span></div>
+                  <div class="info-row"><label>验收口径</label><span>功能可用、流程可闭环、性能达标、通过验收</span></div>
+                  <div class="info-row"><label>项目路径</label><span>D:/path/to/repo</span></div>
+                  <div class="info-row"><label>默认分支</label><span>main</span></div>
+                  <div class="info-row"><label>工作区</label><span>.claude/worktrees/agentdevelop</span></div>
+                </div>
+              </div>
+              <div class="panel">
+                <div class="panel-head"><h2>计划摘要</h2><a style="color:#7c96ff">查看全部任务</a></div>
+                <div class="body">
+                  <div class="plan-row"><span>优先级</span><span>任务</span><span>状态</span><span>负责人</span><span>进度</span></div>
+                  <div class="plan-row"><span class="prio">P0</span><b>导航合并 + 角色模型解耦</b><span style="color:var(--ok)">完成</span><span>产品经理</span><div class="bar"><span style="width:100%"></span></div></div>
+                  <div class="plan-row"><span class="prio">P1</span><b>IM/Git 适配器</b><span style="color:var(--ok)">完成</span><span>前端工程师</span><div class="bar"><span style="width:100%"></span></div></div>
+                  <div class="plan-row"><span class="prio p2">P2</span><b>前端工程标准</b><span style="color:var(--ok)">完成</span><span>产品经理</span><div class="bar"><span style="width:90%"></span></div></div>
+                  <div class="plan-row"><span class="prio p3">P3</span><b>流程编排画布 V2</b><span style="color:#7c96ff">推进中</span><span>前端工程师</span><div class="bar blue"><span style="width:75%"></span></div></div>
+                  <div class="plan-row"><span class="prio p4">P4</span><b>项目管理 V3 + 工作区</b><span style="color:var(--warn)">推进中</span><span>产品经理</span><div class="bar blue"><span style="width:70%"></span></div></div>
+                  <div class="plan-row"><span class="prio p5">P5</span><b>MD 指令体系</b><span style="color:var(--warn)">推进中</span><span>产品经理</span><div class="bar warn"><span style="width:60%"></span></div></div>
+                </div>
+              </div>
+              <div class="panel">
+                <div class="panel-head"><h2>协同来源</h2></div>
+                <div class="body sources">
+                  <div class="source"><span class="file-icon"></span><span>HANDOFF_NEXT_TASKS.md<small>更新于 10 分钟前 · 最后同步 09:20</small></span></div>
+                  <div class="source"><span class="file-icon"></span><span>CODE_REVIEW_AND_FIX_REQUESTS.md<small>更新于 30 分钟前</small></span></div>
+                  <div class="source"><span class="file-icon"></span><span>工作台 TODO<small>更新于 15 分钟前</small></span></div>
+                  <div class="source"><span class="file-icon"></span><span>测试记录<small>更新于 1 小时前</small></span></div>
+                  <div class="source"><span class="file-icon"></span><span>协同连接状态<small>协同文件已连接 · 4 个来源可用</small></span></div>
+                  <a style="color:#7c96ff;text-align:right">查看全部协同文件</a>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section id="p-plan" class="tab-panel single">
+            <div class="panel"><div class="panel-head"><h2>计划与任务</h2><button>调整优先级</button></div><div class="body">
+              <div class="task-head"><span>优先级</span><span>任务</span><span>阶段</span><span>负责人</span><span>进度</span><span>状态</span></div>
+              <div class="task-row"><span class="prio">P0</span><b>导航合并 + 角色模型解耦</b><span>Phase 1</span><span>产品经理</span><div class="bar"><span style="width:100%"></span></div><span>完成</span></div>
+              <div class="task-row"><span class="prio p3">P3</span><b>流程编排画布 V2</b><span>Phase 1</span><span>前端工程师</span><div class="bar blue"><span style="width:75%"></span></div><span>推进中</span></div>
+              <div class="task-row"><span class="prio p4">P7</span><b>产品验收与性能收尾</b><span>Phase 1</span><span>测试工程师</span><div class="bar warn"><span style="width:0%"></span></div><span>待处理</span></div>
+            </div></div>
+          </section>
+
+          <section id="p-progress" class="tab-panel single">
+            <div class="panel"><div class="panel-head"><h2>进度视图 · 甘特图</h2><div><button>今天</button> <button>周视图</button></div></div>
+              <div class="gantt"><div class="today"></div>
+                <div class="g-head"><span>任务</span><span>负责人</span><span>05/15</span><span>05/16</span><span>05/17</span><span>05/18</span><span>05/19</span><span>05/20</span><span>05/21</span></div>
+                <div class="g-row"><b>P0 导航合并 + 角色模型解耦</b><span>产品经理</span><div class="track"><span class="gbar" style="left:4%;width:185%"></span></div><div class="track"></div><div class="track"></div><div class="track"></div><div class="track"></div><div class="track"></div><div class="track"></div></div>
+                <div class="g-row"><b>P3 流程编排画布 V2</b><span>前端工程师</span><div class="track"></div><div class="track"><span class="gbar blue" style="left:8%;width:360%"></span></div><div class="track"></div><div class="track"></div><div class="track"></div><div class="track"></div><div class="track"></div></div>
+                <div class="g-row"><b>P6 AI 工程助手</b><span>AI 工程师</span><div class="track"><span class="gbar purple" style="left:4%;width:185%"></span></div><div class="track"></div><div class="track"></div><div class="track"></div><div class="track"></div><div class="track"></div><div class="track"></div></div>
+                <div class="g-row"><b>P7 产品验收与性能收尾</b><span>测试工程师</span><div class="track"></div><div class="track"></div><div class="track"></div><div class="track"></div><div class="track"><span class="gbar orange" style="left:65%;width:180%"></span></div><div class="track"></div><div class="track"></div></div>
+              </div>
+            </div>
+          </section>
+
+          <section id="p-risk" class="tab-panel">
+            <div class="panel"><div class="panel-head"><h2>风险与决策 · SWOT 分析</h2></div><div class="swot">
+              <div class="swot-card s"><h3>S 优势</h3><ul><li>工作台与流程管理方向已冻结</li><li>协同文件沉淀完整</li><li>前端原型可快速验收</li></ul></div>
+              <div class="swot-card w"><h3>W 劣势</h3><ul><li>多个页面曾按 80% 缩放设计</li><li>真实后端/API 仍未接入</li><li>部分文档存在历史编码问题</li></ul></div>
+              <div class="swot-card o"><h3>O 机会</h3><ul><li>可沉淀为 AI + CLI 工程管理标准</li><li>项目记忆可复用到多项目管理</li><li>流程模板可形成产品核心资产</li></ul></div>
+              <div class="swot-card t"><h3>T 威胁</h3><ul><li>计划频繁变化导致返工</li><li>多工具协同容易读错旧文档</li><li>验收标准不清会拖慢收尾</li></ul></div>
+            </div></div>
+            <aside class="panel"><div class="panel-head"><h2>风险矩阵</h2></div><div class="body"><div class="risk-matrix"><span></span><span>高影响</span><span>低影响</span><span>高概率</span><div class="risk-cell hi">1</div><div class="risk-cell mid">0</div><span>低概率</span><div class="risk-cell mid">1</div><div class="risk-cell lo">2</div></div><div class="card" style="margin-top:12px"><h3>待决策 Gate</h3><p>代码审查 Gate 等待确认，需要产品经理确认后继续。</p><button class="primary">进入决策</button></div></div></aside>
+          </section>
+
+          <section id="p-role" class="tab-panel single">
+            <div class="panel"><div class="panel-head"><h2>角色与流程</h2><button>编辑角色池</button></div><div class="body">
+              <div class="role-flow-layout">
+                <aside class="role-pool">
+                  <div class="role-pool-head"><h3>项目角色池</h3><span class="tag">5 个角色</span></div>
+                  <div class="role-grid">
+                    <div class="role-card"><div class="role-badge">产</div><div><h3>产品经理</h3><p>需求、验收、Gate 决策</p></div><span class="tag">DeepSeek</span></div>
+                    <div class="role-card"><div class="role-badge">UI</div><div><h3>UI/UX 设计师</h3><p>原型、规范、审查</p></div><span class="tag">Claude</span></div>
+                    <div class="role-card"><div class="role-badge">前</div><div><h3>前端工程师</h3><p>页面实现、组件工程化</p></div><span class="tag">Codex</span></div>
+                    <div class="role-card"><div class="role-badge">审</div><div><h3>代码审查员</h3><p>质量、风险、测试建议</p></div><span class="tag">Claude</span></div>
+                    <div class="role-card"><div class="role-badge">测</div><div><h3>测试工程师</h3><p>验收、性能、回归测试</p></div><span class="tag">Gemini</span></div>
+                  </div>
+                </aside>
+                <div class="workflow-zone">
+                  <div class="workflow-zone-head"><h3>流程绑定关系</h3><span class="muted">工作流步骤引用左侧角色</span></div>
+                  <div class="workflow-map">
+                    <div class="step"><span class="step-num">01</span><strong>需求分析</strong><span class="muted">产品经理</span></div>
+                    <div class="step"><span class="step-num">02</span><strong>UI/UX 设计</strong><span class="muted">UI/UX 设计师</span></div>
+                    <div class="step"><span class="step-num">03</span><strong>前端开发</strong><span class="muted">前端工程师</span></div>
+                    <div class="step"><span class="step-num">04</span><strong>代码审查</strong><span class="muted">代码审查员</span></div>
+                    <div class="step"><span class="step-num">05</span><strong>测试验证</strong><span class="muted">测试工程师</span></div>
+                  </div>
+                </div>
+              </div>
+            </div></div>
+          </section>
+
+          <section id="p-docs" class="tab-panel">
+            <div class="panel"><div class="panel-head"><h2>协同文件</h2><button>同步协同文件</button></div><div class="body source-list">
+              <div class="source-card"><span class="file-icon"></span><div><b>HANDOFF_NEXT_TASKS.md</b><p>主协同入口，记录最新设计与执行要求。</p></div><span class="tag">10 分钟前</span></div>
+              <div class="source-card"><span class="file-icon"></span><div><b>CODE_REVIEW_AND_FIX_REQUESTS.md</b><p>代码审查与整改要求。</p></div><span class="tag">30 分钟前</span></div>
+              <div class="source-card"><span class="file-icon"></span><div><b>FRONTEND_IMPLEMENTATION_PLAN.md</b><p>前端实现计划、组件拆分和验收规则。</p></div><span class="tag">今天</span></div>
+            </div></div>
+            <aside class="panel"><div class="panel-head"><h2>AI 解析摘要</h2></div><div class="body"><p>协同文件显示：当前重点从单页原型转向完整分页内容落地，项目详情需要补齐甘特、SWOT、角色流程、协同文件和变更记录。</p></div></aside>
+          </section>
+
+          <section id="p-change" class="tab-panel single">
+            <div class="panel"><div class="panel-head"><h2>变更记录</h2><button>导出变更</button></div><div class="body change-list">
+              <div class="change-card">✓<div><b>合并 7 个项目详情分页</b><p>将项目概况、计划、甘特、SWOT、角色流程、协同文件、变更记录全部合并到主定稿。</p></div><span class="tag">2026-05-20</span></div>
+              <div class="change-card">✓<div><b>项目概况布局调整</b><p>沿用 trace-drawer 版项目概况，放大计划摘要，缩小协同来源。</p></div><span class="tag">2026-05-20</span></div>
+            </div></div>
+          </section>
+        </div>
+
+        <section class="timeline">
+          <div class="mile done"><span>05/15 周四</span><strong>项目启动</strong><span>05/15</span></div>
+          <div class="mile done"><span>05/16 周五</span><strong>环境搭建完成</strong><span>05/16</span></div>
+          <div class="mile active"><span>05/17 周六 今天</span><strong>流程编排画布 V2</strong><span>开发中</span></div>
+          <div class="mile"><span>05/18 周日</span><strong>测试验证完成</strong><span>05/18</span></div>
+          <div class="mile"><span>05/19 周一</span><strong>产品验收</strong><span>05/19</span></div>
+          <div class="mile"><span>05/20 周二</span><strong>性能收尾</strong><span>05/20</span></div>
+        </section>
+      </section>
+    </main>
+
+    <aside class="drawer">
+      <div class="drawer-head"><h2>详情面板</h2><span class="drawer-type">当前任务</span></div>
+      <div class="drawer-body">
+        <div class="detail-hero"><span class="chip primary">推进中</span> <span class="chip">P3</span> <span class="chip">中优先级</span><h3>流程编排画布 V2</h3><p class="muted">预计完成 2026-05-20</p></div>
+        <div class="detail-row"><label>任务目标</label><p>完成流程编排画布 V2 版本，支持节点、连线、配置面板与校验逻辑，并与后端 API 对接，保障稳定性与易用性。</p></div>
+        <div class="detail-row"><label>所属阶段</label><p><span class="chip">Phase 1 · Web MVP</span></p></div>
+        <div class="detail-row"><label>负责人角色</label><p>前端工程师</p></div>
+        <div class="detail-row"><label>关联工作流步骤</label><p>需求分析 > UI/UX 设计 > 前端开发 > 代码审查</p></div>
+        <div class="detail-row"><label>验收标准</label><ul><li>画布支持节点新增、编辑、连线与删除</li><li>节点配置面板完整，校验通过</li><li>与后端流程 API 对接，数据可保存与加载</li><li>通过测试用例，缺陷率 ≤ 3%</li></ul></div>
+        <div class="detail-row"><label>AI 最新判断</label><p>整体进展良好，核心功能已完成约 75%，预计 05/20 可达成验收。建议：优先完成校验规则与性能优化。</p></div>
+        <div class="detail-row"><label>工作台反馈</label><ul><li>05/16：连线交互体验需要优化</li><li>05/16：节点复制存在 ID 冲突问题</li><li>05/17：配置面板字段校验通过</li></ul></div>
+        <div class="detail-row"><label>相关协同文件片段</label><p>CODE_REVIEW_AND_FIX_REQUESTS.md (L23-L45)<br>&gt; 画布连线的性能存在瓶颈，建议使用节流处理缩放事件...</p></div>
+        <div class="detail-row"><label>历史变更</label><p>2026-05-16 14:22：进度更新 60% -> 75%<br>2026-05-15 11:05：状态变更 计划中 -> 推进中</p></div>
+      </div>
+      <div class="drawer-foot"><button>调整优先级</button><button style="border-color:#75521b;color:#f0b34d;background:rgba(87,60,22,.25)">标记需确认</button></div>
+    </aside>
+  </div>
+</body>
+</html>

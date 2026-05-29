@@ -1,0 +1,27 @@
+node_modules/
+dist/
+.npm-cache/
+.playwright/
+.playwright-cli/
+.playwright-screenshots/
+.superpowers/
+.agents/
+.claude/skills/
+.claude/worktrees/
+.worktrees/
+skills-lock.json
+screenshots/
+*.log
+*.err.log
+*.out.log
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
+
+# Local visual QA artifacts generated at the repository root.
+/*.png
+/*.jpg
+/*.jpeg
+/*.webp
+/*.yaml
+/*.yml

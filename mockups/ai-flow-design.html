@@ -1,0 +1,524 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 流程设计 — Agent Management</title>
+<style>
+:root {
+  color-scheme: dark;
+  --bg: #0b0e12; --surface: #12161c; --surface-2: #181d25; --surface-3: #1f2530;
+  --line: #2a3240; --line-soft: #202633; --text: #edf2f9; --muted: #8b98ad; --faint: #5c6a80;
+  --primary: #5b8cff; --primary-bg: rgba(91,140,255,0.06); --primary-border: rgba(91,140,255,0.18);
+  --green: #3cd68c; --green-bg: rgba(60,214,140,0.06); --green-border: rgba(60,214,140,0.15);
+  --amber: #f0b35a; --amber-bg: rgba(240,179,90,0.06); --amber-border: rgba(240,179,90,0.15);
+  --violet: #b697ff; --violet-bg: rgba(182,151,255,0.06); --violet-border: rgba(182,151,255,0.2);
+  --red: #ff6b7a;
+  --radius: 10px; --radius-sm: 7px;
+  --font: Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:var(--font); background:var(--bg); color:var(--text); font-size:13px; line-height:1.55; min-height:100vh; }
+
+/* ===== 复用现有 WorkflowBuilder 框架 ===== */
+.wf-page { display:flex; flex-direction:column; height:100vh; overflow:hidden; }
+
+/* Topbar */
+.wf-topbar {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:0 16px; height:48px; flex-shrink:0;
+  background:var(--surface); border-bottom:1px solid var(--line-soft);
+}
+.wf-topbar-l { display:flex; align-items:center; gap:8px; font-size:12px; }
+.wf-topbar-sep { color:var(--faint); }
+.wf-project-btn {
+  display:flex; align-items:center; gap:4px; padding:4px 10px; border-radius:6px;
+  border:1px solid var(--line-soft); background:var(--surface-2); color:var(--text);
+  font-size:12px; cursor:pointer; font-family:var(--font); position:relative;
+}
+.wf-project-btn:hover { border-color:var(--line); }
+
+/* Dropdown */
+.wf-dropdown { position:relative; }
+.wf-dropdown-menu {
+  display:none; position:absolute; top:100%; left:0; margin-top:4px;
+  background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+  box-shadow:0 8px 32px rgba(0,0,0,0.4); z-index:50; min-width:180px; overflow:hidden;
+}
+.wf-dropdown-menu.show { display:block; }
+.wf-dropdown-item {
+  display:block; width:100%; padding:9px 14px; border:none; background:none;
+  color:var(--text); font-family:var(--font); font-size:12px; cursor:pointer;
+  text-align:left; transition:background .1s;
+}
+.wf-dropdown-item:hover { background:var(--surface-2); }
+.wf-dropdown-item.active { color:var(--primary); background:var(--primary-bg); }
+.wf-dropdown-item .sub { font-size:10px; color:var(--faint); display:block; margin-top:1px; }
+
+.wf-breadcrumb { color:var(--muted); display:flex; align-items:center; gap:4px; }
+.wf-breadcrumb .active { color:var(--violet); font-weight:600; }
+.wf-version-badge { display:flex; align-items:center; gap:4px; font-size:11px; color:var(--amber); margin-left:8px; }
+.wf-version-dot { width:6px; height:6px; border-radius:50%; background:var(--amber); }
+.wf-topbar-r { display:flex; gap:6px; }
+
+.wf-btn {
+  display:flex; align-items:center; gap:4px; padding:5px 10px; border-radius:6px;
+  border:1px solid var(--line-soft); background:var(--surface-2); color:var(--muted);
+  font-size:11px; cursor:pointer; font-family:var(--font); font-weight:500;
+  transition:all .12s;
+}
+.wf-btn:hover { border-color:var(--primary); color:var(--text); }
+.wf-btn.primary { background:var(--primary); color:#fff; border-color:var(--primary); }
+
+/* Title Area */
+.wf-title-area {
+  padding:14px 20px; border-bottom:1px solid var(--line-soft);
+  background:var(--surface); flex-shrink:0;
+}
+.wf-title { font-size:15px; font-weight:700; }
+.wf-title .ai-badge {
+  display:inline-flex; align-items:center; gap:3px;
+  padding:2px 8px; border-radius:4px; background:rgba(182,151,255,0.1);
+  color:var(--violet); font-size:10px; font-weight:600; margin-left:8px;
+  vertical-align:middle;
+}
+.wf-subtitle { font-size:11px; color:var(--faint); margin-top:2px; }
+
+/* Three Column Workspace */
+.wf-workspace {
+  flex:1; display:grid; grid-template-columns:240px 1fr 280px;
+  overflow:hidden;
+}
+
+/* Left Panel */
+.wf-left {
+  border-right:1px solid var(--line-soft); overflow-y:auto; padding:12px;
+  display:flex; flex-direction:column; gap:12px; background:var(--surface);
+}
+.wf-panel-header { margin-bottom:8px; }
+.wf-panel-header h3 { font-size:12px; font-weight:700; }
+.wf-panel-header p { font-size:10px; color:var(--faint); }
+
+/* ---- AI 设计特有的左边栏 ---- */
+.ai-source-section { margin-bottom:4px; }
+.ai-source-section h3 { font-size:11px; font-weight:700; color:var(--violet); margin-bottom:6px; }
+.ai-source-grid { display:grid; grid-template-columns:1fr 1fr; gap:4px; }
+.ai-source-item {
+  padding:8px; border:1px solid var(--line-soft); border-radius:6px;
+  background:var(--surface-2); cursor:pointer; transition:all .12s;
+  display:flex; flex-direction:column; gap:3px; text-align:center;
+}
+.ai-source-item:hover { border-color:var(--line); }
+.ai-source-item.selected { border-color:var(--violet-border); background:var(--violet-bg); }
+.ai-source-item .icon { font-size:16px; }
+.ai-source-item .label { font-size:10px; font-weight:700; }
+.ai-source-item .desc { font-size:9px; color:var(--faint); }
+
+.ai-context-section { margin-top:4px; }
+.ai-context-section h3 { font-size:11px; font-weight:700; color:var(--violet); margin-bottom:6px; }
+.ai-context-section textarea {
+  width:100%; min-height:80px; padding:8px 10px; border:1px solid var(--line);
+  border-radius:6px; background:#0d1117; color:var(--text);
+  font-family:var(--font); font-size:11px; resize:vertical;
+}
+.ai-context-section textarea:focus { border-color:var(--violet); outline:none; }
+.ai-generate-btn {
+  display:flex; align-items:center; justify-content:center; gap:6px;
+  width:100%; padding:8px; margin-top:8px; border-radius:6px;
+  border:1px solid var(--violet-border); background:var(--violet-bg);
+  color:var(--violet); cursor:pointer; font-family:var(--font); font-size:12px; font-weight:600;
+  transition:all .12s;
+}
+.ai-generate-btn:hover { border-color:var(--violet); background:rgba(182,151,255,0.1); }
+
+/* Center Canvas */
+.wf-center {
+  overflow-y:auto; padding:16px 20px; background:var(--bg);
+  display:flex; flex-direction:column;
+}
+.canvas-toolbar {
+  display:flex; justify-content:space-between; width:100%;
+  margin-bottom:16px; font-size:12px; color:var(--muted);
+}
+/* ---- AI 特有的画布：草案预览 + diff ---- */
+.ai-draft-section { flex:1; display:flex; flex-direction:column; gap:12px; }
+
+/* AI Loading */
+.ai-loading {
+  display:flex; align-items:center; gap:12px; padding:16px;
+  border:1px solid var(--violet-border); border-radius:var(--radius);
+  background:var(--violet-bg); margin-bottom:12px;
+}
+.loader { width:14px; height:14px; border:2px solid var(--line-soft); border-top-color:var(--violet); border-radius:50%; animation:spin .8s linear infinite; flex-shrink:0; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.loader-text { font-size:12px; color:var(--violet); font-weight:600; }
+.loader-sub { font-size:10px; color:var(--muted); margin-top:2px; }
+
+/* AI Draft */
+.ai-draft-card {
+  border:1px solid var(--green-border); border-radius:var(--radius); overflow:hidden;
+  background:var(--surface);
+}
+.ai-draft-card-head {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:10px 14px; border-bottom:1px solid var(--green-border);
+  background:var(--green-bg);
+  font-size:12px; font-weight:700; color:var(--green);
+}
+.ai-draft-card-head span { display:flex; align-items:center; gap:6px; }
+.ai-draft-meta { font-size:10px; color:var(--faint); font-weight:400; }
+.ai-draft-card-body { padding:10px 14px; display:flex; flex-direction:column; gap:6px; max-height:360px; overflow-y:auto; }
+
+.draft-step {
+  display:flex; align-items:center; gap:10px; padding:10px 12px;
+  border:1px solid var(--line-soft); border-radius:6px;
+  background:var(--surface-2);
+}
+.draft-step-num {
+  width:24px; height:24px; border-radius:4px; background:rgba(182,151,255,0.1);
+  display:grid; place-items:center; font-family:var(--mono);
+  font-size:10px; font-weight:800; color:var(--violet); flex-shrink:0;
+}
+.draft-step-body { flex:1; min-width:0; }
+.draft-step-name { font-weight:700; font-size:12px; }
+.draft-step-meta { font-size:10px; color:var(--faint); margin-top:2px; }
+.draft-step-meta span { margin-right:8px; }
+.draft-step-reason { font-size:10px; color:var(--violet); margin-top:2px; font-style:italic; }
+.draft-step-actions { display:flex; gap:3px; flex-shrink:0; }
+.draft-step-actions button {
+  width:24px; height:24px; border-radius:4px; border:1px solid var(--line-soft);
+  background:var(--surface-2); color:var(--muted); cursor:pointer;
+  display:grid; place-items:center; font-size:10px; transition:all .12s;
+}
+.draft-step-actions button:hover { border-color:var(--green); color:var(--green); }
+
+/* Diff Panel */
+.ai-diff {
+  margin-top:12px; border:1px solid var(--amber-border);
+  border-radius:var(--radius); overflow:hidden;
+  background:var(--amber-bg);
+}
+.ai-diff-head {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:8px 14px; border-bottom:1px solid var(--amber-border);
+  font-size:11px; font-weight:700; color:var(--amber);
+}
+.diff-row {
+  display:grid; grid-template-columns:1fr 20px 1fr;
+  padding:7px 14px; border-bottom:1px solid rgba(240,179,90,0.06);
+  font-size:10px; gap:6px; align-items:center;
+}
+.diff-row:last-child { border-bottom:none; }
+.diff-old { color:var(--red); text-decoration:line-through; }
+.diff-new { color:var(--green); }
+.diff-arrow { color:var(--amber); text-align:center; }
+
+.ai-canvas-footer {
+  margin-top:12px; padding:10px 14px;
+  border:1px solid var(--line-soft); border-radius:var(--radius);
+  background:var(--surface); display:flex; align-items:center; justify-content:space-between;
+}
+.ai-canvas-footer .info { font-size:10px; color:var(--faint); }
+.ai-canvas-footer .actions { display:flex; gap:8px; }
+
+/* Right Panel: AI Step Inspector */
+.wf-right {
+  border-left:1px solid var(--line-soft); overflow-y:auto; padding:12px;
+  background:var(--surface);
+}
+.wf-inspector { }
+.wf-inspector h2 { font-size:12px; font-weight:700; margin-bottom:4px; }
+.wf-inspector .step-badge { font-size:11px; color:var(--violet); font-weight:600; }
+.inspector-section { margin-bottom:14px; }
+.inspector-section h3 { font-size:11px; font-weight:700; color:var(--muted); margin-bottom:8px; }
+.inspector-field { margin-bottom:8px; }
+.inspector-field label { display:block; font-size:10px; color:var(--faint); margin-bottom:3px; }
+.inspector-field input, .inspector-field select {
+  width:100%; padding:6px 8px; border:1px solid var(--line); border-radius:5px;
+  background:#0d1117; color:var(--text); font-size:12px; font-family:var(--font);
+}
+.inspector-field input:focus, .inspector-field select:focus { border-color:var(--violet); outline:none; }
+.inspector-ai-note {
+  margin-top:8px; padding:8px 10px; border-radius:6px;
+  border:1px solid var(--violet-border); background:var(--violet-bg);
+  font-size:10px; color:var(--violet);
+}
+
+/* Toast */
+.toast {
+  position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+  padding:10px 24px; border-radius:8px; background:var(--surface);
+  border:1px solid var(--green); color:var(--green);
+  font-weight:600; font-size:12px; box-shadow:0 8px 32px rgba(0,0,0,0.4);
+  opacity:0; pointer-events:none; z-index:200;
+  transition:opacity .2s;
+}
+.toast.show { opacity:1; }
+</style>
+</head>
+<body>
+
+<div class="wf-page">
+
+  <!-- ===== Topbar ===== -->
+  <header class="wf-topbar">
+    <div class="wf-topbar-l">
+      <div class="wf-dropdown">
+        <button class="wf-project-btn" onclick="document.getElementById('projectDropdown').classList.toggle('show')">
+          <svg width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2"/></svg>
+          Agent Develop
+          <svg width="10" height="10" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="wf-dropdown-menu" id="projectDropdown">
+          <button class="wf-dropdown-item active" onclick="switchToRegular()">Agent Develop</button>
+          <button class="wf-dropdown-item" onclick="switchToRegular()">AI 方案立项</button>
+        </div>
+      </div>
+      <span class="wf-topbar-sep">|</span>
+      <span class="wf-breadcrumb">流程管理 <span class="active">/ AI 流程设计</span></span>
+      <span class="wf-version-badge"><span class="wf-version-dot"></span> AI 生成草案</span>
+    </div>
+    <div class="wf-topbar-r">
+      <button class="wf-btn">校验流程</button>
+      <button class="wf-btn primary">保存流程</button>
+      <button class="wf-btn">应用到项目</button>
+      <button class="wf-btn">⋮</button>
+    </div>
+  </header>
+
+  <!-- ===== Title Area ===== -->
+  <div class="wf-title-area">
+    <div class="wf-title">AI 流程设计 <span class="ai-badge"><svg width="10" height="10" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> AI 生成</span></div>
+    <div class="wf-subtitle">输入项目描述和需求，AI 自动生成流程草案，可逐步审核和微调</div>
+  </div>
+
+  <!-- ===== 三栏工作区 ===== -->
+  <div class="wf-workspace">
+
+    <!-- ===== LEFT: AI 输入区 ===== -->
+    <div class="wf-left">
+      <div class="ai-source-section">
+        <h3>分析来源</h3>
+        <div class="ai-source-grid">
+          <div class="ai-source-item selected" onclick="selectSource(this)">
+            <span class="icon">📋</span>
+            <span class="label">项目计划</span>
+            <span class="desc">从项目描述提取</span>
+          </div>
+          <div class="ai-source-item" onclick="selectSource(this)">
+            <span class="icon">📁</span>
+            <span class="label">协同文档</span>
+            <span class="desc">设计规格+计划</span>
+          </div>
+          <div class="ai-source-item" onclick="selectSource(this)">
+            <span class="icon">🔄</span>
+            <span class="label">已有流程</span>
+            <span class="desc">基于现有模板优化</span>
+          </div>
+          <div class="ai-source-item" onclick="selectSource(this)">
+            <span class="icon">✏️</span>
+            <span class="label">自由描述</span>
+            <span class="desc">直接描述期望流程</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="ai-context-section">
+        <h3>项目上下文</h3>
+        <textarea placeholder="描述你的项目类型、技术栈、团队规模和期望的流程结构。&#10;&#10;例：React+TypeScript 前端项目，5人团队，需要标准的开发流程，高风险步骤需要人工确认。"></textarea>
+      </div>
+
+      <button class="ai-generate-btn" onclick="showAiDraft()">
+        <svg width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        生成流程草案
+      </button>
+
+      <!-- 已有的流程模板 -->
+      <div style="margin-top:12px;">
+        <div class="wf-panel-header"><h3>现有模板</h3><p>可选择基于已有模板优化</p></div>
+        <div class="ai-source-item" style="text-align:left;margin-bottom:4px;" onclick="this.classList.toggle('selected')">
+          <span class="label">软件开发完整流程</span>
+          <span class="desc">5 步骤 · v1.3</span>
+        </div>
+        <div class="ai-source-item" style="text-align:left;margin-bottom:4px;" onclick="this.classList.toggle('selected')">
+          <span class="label">设计评审流程</span>
+          <span class="desc">4 步骤 · 草稿</span>
+        </div>
+        <div class="ai-source-item" style="text-align:left;" onclick="this.classList.toggle('selected')">
+          <span class="label">Bug 修复流程</span>
+          <span class="desc">4 步骤 · 草稿</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== CENTER: AI 草案预览 + Diff ===== -->
+    <div class="wf-center">
+      <div class="canvas-toolbar">
+        <span>AI 流程草案 — 逐步审核和微调</span>
+      </div>
+
+      <div class="ai-draft-section" id="draftArea">
+        <!-- 初始空状态 -->
+        <div id="draftEmpty" style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:12px;color:var(--faint);">
+          <svg width="40" height="40" viewBox="0 0 24 24" stroke="var(--faint)" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          <div style="font-size:13px;color:var(--muted);">点击左侧"生成流程草案"开始</div>
+          <div style="font-size:11px;">AI 将根据项目上下文自动生成流程步骤</div>
+        </div>
+
+        <!-- Loading -->
+        <div id="draftLoading" class="ai-loading" style="display:none;">
+          <div class="loader"></div>
+          <div>
+            <div class="loader-text">AI 正在分析项目上下文...</div>
+            <div class="loader-sub">根据项目描述和协同文档推理流程结构</div>
+          </div>
+        </div>
+
+        <!-- Draft Result -->
+        <div id="draftResult" style="display:none;display:flex;flex-direction:column;gap:12px;">
+          <div class="ai-draft-card">
+            <div class="ai-draft-card-head">
+              <span><svg width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>AI 建议流程草案</span>
+              <span class="ai-draft-meta">5 步骤 · 2 个人工决策 · 基于项目计划</span>
+            </div>
+            <div class="ai-draft-card-body">
+              <div class="draft-step" onclick="selectStep(this,'01')">
+                <div class="draft-step-num">01</div>
+                <div class="draft-step-body">
+                  <div class="draft-step-name">需求分析</div>
+                  <div class="draft-step-meta"><span>角色：产品经理</span><span>模型：DeepSeek v4-pro</span><span>Runner：Claude Code</span></div>
+                  <div class="draft-step-reason">AI 推理：从项目描述中提取"MVP"关键词，建议设置人工决策 Gate</div>
+                </div>
+                <div class="draft-step-actions"><button title="保留">✓</button><button title="编辑">✎</button></div>
+              </div>
+              <div class="draft-step" onclick="selectStep(this,'02')">
+                <div class="draft-step-num">02</div>
+                <div class="draft-step-body">
+                  <div class="draft-step-name">UI/UX 设计</div>
+                  <div class="draft-step-meta"><span>角色：设计师</span><span>模型：DeepSeek v4-pro</span><span>Runner：Codex CLI</span></div>
+                  <div class="draft-step-reason">AI 推理：检测到项目引用了 ui-ux-pro-max 设计规范</div>
+                </div>
+                <div class="draft-step-actions"><button title="保留">✓</button><button title="编辑">✎</button></div>
+              </div>
+              <div class="draft-step" onclick="selectStep(this,'03')">
+                <div class="draft-step-num">03</div>
+                <div class="draft-step-body">
+                  <div class="draft-step-name">前端开发</div>
+                  <div class="draft-step-meta"><span>角色：前端工程师</span><span>模型：OpenAI GPT-5.3</span><span>Runner：Claude Code</span></div>
+                  <div class="draft-step-reason">AI 推理：React+TypeScript 技术栈，建议自动继续无需 Gate</div>
+                </div>
+                <div class="draft-step-actions"><button title="保留">✓</button><button title="编辑">✎</button></div>
+              </div>
+              <div class="draft-step" onclick="selectStep(this,'04')">
+                <div class="draft-step-num">04</div>
+                <div class="draft-step-body">
+                  <div class="draft-step-name">代码审查</div>
+                  <div class="draft-step-meta"><span>角色：审查员</span><span>模型：DeepSeek v4-pro</span><span>Runner：Codex CLI</span></div>
+                  <div class="draft-step-reason">AI 推理：5人团队建议人工决策 Gate 确保代码质量</div>
+                </div>
+                <div class="draft-step-actions"><button title="保留">✓</button><button title="编辑">✎</button></div>
+              </div>
+              <div class="draft-step" onclick="selectStep(this,'05')">
+                <div class="draft-step-num">05</div>
+                <div class="draft-step-body">
+                  <div class="draft-step-name">测试验证</div>
+                  <div class="draft-step-meta"><span>角色：测试工程师</span><span>模型：OpenAI GPT-5.3</span><span>Runner：Claude Code</span></div>
+                  <div class="draft-step-reason">AI 推理：标准流程收尾步骤，自动继续</div>
+                </div>
+                <div class="draft-step-actions"><button title="保留">✓</button><button title="编辑">✎</button></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Diff -->
+          <div class="ai-diff">
+            <div class="ai-diff-head">
+              与模板 "软件开发完整流程 v1.3" 的差异
+              <span style="font-weight:400;font-size:10px;color:var(--muted);">2 处 AI 建议变更</span>
+            </div>
+            <div class="diff-row">
+              <span class="diff-old">步骤 3 Runner：默认</span>
+              <span class="diff-arrow">→</span>
+              <span class="diff-new">步骤 3 Runner：Claude Code（AI 推荐）</span>
+            </div>
+            <div class="diff-row">
+              <span class="diff-old">步骤 1 模型：通用默认</span>
+              <span class="diff-arrow">→</span>
+              <span class="diff-new">步骤 1 模型：DeepSeek v4-pro（匹配技术栈）</span>
+            </div>
+          </div>
+
+          <!-- Footer Actions -->
+          <div class="ai-canvas-footer">
+            <span class="info">2 个步骤被修改 · AI 推理依据：项目计划 + 协同文档</span>
+            <div class="actions">
+              <button class="wf-btn" onclick="resetDraft()">放弃草案</button>
+              <button class="wf-btn primary" onclick="showToast()">
+                <svg width="12" height="12" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                应用此草案到模板
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== RIGHT: 步骤详情配置 ===== -->
+    <div class="wf-right">
+      <div class="wf-inspector">
+        <h2>步骤详情</h2>
+        <div class="step-badge">01 需求分析</div>
+      </div>
+      <div class="inspector-section" style="margin-top:14px;">
+        <div class="inspector-field"><label>步骤名称</label><input type="text" value="需求分析"></div>
+        <div class="inspector-field"><label>绑定角色</label><select><option>产品经理</option><option>设计师</option><option>前端工程师</option><option>审查员</option><option>测试工程师</option></select></div>
+        <div class="inspector-field"><label>模型</label><select><option>DeepSeek v4-pro</option><option>OpenAI GPT-5.3</option></select></div>
+        <div class="inspector-field"><label>Runner</label><select><option>Claude Code</option><option>Codex CLI</option></select></div>
+        <div class="inspector-field"><label>Gate 模式</label><select><option>人工决策</option><option>自动继续</option></select></div>
+      </div>
+      <div class="inspector-ai-note">
+        <strong>AI 建议：</strong> 基于"MVP"关键词，此步骤设置人工决策 Gate 以确认项目范围
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast">AI 流程草案已应用到 "软件开发完整流程 v1.3"</div>
+
+<script>
+function switchToRegular(){
+  document.querySelector('.wf-breadcrumb .active').textContent = '常规流程设计';
+  document.querySelector('.wf-title').innerHTML = '常规流程设计';
+  document.querySelector('.wf-subtitle').textContent = '手动维护成熟流程模板，绑定角色、执行器、模型和能力授权';
+}
+function selectSource(el){
+  el.parentElement.querySelectorAll('.ai-source-item').forEach(function(c){ c.classList.remove('selected'); });
+  el.classList.add('selected');
+}
+function selectStep(el, num){
+  document.querySelectorAll('.draft-step').forEach(function(s){ s.style.borderColor=''; s.style.background=''; });
+  el.style.borderColor = 'rgba(182,151,255,0.3)';
+  el.style.background = 'rgba(182,151,255,0.03)';
+  document.querySelector('.step-badge').textContent = num + ' ' + el.querySelector('.draft-step-name').textContent;
+}
+function showAiDraft(){
+  document.getElementById('draftEmpty').style.display = 'none';
+  document.getElementById('draftLoading').style.display = 'flex';
+  setTimeout(function(){
+    document.getElementById('draftLoading').style.display = 'none';
+    document.getElementById('draftResult').style.display = 'flex';
+  }, 1800);
+}
+function resetDraft(){
+  document.getElementById('draftResult').style.display = 'none';
+  document.getElementById('draftEmpty').style.display = 'flex';
+}
+function showToast(){
+  var t=document.getElementById('toast'); t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); }, 2500);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>项目管理完整版 — Agent 工程管理系统</title>
+<style>
+:root {
+  --bg: #101215; --surface: #171a1f; --surface-2: #20242b; --surface-3: #282e37;
+  --line: #343b46; --line-soft: #262c35; --text: #f4f7fb; --muted: #a8b0bd; --faint: #747f8e;
+  --primary: #4f8cff; --primary-2: #7cdbb5; --warn: #f2b85b; --danger: #f97066; --ok: #51d6a1; --violet: #b697ff;
+  --radius: 10px;
+  --font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:var(--font); background:var(--bg); color:var(--text); font-size:13px; line-height:1.5; min-height:100vh; }
+svg.ic { width:16px; height:16px; stroke:currentColor; fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; flex-shrink:0; }
+svg.ic-sm { width:12px; height:12px; }
+svg.ic-lg { width:20px; height:20px; }
+
+.page { display:flex; flex-direction:column; height:100vh; overflow:hidden; }
+.topbar { display:flex; align-items:center; justify-content:space-between; padding:12px 24px; border-bottom:1px solid var(--line-soft); flex-shrink:0; background:var(--surface); }
+.topbar-left { display:flex; align-items:center; gap:10px; }
+.topbar-left h1 { font-size:16px; font-weight:700; }
+.topbar-right { display:flex; gap:8px; }
+.main { flex:1; overflow-y:auto; padding:24px 32px; display:flex; flex-direction:column; gap:24px; }
+.pm-header { display:flex; align-items:center; justify-content:space-between; }
+.pm-header-left h2 { font-size:16px; font-weight:700; }
+.pm-header-left span { color:var(--muted); font-size:13px; }
+.pm-header-actions { display:flex; gap:8px; }
+.pm-stats { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:14px; }
+.pm-stat-card { padding:14px 16px; border:1px solid var(--line-soft); border-radius:var(--radius); background:var(--surface); display:flex; align-items:center; gap:12px; }
+.pm-stat-icon { width:40px; height:40px; border-radius:8px; display:grid; place-items:center; flex-shrink:0; }
+.pm-stat-icon.blue { background:rgba(79,140,255,0.12); color:var(--primary); }
+.pm-stat-icon.green { background:rgba(81,214,161,0.10); color:var(--ok); }
+.pm-stat-icon.orange { background:rgba(242,184,91,0.12); color:var(--warn); }
+.pm-stat-icon.violet { background:rgba(182,151,255,0.12); color:var(--violet); }
+.pm-stat-value { font-size:20px; font-weight:800; font-family:var(--mono); }
+.pm-stat-label { font-size:11px; color:var(--faint); font-weight:600; }
+.pm-project-grid { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:14px; }
+.project-card { border:1px solid var(--line-soft); border-radius:var(--radius); background:var(--surface); overflow:hidden; cursor:pointer; transition:border-color 120ms; position:relative; }
+.project-card:hover { border-color:var(--line); }
+.project-card.has-gate { border-color:rgba(242,184,91,0.3); }
+.project-card-top { padding:16px 18px; display:flex; align-items:flex-start; gap:12px; }
+.project-card-avatar { width:44px; height:44px; border-radius:9px; background:linear-gradient(135deg, rgba(79,140,255,0.25), rgba(124,219,181,0.15)); display:grid; place-items:center; font-weight:800; font-size:16px; color:var(--primary); flex-shrink:0; }
+.project-card-info { flex:1; min-width:0; }
+.project-card-name { font-size:15px; font-weight:700; margin-bottom:4px; }
+.project-card-meta { display:flex; gap:8px; font-size:12px; color:var(--muted); margin-bottom:8px; }
+.project-card-progress { height:4px; background:var(--surface-3); border-radius:2px; overflow:hidden; }
+.project-card-progress-fill { height:100%; background:var(--primary-2); border-radius:2px; }
+.project-card-bottom { padding:10px 18px; border-top:1px solid var(--line-soft); background:rgba(17,20,25,0.3); display:flex; align-items:center; gap:14px; font-size:12px; }
+.project-card-stat { display:flex; align-items:center; gap:4px; color:var(--muted); }
+.project-card-stat.warn { color:var(--warn); }
+.gate-badge-card { position:absolute; top:10px; right:14px; display:flex; align-items:center; gap:5px; padding:3px 9px; border-radius:99px; background:rgba(242,184,91,0.12); border:1px solid rgba(242,184,91,0.25); color:var(--warn); font-size:11px; font-weight:700; }
+.card-enter-hint { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.65); opacity:0; transition:opacity 150ms; border-radius:var(--radius); pointer-events:none; }
+.project-card:hover .card-enter-hint { opacity:1; }
+.card-enter-btn { display:flex; align-items:center; gap:6px; padding:10px 18px; border-radius:7px; background:var(--primary); color:#fff; font-size:13px; font-weight:700; border:none; cursor:pointer; }
+
+/* Project Workspace (embedded) */
+.workspace { display:flex; flex-direction:column; height:100%; overflow:hidden; }
+.ws-topbar { display:flex; align-items:center; justify-content:space-between; padding:10px 20px; border-bottom:1px solid var(--line-soft); flex-shrink:0; }
+.ws-topbar-left { display:flex; align-items:center; gap:8px; }
+.ws-back-btn { width:28px; height:28px; border-radius:6px; border:none; background:none; color:var(--muted); cursor:pointer; display:grid; place-items:center; }
+.ws-back-btn:hover { color:var(--text); }
+.ws-proj-avatar { width:28px; height:28px; border-radius:6px; background:linear-gradient(135deg, rgba(79,140,255,0.3), rgba(124,219,181,0.15)); display:grid; place-items:center; font-weight:800; font-size:12px; color:var(--primary); }
+.ws-proj-name { font-size:14px; font-weight:700; }
+.ws-proj-meta { font-size:11px; color:var(--faint); margin-left:4px; }
+.ws-body { flex:1; display:grid; grid-template-columns:1fr 380px; overflow:hidden; }
+.ws-left { display:flex; flex-direction:column; overflow:hidden; border-right:1px solid var(--line-soft); }
+.ws-stats { display:flex; border-bottom:1px solid var(--line-soft); flex-shrink:0; }
+.ws-stat { flex:1; padding:10px; text-align:center; border-right:1px solid var(--line-soft); }
+.ws-stat:last-child { border-right:none; }
+.ws-stat-val { font-size:18px; font-weight:800; font-family:var(--mono); }
+.ws-stat-val.run { color:var(--primary); }
+.ws-stat-val.gate { color:var(--warn); }
+.ws-stat-val.done { color:var(--ok); }
+.ws-stat-label { font-size:10px; color:var(--faint); font-weight:600; }
+.ws-content { flex:1; overflow-y:auto; padding:16px 20px; display:flex; flex-direction:column; gap:14px; }
+.ws-task-card { padding:12px 14px; border:1px solid var(--line-soft); border-radius:8px; background:var(--surface); }
+.ws-task-goal { font-size:14px; font-weight:700; }
+.ws-stepper { display:flex; overflow-x:auto; gap:0; padding:4px 0; }
+.ws-stepper-node { display:flex; flex-direction:column; align-items:center; gap:6px; padding:12px 14px; border:1px solid var(--line-soft); border-radius:8px; background:var(--surface); white-space:nowrap; flex-shrink:0; min-width:90px; text-align:center; }
+.ws-stepper-node.active { border-color:var(--primary); box-shadow:0 0 0 1px rgba(79,140,255,0.2); background:rgba(79,140,255,0.04); }
+.ws-stepper-node.done { border-color:var(--ok); opacity:0.85; }
+.ws-stepper-num { width:26px; height:26px; border-radius:6px; display:grid; place-items:center; font-family:var(--mono); font-size:12px; font-weight:800; }
+.ws-stepper-node.active .ws-stepper-num { background:rgba(79,140,255,0.15); color:var(--primary); }
+.ws-stepper-node.done .ws-stepper-num { background:rgba(81,214,161,0.12); color:var(--ok); }
+.ws-stepper-name { font-size:12px; font-weight:650; }
+.ws-stepper-role { font-size:10px; color:var(--faint); }
+.ws-connector { width:28px; height:2px; background:var(--line); flex-shrink:0; align-self:center; margin:0 4px; border-radius:1px; }
+.ws-connector.done { background:var(--ok); }
+.ws-right { display:flex; flex-direction:column; overflow:hidden; background:var(--surface); }
+.ws-agent-list { display:flex; border-bottom:1px solid var(--line-soft); flex-shrink:0; padding:6px 8px; gap:4px; overflow-x:auto; }
+.ws-agent-item { display:flex; align-items:center; gap:6px; padding:6px 9px; border:1px solid transparent; border-radius:7px; background:none; color:var(--muted); cursor:pointer; font-size:11.5px; font-weight:600; white-space:nowrap; flex-shrink:0; }
+.ws-agent-item:hover { background:var(--surface-2); }
+.ws-agent-item.active { border-color:var(--violet); background:rgba(182,151,255,0.06); color:var(--text); }
+.ws-agent-avatar { width:22px; height:22px; border-radius:5px; display:grid; place-items:center; font-size:9.5px; font-weight:800; flex-shrink:0; }
+.ws-agent-avatar.pm { background:rgba(182,151,255,0.2); color:var(--violet); }
+.ws-agent-avatar.review { background:rgba(242,184,91,0.2); color:var(--warn); }
+.ws-agent-dot { width:5px; height:5px; border-radius:50%; }
+.ws-agent-dot.online { background:var(--ok); }
+.ws-chat { flex:1; overflow-y:auto; padding:12px; display:flex; flex-direction:column; gap:8px; }
+.ws-msg { display:flex; gap:6px; }
+.ws-msg.user { flex-direction:row-reverse; }
+.ws-msg-avatar { width:24px; height:24px; border-radius:5px; display:grid; place-items:center; font-size:10px; font-weight:800; flex-shrink:0; }
+.ws-msg-avatar.agent { background:linear-gradient(135deg, rgba(79,140,255,0.3), rgba(182,151,255,0.2)); color:var(--primary); }
+.ws-msg-avatar.user { background:rgba(242,184,91,0.2); color:var(--warn); }
+.ws-msg-bubble { padding:8px 12px; border-radius:8px; font-size:12px; line-height:1.5; max-width:85%; }
+.ws-msg.agent .ws-msg-bubble { background:var(--surface-2); border:1px solid var(--line-soft); }
+.ws-msg.user .ws-msg-bubble { background:rgba(79,140,255,0.08); border:1px solid rgba(79,140,255,0.2); }
+.ws-msg-name { font-size:10px; font-weight:700; margin-bottom:2px; }
+.ws-msg.agent .ws-msg-name { color:var(--violet); }
+.ws-msg-time { font-size:9.5px; color:var(--faint); margin-top:4px; }
+.ws-chat-input { padding:10px 12px; border-top:1px solid var(--line-soft); flex-shrink:0; display:flex; gap:8px; }
+.ws-chat-input input { flex:1; min-height:34px; border:1px solid var(--line); border-radius:7px; background:#111419; color:var(--text); padding:0 10px; font-size:12.5px; }
+.ws-chat-input input:focus { border-color:var(--primary); outline:none; }
+.pm-task-list { display:flex; flex-direction:column; gap:6px; margin-top:12px; }
+.pm-task-item { display:flex; align-items:center; gap:10px; padding:10px 14px; border:1px solid var(--line-soft); border-radius:8px; background:var(--surface); }
+.pm-task-status { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.pm-task-status.gate { background:var(--warn); box-shadow:0 0 8px rgba(242,184,91,0.4); }
+.pm-task-status.done { background:var(--ok); }
+.pm-task-info { flex:1; min-width:0; }
+.pm-task-goal { font-size:13px; font-weight:600; }
+.pm-task-project { font-size:11px; color:var(--faint); }
+
+/* Overlay */
+.overlay { position:fixed; inset:0; z-index:100; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; }
+.overlay.hidden { display:none; }
+
+/* Panel */
+.panel { background:var(--surface); border:1px solid var(--line); border-radius:12px; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 24px 80px rgba(0,0,0,0.5); }
+.panel-wide { width:90vw; max-width:1100px; height:85vh; }
+.panel-mid { width:90vw; max-width:800px; max-height:85vh; }
+.panel-header { padding:14px 20px; border-bottom:1px solid var(--line-soft); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+.panel-header h3 { font-size:15px; font-weight:700; display:flex; align-items:center; gap:8px; }
+.panel-header h3 .dot { width:8px; height:8px; border-radius:50%; }
+.dot-warn { background:var(--warn); }
+.dot-blue { background:var(--primary); }
+.dot-green { background:var(--ok); }
+.panel-body { flex:1; overflow-y:auto; padding:20px; }
+
+/* ===== GATE PANEL ===== */
+.gate-body { flex:1; display:flex; overflow:hidden; }
+.gate-left { flex:1; display:flex; flex-direction:column; overflow:hidden; border-right:1px solid var(--line-soft); }
+.gate-task-context { padding:14px 20px; border-bottom:1px solid var(--line-soft); flex-shrink:0; }
+.gate-task-context .task-title { font-size:14px; font-weight:700; margin-bottom:6px; }
+.gate-ev-tabs { display:flex; border-bottom:1px solid var(--line-soft); flex-shrink:0; padding:0 12px; }
+.gate-ev-tab { padding:8px 14px; border:none; background:none; color:var(--muted); font-size:12.5px; font-weight:600; cursor:pointer; border-bottom:2px solid transparent; display:flex; align-items:center; gap:5px; }
+.gate-ev-tab.active { color:var(--primary); border-bottom-color:var(--primary); }
+.gate-ev-content { flex:1; overflow-y:auto; padding:16px 20px; }
+.gate-ev-item { padding:8px 12px; border:1px solid var(--line-soft); border-radius:6px; background:rgba(32,36,43,0.4); margin-bottom:8px; font-size:12px; color:var(--muted); }
+.gate-ev-item code { display:block; font-family:var(--mono); font-size:11.5px; color:#cfdaeb; margin-top:4px; }
+.gate-right { width:380px; flex-shrink:0; display:flex; flex-direction:column; overflow-y:auto; background:rgba(23,26,31,0.5); padding:16px 20px; }
+.gate-section-title { font-size:13px; font-weight:700; color:var(--muted); margin-bottom:10px; display:flex; align-items:center; gap:6px; }
+.gate-summary { font-size:12.5px; line-height:1.6; margin-bottom:14px; padding:10px 12px; border:1px solid var(--line-soft); border-radius:7px; background:rgba(32,36,43,0.4); }
+.gate-actions { display:flex; flex-direction:column; gap:8px; margin-bottom:12px; }
+.gate-action-btn { display:flex; align-items:center; gap:10px; padding:12px 14px; border:1px solid var(--line-soft); border-radius:8px; background:var(--surface-2); color:var(--text); font-size:13px; font-weight:600; cursor:pointer; text-align:left; transition:border-color 120ms; }
+.gate-action-btn:hover { border-color:var(--line); }
+.gate-action-btn.primary { border-color:rgba(81,214,161,0.3); background:rgba(81,214,161,0.05); }
+.gate-action-btn.warn { border-color:rgba(242,184,91,0.3); background:rgba(242,184,91,0.04); }
+.gate-action-btn.danger { border-color:rgba(249,112,102,0.2); background:rgba(249,112,102,0.03); }
+.gate-action-icon { width:32px; height:32px; border-radius:7px; display:grid; place-items:center; flex-shrink:0; }
+.gate-action-icon.approve { background:rgba(81,214,161,0.12); color:var(--ok); }
+.gate-action-icon.rerun { background:rgba(242,184,91,0.12); color:var(--warn); }
+.gate-action-icon.reassign { background:rgba(182,151,255,0.12); color:var(--violet); }
+.gate-action-icon.stop { background:rgba(249,112,102,0.12); color:var(--danger); }
+.gate-action-desc { font-size:11px; color:var(--faint); margin-top:1px; display:block; }
+.gate-reassign { padding:10px; border:1px solid rgba(182,151,255,0.2); border-radius:7px; background:rgba(182,151,255,0.03); margin-bottom:8px; }
+.gate-result { padding:10px 14px; border-radius:7px; font-size:12.5px; font-weight:600; margin-bottom:10px; }
+.gate-result.ok { background:rgba(81,214,161,0.08); color:var(--ok); border:1px solid rgba(81,214,161,0.2); }
+.memory-save { padding:10px 12px; border:1px dashed rgba(79,140,255,0.3); border-radius:7px; background:rgba(79,140,255,0.04); font-size:11px; color:var(--primary); cursor:pointer; display:flex; align-items:center; gap:6px; margin-bottom:8px; }
+
+/* ===== IMPORT PANEL ===== */
+.import-step { margin-bottom:20px; }
+.import-step-title { font-size:13px; font-weight:700; color:var(--muted); margin-bottom:8px; display:flex; align-items:center; gap:6px; }
+.import-path-row { display:flex; gap:8px; }
+.import-path-row input { flex:1; min-height:38px; border:1px solid var(--line); border-radius:7px; background:#111419; color:var(--text); padding:0 12px; font-size:13px; }
+.import-path-row input:focus { border-color:var(--primary); outline:none; }
+.import-detect-result { margin-top:14px; padding:16px; border:1px solid rgba(81,214,161,0.2); border-radius:8px; background:rgba(81,214,161,0.03); }
+.import-detect-header { font-size:14px; font-weight:700; color:var(--ok); margin-bottom:10px; display:flex; align-items:center; gap:6px; }
+.import-detect-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+.import-detect-item { display:flex; justify-content:space-between; padding:6px 10px; border:1px solid var(--line-soft); border-radius:6px; background:rgba(32,36,43,0.4); font-size:12px; }
+.import-detect-label { color:var(--faint); }
+.import-detect-roles { margin-top:12px; }
+.import-detect-roles h4 { font-size:12px; font-weight:700; color:var(--muted); margin-bottom:6px; }
+.import-role-row { display:flex; align-items:center; gap:8px; padding:6px 10px; border:1px solid var(--line-soft); border-radius:6px; margin-bottom:4px; }
+.import-role-avatar { width:28px; height:28px; border-radius:6px; background:rgba(182,151,255,0.2); display:grid; place-items:center; font-size:11px; font-weight:800; color:var(--violet); flex-shrink:0; }
+.import-role-name { flex:1; font-size:12.5px; font-weight:600; }
+.import-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:14px; }
+
+/* ===== NEW PROJECT PANEL ===== */
+.new-wizard-steps { display:flex; gap:0; border-bottom:1px solid var(--line-soft); flex-shrink:0; padding:0 20px; }
+.new-wizard-step { padding:10px 16px; border:none; background:none; color:var(--faint); font-size:12.5px; font-weight:600; cursor:pointer; border-bottom:2px solid transparent; display:flex; align-items:center; gap:6px; }
+.new-wizard-step.active { color:var(--primary); border-bottom-color:var(--primary); }
+.new-wizard-step.done { color:var(--ok); }
+.new-step-content { padding:16px 0; }
+.new-form-grid { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:12px; margin-bottom:14px; }
+.new-form-full { margin-bottom:14px; }
+.new-form-section { margin-bottom:16px; }
+.new-form-section h4 { font-size:12.5px; font-weight:700; color:var(--muted); margin-bottom:8px; display:flex; align-items:center; gap:6px; }
+.new-empty-hint { text-align:center; padding:28px; color:var(--faint); font-size:12px; border:1px dashed var(--line); border-radius:8px; }
+.new-wizard-footer { display:flex; justify-content:space-between; align-items:center; margin-top:16px; padding-top:14px; border-top:1px solid var(--line-soft); }
+.new-wizard-footer .hint { font-size:11px; color:var(--faint); }
+
+/* Common */
+.badge { display:inline-flex; align-items:center; gap:3px; padding:2px 7px; border-radius:999px; font-size:10.5px; font-weight:600; border:1px solid; }
+.badge-v { color:#ddceff; background:rgba(182,151,255,0.10); border-color:rgba(182,151,255,0.22); }
+.badge-b { color:#b8ccff; background:rgba(79,140,255,0.10); border-color:rgba(79,140,255,0.22); }
+.badge-o { color:#ffe0aa; background:rgba(242,184,91,0.10); border-color:rgba(242,184,91,0.22); }
+.badge-g { color:#bcf4dc; background:rgba(81,214,161,0.08); border-color:rgba(81,214,161,0.20); }
+select, input[type="text"] { min-height:36px; border:1px solid var(--line); border-radius:6px; background:#111419; color:var(--text); padding:0 10px; font-size:13px; }
+select:focus, input:focus { border-color:var(--primary); outline:none; }
+textarea { border:1px solid var(--line); border-radius:6px; background:#111419; color:var(--text); padding:8px 10px; font-size:13px; resize:vertical; }
+textarea:focus { border-color:var(--primary); outline:none; }
+.form-field { display:grid; gap:5px; }
+.form-field label { color:var(--muted); font-size:12px; font-weight:600; }
+.form-field input.full { width:100%; }
+.btn { display:inline-flex; align-items:center; gap:6px; padding:7px 12px; border-radius:7px; font-size:12.5px; font-weight:600; cursor:pointer; border:1px solid var(--line); background:var(--surface-2); color:var(--muted); }
+.btn-primary { background:var(--primary); color:#fff; border-color:var(--primary); }
+.btn-ghost { background:none; border-color:transparent; }
+.btn-sm { padding:4px 8px; font-size:11px; }
+.btn-danger { background:var(--danger); color:#fff; border-color:var(--danger); }
+</style>
+</head>
+<body>
+<div class="page" id="page-dashboard">
+
+  <!-- Top Bar -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <svg class="ic" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+      <h1>项目管理</h1>
+    </div>
+    <div class="topbar-right">
+      <button class="btn btn-sm" onclick="document.getElementById('import-panel').classList.remove('hidden')">导入项目</button>
+      <button class="btn btn-primary btn-sm" onclick="document.getElementById('new-panel').classList.remove('hidden')">新建项目</button>
+    </div>
+  </div>
+
+  <!-- MAIN: Dashboard (always visible) -->
+  <div class="main">
+    <div class="pm-header"><div class="pm-header-left"><h2>项目看板</h2><span>共 3 个项目，2 个活跃</span></div></div>
+
+    <div class="pm-stats">
+      <div class="pm-stat-card"><div class="pm-stat-icon blue"><svg class="ic" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></div><div><div class="pm-stat-value">3</div><div class="pm-stat-label">项目总数</div></div></div>
+      <div class="pm-stat-card"><div class="pm-stat-icon green"><svg class="ic" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div><div><div class="pm-stat-value">2</div><div class="pm-stat-label">运行中 Agent</div></div></div>
+      <div class="pm-stat-card"><div class="pm-stat-icon orange"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div><div><div class="pm-stat-value">1</div><div class="pm-stat-label">等待人工决策</div></div></div>
+      <div class="pm-stat-card"><div class="pm-stat-icon violet"><svg class="ic" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></div><div><div class="pm-stat-value">8</div><div class="pm-stat-label">已完成任务</div></div></div>
+    </div>
+
+    <div class="pm-project-grid">
+      <div class="project-card has-gate" onclick="document.getElementById('page-dashboard').style.display='none';document.getElementById('page-workspace').style.display='flex'">
+        <div class="card-enter-hint"><button class="card-enter-btn">进入项目</button></div>
+        <span class="gate-badge-card" onclick="event.stopPropagation();document.getElementById('gate-panel').classList.remove('hidden')"><svg class="ic-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>1 个待决策</span>
+        <div class="project-card-top">
+          <div class="project-card-avatar">Ag</div>
+          <div class="project-card-info">
+            <div class="project-card-name">AgentDevelop</div>
+            <div class="project-card-meta"><span>main</span><span class="badge badge-v">Vite+React+TS</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px;"><span>任务进度</span><span style="color:var(--primary-2);font-weight:700;">4/5</span></div>
+            <div class="project-card-progress"><div class="project-card-progress-fill" style="width:80%"></div></div>
+          </div>
+        </div>
+        <div class="project-card-bottom"><div class="project-card-stat">1 运行中</div><div class="project-card-stat warn">1 等待决策</div><div class="project-card-stat">3 已完成</div></div>
+      </div>
+      <div class="project-card" onclick="document.getElementById('page-dashboard').style.display='none';document.getElementById('page-workspace').style.display='flex'">
+        <div class="card-enter-hint"><button class="card-enter-btn">进入项目</button></div>
+        <div class="project-card-top"><div class="project-card-avatar">IC</div><div class="project-card-info"><div class="project-card-name">Internal-CLI</div><div class="project-card-meta"><span>develop</span><span class="badge badge-b">Go+Cobra</span></div><div class="project-card-progress"><div class="project-card-progress-fill" style="width:33%"></div></div></div></div>
+        <div class="project-card-bottom"><div class="project-card-stat">1 运行中</div><div class="project-card-stat">0 决策</div><div class="project-card-stat">1 已完成</div></div>
+      </div>
+    </div>
+
+    <div>
+      <h3 style="font-size:14px;font-weight:700;margin-bottom:8px;">近期任务</h3>
+      <div class="pm-task-list">
+        <div class="pm-task-item"><div class="pm-task-status gate"></div><div class="pm-task-info"><div class="pm-task-goal">完成 V1 产品闭环页面开发</div><div class="pm-task-project">AgentDevelop</div></div><span class="badge badge-o">等待决策</span></div>
+        <div class="pm-task-item"><div class="pm-task-status done"></div><div class="pm-task-info"><div class="pm-task-goal">重构 CLI 命令解析模块</div><div class="pm-task-project">Internal-CLI</div></div><span class="badge badge-g">已完成</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== GATE DECISION PANEL ===== -->
+  <div class="overlay hidden" id="gate-panel" onclick="if(event.target===this)this.classList.add('hidden')">
+    <div class="panel panel-wide" onclick="event.stopPropagation()">
+      <div class="panel-header">
+        <h3><span class="dot dot-warn"></span>人工决策 · AgentDevelop</h3>
+        <div style="display:flex;gap:10px;font-size:12px;color:var(--muted);"><span>步骤 4 · 代码审查</span><span>审查员 · DeepSeek v4</span></div>
+        <button class="btn btn-ghost btn-sm" onclick="this.closest('.overlay').classList.add('hidden')">✕ 关闭</button>
+      </div>
+      <div class="gate-body">
+        <div class="gate-left">
+          <div class="gate-task-context"><div class="task-title">任务：完成 V1 产品闭环页面开发</div><div style="display:flex;gap:6px;margin-top:4px;"><span class="badge badge-v">软件开发完整流程 v1</span><span class="badge badge-b">隔离 worktree</span></div></div>
+          <div class="gate-ev-tabs">
+            <button class="gate-ev-tab active"><svg class="ic-sm" viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m16 11-4 4-8-8"/></svg>Diff</button>
+            <button class="gate-ev-tab"><svg class="ic-sm" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg>测试</button>
+            <button class="gate-ev-tab"><svg class="ic-sm" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>预览</button>
+            <button class="gate-ev-tab"><svg class="ic-sm" viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>日志</button>
+          </div>
+          <div class="gate-ev-content">
+            <div class="gate-ev-item"><code>src/components/AppShell.tsx</code><span>侧边栏汉化 + 图标重构，导航合并</span></div>
+            <div class="gate-ev-item"><code>src/data/fixtures.ts</code><span>中文编码修复，删除废弃字段</span></div>
+            <div class="gate-ev-item"><code>src/components/Settings.tsx</code><span>设置中心 UI 重设计</span></div>
+          </div>
+        </div>
+        <div class="gate-right">
+          <div class="gate-section-title"><svg class="ic-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>决策摘要</div>
+          <div class="gate-summary">代码审查已完成。2 个文件变更，21 个测试通过。请确认并决定下一步。</div>
+          <div class="memory-save"><svg class="ic-sm" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>保存为项目记忆："V1 代码审查结论"</div>
+          <div class="gate-actions">
+            <button class="gate-action-btn primary"><div class="gate-action-icon approve"><svg class="ic" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div><div class="gate-action-text">同意继续<span class="gate-action-desc">执行下一步"测试验证"</span></div></button>
+            <button class="gate-action-btn warn"><div class="gate-action-icon rerun"><svg class="ic" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></div><div class="gate-action-text">重跑<span class="gate-action-desc">重新执行"代码审查"</span></div></button>
+            <button class="gate-action-btn"><div class="gate-action-icon reassign"><svg class="ic" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div><div class="gate-action-text">改派<span class="gate-action-desc">重新分配给其他角色</span></div></button>
+            <button class="gate-action-btn danger"><div class="gate-action-icon stop"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></div><div class="gate-action-text">终止<span class="gate-action-desc">停止任务，标记为失败</span></div></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== IMPORT PROJECT PANEL ===== -->
+  <div class="overlay hidden" id="import-panel" onclick="if(event.target===this)this.classList.add('hidden')">
+    <div class="panel panel-mid" onclick="event.stopPropagation()">
+      <div class="panel-header">
+        <h3><span class="dot dot-blue"></span>导入已有项目</h3>
+        <button class="btn btn-ghost btn-sm" onclick="this.closest('.overlay').classList.add('hidden')">✕ 关闭</button>
+      </div>
+      <div class="panel-body">
+
+        <!-- Step 1: Scan -->
+        <div class="import-step">
+          <div class="import-step-title"><svg class="ic-sm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>步骤 1：扫描本地仓库</div>
+          <div class="import-path-row">
+            <input type="text" placeholder="输入或粘贴仓库路径，例如 D:/work/agent-develop" value="D:/work/vibecode/AgentDevelop">
+            <button class="btn btn-sm">选择文件夹</button>
+            <button class="btn btn-primary btn-sm">开始检测</button>
+          </div>
+        </div>
+
+        <!-- Step 2: Detection Result -->
+        <div class="import-step">
+          <div class="import-step-title"><svg class="ic-sm" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>步骤 2：检测结果</div>
+          <div class="import-detect-result">
+            <div class="import-detect-header"><svg class="ic" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>AgentDevelop · 可导入</div>
+            <div class="import-detect-grid">
+              <div class="import-detect-item"><span class="import-detect-label">技术栈</span><span class="badge badge-v">Vite+React+TS</span></div>
+              <div class="import-detect-item"><span class="import-detect-label">分支</span><span class="badge badge-b">main</span></div>
+              <div class="import-detect-item"><span class="import-detect-label">安装命令</span><code style="font-size:11px;">npm install</code></div>
+              <div class="import-detect-item"><span class="import-detect-label">测试命令</span><code style="font-size:11px;">npm test</code></div>
+              <div class="import-detect-item"><span class="import-detect-label">构建命令</span><code style="font-size:11px;">npm run build</code></div>
+              <div class="import-detect-item"><span class="import-detect-label">预览命令</span><code style="font-size:11px;">npm run dev</code></div>
+            </div>
+            <div class="import-detect-roles">
+              <h4>检测到 5 个角色</h4>
+              <div class="import-role-row"><div class="import-role-avatar">产品</div><span class="import-role-name">产品经理</span><span class="badge badge-v">DeepSeek v4</span><button class="btn btn-ghost btn-sm">编辑</button></div>
+              <div class="import-role-row"><div class="import-role-avatar">设计</div><span class="import-role-name">UI/UX 设计师</span><span class="badge badge-v">DeepSeek v4</span></div>
+              <div class="import-role-row"><div class="import-role-avatar">前端</div><span class="import-role-name">前端工程师</span><span class="badge badge-b">OpenAI gpt-5.3</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 3: Confirm -->
+        <div class="import-step">
+          <div class="import-step-title"><svg class="ic-sm" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>步骤 3：确认并导入</div>
+          <div class="import-actions">
+            <button class="btn btn-ghost" onclick="this.closest('.overlay').classList.add('hidden')">取消</button>
+            <button class="btn btn-primary">确认导入项目</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== NEW PROJECT PANEL ===== -->
+  <div class="overlay hidden" id="new-panel" onclick="if(event.target===this)this.classList.add('hidden')">
+    <div class="panel panel-mid" onclick="event.stopPropagation()">
+      <div class="panel-header">
+        <h3><span class="dot dot-green"></span>新建项目</h3>
+        <button class="btn btn-ghost btn-sm" onclick="this.closest('.overlay').classList.add('hidden')">✕ 关闭</button>
+      </div>
+
+      <!-- Wizard Steps -->
+      <div class="new-wizard-steps">
+        <button class="new-wizard-step active"><svg class="ic-sm" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>基本信息</button>
+        <button class="new-wizard-step"><svg class="ic-sm" viewBox="0 0 24 24"><path d="M6 3v18"/><circle cx="12" cy="6" r="3"/><path d="M18 3v18"/></svg>角色 & 流程绑定</button>
+        <button class="new-wizard-step"><svg class="ic-sm" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>确认</button>
+      </div>
+
+      <div class="panel-body">
+
+        <!-- Step 1: 基本信息 -->
+        <div class="new-step-content">
+          <div class="new-form-grid">
+            <div class="form-field"><label>项目名称</label><input type="text" placeholder="例如：AgentDevelop"></div>
+            <div class="form-field"><label>仓库路径</label><input type="text" placeholder="例如：D:/work/my-project"></div>
+            <div class="form-field"><label>默认分支</label><input type="text" value="main"></div>
+            <div class="form-field"><label>技术栈</label><input type="text" placeholder="例如：Vite + React + TypeScript"></div>
+          </div>
+          <div class="new-form-section">
+            <h4><svg class="ic-sm" viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>命令配置</h4>
+            <div class="new-form-grid">
+              <div class="form-field"><label>安装命令</label><input type="text" value="npm install"></div>
+              <div class="form-field"><label>测试命令</label><input type="text" value="npm test"></div>
+              <div class="form-field"><label>构建命令</label><input type="text" value="npm run build"></div>
+              <div class="form-field"><label>预览命令</label><input type="text" value="npm run dev"></div>
+            </div>
+          </div>
+          <div class="new-form-section">
+            <h4><svg class="ic-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>风险评估</h4>
+            <textarea placeholder="描述项目的主要风险点..." rows="2" style="width:100%;"></textarea>
+          </div>
+
+          <div class="new-form-section" style="border-top:1px solid var(--line-soft);padding-top:14px;">
+            <h4><svg class="ic-sm" viewBox="0 0 24 24"><path d="M6 3v18"/><circle cx="12" cy="6" r="3"/><path d="M18 3v18"/></svg>绑定流程模板</h4>
+            <div class="new-form-grid">
+              <div class="form-field"><label>选择流程</label><select><option>软件开发完整流程 v1</option><option>Bug 快速修复流程 v1</option><option>代码审查流程 v2</option></select></div>
+              <div class="form-field"><label>升级策略</label><select><option>锁定当前版本</option><option>跟随模板更新</option></select></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="new-wizard-footer">
+          <span class="hint">步骤 1/3 · 填写项目基本信息并绑定流程</span>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-ghost" onclick="this.closest('.overlay').classList.add('hidden')">取消</button>
+            <button class="btn btn-primary">下一步 · 角色 & 流程 →</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== PROJECT WORKSPACE (full page, hidden by default) ===== -->
+  <div class="page" id="page-workspace" style="display:none;">
+    <div class="workspace">
+      <!-- Top Bar -->
+      <div class="ws-topbar">
+        <div class="ws-topbar-left">
+          <button class="ws-back-btn" onclick="document.getElementById('page-workspace').style.display='none';document.getElementById('page-dashboard').style.display='flex'" title="返回项目管理">
+            <svg class="ic" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>返回项目管理
+          </button>
+          <div class="ws-proj-avatar">Ag</div>
+          <span class="ws-proj-name">AgentDevelop</span>
+          <span class="ws-proj-meta">main · Vite+React+TS</span>
+        </div>
+        <div class="topbar-right">
+          <button class="btn btn-sm" onclick="document.getElementById('gate-panel').classList.remove('hidden')">人工决策</button>
+          <button class="btn btn-sm">Issues</button>
+          <button class="btn btn-sm">CI/CD</button>
+          <button class="btn btn-sm">设置</button>
+        </div>
+      </div>
+
+      <!-- Body -->
+      <div class="ws-body">
+        <!-- LEFT -->
+        <div class="ws-left">
+          <div class="ws-stats">
+            <div class="ws-stat"><div class="ws-stat-val run">1</div><div class="ws-stat-label">运行中 Agent</div></div>
+            <div class="ws-stat"><div class="ws-stat-val gate">1</div><div class="ws-stat-label">等待决策</div></div>
+            <div class="ws-stat"><div class="ws-stat-val done">4</div><div class="ws-stat-label">已完成步骤</div></div>
+            <div class="ws-stat"><div class="ws-stat-val" style="color:var(--violet);">3</div><div class="ws-stat-label">项目记忆</div></div>
+          </div>
+          <div class="ws-content">
+            <div class="ws-task-card">
+              <div class="ws-task-goal">当前任务：完成 V1 产品闭环页面开发</div>
+              <div style="display:flex;gap:6px;margin-top:6px;">
+                <span class="badge badge-v">软件开发完整流程 v1</span>
+                <span class="badge badge-o">等待决策</span>
+                <span class="badge badge-b">隔离 worktree</span>
+              </div>
+            </div>
+            <div>
+              <div style="font-size:12.5px;font-weight:700;color:var(--muted);margin-bottom:8px;display:flex;align-items:center;gap:6px;"><svg class="ic-sm" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>执行进度</div>
+              <div class="ws-stepper">
+                <div class="ws-stepper-node done"><div class="ws-stepper-num">01</div><div class="ws-stepper-name">需求分析</div><div class="ws-stepper-role">产品经理</div></div>
+                <div class="ws-connector done"></div>
+                <div class="ws-stepper-node done"><div class="ws-stepper-num">02</div><div class="ws-stepper-name">UI/UX 设计</div><div class="ws-stepper-role">设计师</div></div>
+                <div class="ws-connector done"></div>
+                <div class="ws-stepper-node done"><div class="ws-stepper-num">03</div><div class="ws-stepper-name">前端开发</div><div class="ws-stepper-role">前端工程师</div></div>
+                <div class="ws-connector done"></div>
+                <div class="ws-stepper-node active"><div class="ws-stepper-num">04</div><div class="ws-stepper-name">代码审查</div><div class="ws-stepper-role">审查员</div></div>
+                <div class="ws-connector"></div>
+                <div class="ws-stepper-node"><div class="ws-stepper-num">05</div><div class="ws-stepper-name">测试验证</div><div class="ws-stepper-role">测试工程师</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT: Agent Chat -->
+        <div class="ws-right">
+          <div class="ws-agent-list">
+            <button class="ws-agent-item active"><div class="ws-agent-avatar pm">产</div>产品经理<div class="ws-agent-dot online"></div></button>
+            <button class="ws-agent-item"><div class="ws-agent-avatar review">审</div>审查员<div class="ws-agent-dot online"></div></button>
+            <button class="ws-agent-item"><div class="ws-agent-avatar" style="background:rgba(79,140,255,0.2);color:var(--primary);">设</div>设计师</button>
+            <button class="ws-agent-item"><div class="ws-agent-avatar" style="background:rgba(124,219,181,0.2);color:var(--primary-2);">前</div>前端</button>
+            <button class="ws-agent-item"><div class="ws-agent-avatar" style="background:rgba(249,112,102,0.2);color:var(--danger);">测</div>测试</button>
+          </div>
+          <div class="ws-chat">
+            <div class="ws-msg agent">
+              <div class="ws-msg-avatar agent">产</div>
+              <div class="ws-msg-bubble">
+                <div class="ws-msg-name">产品经理</div>
+                <div>V1 需求分析已完成。范围：个人本地 Web MVP，核心 5 个页面。</div>
+                <div class="ws-msg-time">06:30</div>
+              </div>
+            </div>
+            <div class="ws-msg user">
+              <div class="ws-msg-avatar user">我</div>
+              <div class="ws-msg-bubble"><div class="ws-msg-name">我</div>同意，继续推进 UI/UX 设计。</div>
+            </div>
+            <div class="ws-msg agent">
+              <div class="ws-msg-avatar" style="background:linear-gradient(135deg, rgba(242,184,91,0.3), rgba(249,112,102,0.15)); color:var(--warn);">审</div>
+              <div class="ws-msg-bubble">
+                <div class="ws-msg-name" style="color:var(--warn);">审查员</div>
+                <div>前端开发完成。2 文件变更，21 测试通过。⚠ 需要你的决策。</div>
+                <div class="ws-msg-time">08:30</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;padding:4px 0;">
+              <button class="btn btn-primary btn-sm" onclick="document.getElementById('gate-panel').classList.remove('hidden')">同意继续</button>
+              <button class="btn btn-sm">重跑</button>
+              <button class="btn btn-sm">改派</button>
+              <button class="btn btn-sm" style="color:var(--danger);border-color:rgba(249,112,102,0.3);">终止</button>
+            </div>
+            <div class="ws-msg user">
+              <div class="ws-msg-avatar user">我</div>
+              <div class="ws-msg-bubble"><div class="ws-msg-name">我</div>审查通过，继续测试。</div>
+            </div>
+          </div>
+          <div class="ws-chat-input"><input placeholder="与产品经理对话..."><button class="btn btn-primary btn-sm">发送</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

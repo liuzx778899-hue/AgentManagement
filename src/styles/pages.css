@@ -1,0 +1,30 @@
+/*
+ * Pages CSS - Aggregator File
+ * This file imports all split CSS files for page-specific styles.
+ *
+ * Split from original 10054-line file on 2025-05-16.
+ */
+
+/* Base styles: Workbench Home, Metrics, Tasks */
+@import './base.css';
+
+/* Shared Components: Project Cards, Issue/PR Panels, Runner Logs, Gate Panel, Wizard, Import */
+@import './shared-components.css';
+
+/* Utility styles: Modal, Badge, Button, Responsive, Terminal, Toggle */
+@import './utilities.css';
+
+/* Page-specific styles */
+@import './project-detail.css';
+@import './project-management.css';
+@import './manual-gate.css';
+@import './memory-manager.css';
+@import './workflow.css';
+@import './workflow-management.css';
+@import './settings.css';
+@import './im-adapter.css';
+@import './git-auth.css';
+@import './capability-center.css';
+@import './project-workspace.css';
+@import './ai-assistant.css';
+@import './ai-workflow-design.css';

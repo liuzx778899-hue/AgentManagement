@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>流程模板选择 - 设计方案对比</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f7fa; color: #1a1a2e; }
+
+    .demo-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white; padding: 40px 20px; text-align: center;
+    }
+    .demo-header h1 { font-size: 28px; margin-bottom: 10px; }
+    .demo-header p { opacity: 0.9; }
+
+    .tabs { display: flex; justify-content: center; gap: 10px; padding: 20px; background: white; border-bottom: 1px solid #e2e8f0; }
+    .tab-btn {
+      padding: 12px 24px; border: none; background: #f1f5f9; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.2s;
+    }
+    .tab-btn.active { background: #667eea; color: white; }
+    .tab-btn:hover:not(.active) { background: #e2e8f0; }
+
+    .demo-container { max-width: 1200px; margin: 30px auto; padding: 0 20px; }
+    .demo-section { display: none; }
+    .demo-section.active { display: block; }
+
+    /* === 方案 A: 卡片优化 === */
+    .scheme-a .search-bar {
+      display: flex; gap: 12px; margin-bottom: 20px;
+    }
+    .scheme-a .search-bar input {
+      flex: 1; padding: 12px 16px; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 14px;
+    }
+    .scheme-a .search-bar input:focus { outline: none; border-color: #667eea; }
+    .scheme-a .filter-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+    .scheme-a .chip {
+      padding: 6px 14px; background: #f1f5f9; border-radius: 20px; font-size: 12px; cursor: pointer; transition: all 0.2s;
+    }
+    .scheme-a .chip:hover { background: #e2e8f0; }
+    .scheme-a .chip.active { background: #667eea; color: white; }
+
+    .scheme-a .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; margin-top: 24px; }
+    .scheme-a .card {
+      background: white; border-radius: 12px; padding: 20px; border: 2px solid transparent; transition: all 0.2s; cursor: pointer; position: relative;
+    }
+    .scheme-a .card:hover { border-color: #667eea; transform: translateY(-2px); box-shadow: 0 8px 25px rgba(102, 126, 234, 0.15); }
+    .scheme-a .card.selected { border-color: #667eea; background: linear-gradient(to bottom, #f0f4ff, white); }
+    .scheme-a .card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .scheme-a .card-icon {
+      width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px;
+    }
+    .scheme-a .card-icon.dev { background: linear-gradient(135deg, #667eea, #764ba2); }
+    .scheme-a .card-icon.review { background: linear-gradient(135deg, #11998e, #38ef7d); }
+    .scheme-a .card-icon.bug { background: linear-gradient(135deg, #eb3349, #f45c43); }
+    .scheme-a .card-icon.refactor { background: linear-gradient(135deg, #4facfe, #00f2fe); }
+    .scheme-a .card-title { font-weight: 600; font-size: 16px; }
+    .scheme-a .card-subtitle { font-size: 12px; color: #64748b; margin-top: 2px; }
+    .scheme-a .card-steps {
+      display: flex; gap: 4px; margin: 12px 0; flex-wrap: wrap;
+    }
+    .scheme-a .step-badge {
+      background: #f1f5f9; padding: 4px 10px; border-radius: 4px; font-size: 11px; color: #475569;
+    }
+    .scheme-a .step-badge.active { background: #667eea; color: white; }
+    .scheme-a .card-meta { display: flex; gap: 16px; font-size: 12px; color: #94a3b8; margin-top: 12px; }
+    .scheme-a .card-badge {
+      position: absolute; top: 12px; right: 12px; background: #fef3c7; color: #92400e; padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 500;
+    }
+    .scheme-a .card-hover-preview {
+      position: absolute; left: 105%; top: 0; width: 280px; background: white; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.15); padding: 16px; display: none; z-index: 10;
+    }
+    .scheme-a .card:hover .card-hover-preview { display: block; }
+
+    /* === 方案 B: 双栏布局 === */
+    .scheme-b { display: flex; gap: 0; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+    .scheme-b .sidebar { width: 240px; background: #f8fafc; border-right: 1px solid #e2e8f0; padding: 16px; }
+    .scheme-b .sidebar-title { font-size: 12px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+    .scheme-b .category-item {
+      padding: 10px 14px; border-radius: 8px; cursor: pointer; font-size: 14px; margin-bottom: 4px; display: flex; align-items: center; gap: 10px; transition: all 0.15s;
+    }
+    .scheme-b .category-item:hover { background: #e2e8f0; }
+    .scheme-b .category-item.active { background: #667eea; color: white; }
+    .scheme-b .category-count { margin-left: auto; font-size: 12px; opacity: 0.7; }
+
+    .scheme-b .list-panel { width: 340px; border-right: 1px solid #e2e8f0; overflow-y: auto; max-height: 500px; }
+    .scheme-b .list-item {
+      padding: 16px; border-bottom: 1px solid #f1f5f9; cursor: pointer; transition: background 0.15s;
+    }
+    .scheme-b .list-item:hover { background: #f8fafc; }
+    .scheme-b .list-item.active { background: #f0f4ff; border-left: 3px solid #667eea; }
+    .scheme-b .list-item-title { font-weight: 500; font-size: 14px; margin-bottom: 4px; }
+    .scheme-b .list-item-desc { font-size: 12px; color: #64748b; }
+    .scheme-b .list-item-meta { display: flex; gap: 8px; margin-top: 8px; }
+    .scheme-b .list-item-meta span { font-size: 11px; color: #94a3b8; background: #f1f5f9; padding: 2px 8px; border-radius: 4px; }
+
+    .scheme-b .detail-panel { flex: 1; padding: 24px; background: #fefefe; }
+    .scheme-b .detail-header { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 24px; }
+    .scheme-b .detail-icon { width: 64px; height: 64px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 28px; background: linear-gradient(135deg, #667eea, #764ba2); }
+    .scheme-b .detail-title { font-size: 20px; font-weight: 600; }
+    .scheme-b .detail-subtitle { color: #64748b; font-size: 14px; margin-top: 4px; }
+    .scheme-b .detail-steps { margin-top: 20px; }
+    .scheme-b .detail-steps-title { font-size: 14px; font-weight: 600; margin-bottom: 12px; }
+    .scheme-b .step-flow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .scheme-b .flow-step { background: #f1f5f9; padding: 8px 14px; border-radius: 8px; font-size: 13px; }
+    .scheme-b .flow-arrow { color: #94a3b8; }
+    .scheme-b .detail-actions { margin-top: 24px; display: flex; gap: 12px; }
+    .scheme-b .btn { padding: 12px 24px; border-radius: 8px; border: none; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.2s; }
+    .scheme-b .btn.primary { background: #667eea; color: white; }
+    .scheme-b .btn.primary:hover { background: #5a67d8; }
+    .scheme-b .btn.ghost { background: transparent; border: 1px solid #e2e8f0; color: #475569; }
+    .scheme-b .btn.ghost:hover { background: #f1f5f9; }
+
+    /* === 方案 C: 表格式 === */
+    .scheme-c { background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+    .scheme-c .table-header {
+      display: grid; grid-template-columns: 1fr 100px 80px 80px 120px; gap: 12px; padding: 12px 20px; background: #f8fafc; font-size: 12px; font-weight: 600; color: #64748b; border-bottom: 1px solid #e2e8f0;
+    }
+    .scheme-c .table-row {
+      display: grid; grid-template-columns: 1fr 100px 80px 80px 120px; gap: 12px; padding: 16px 20px; border-bottom: 1px solid #f1f5f9; align-items: center; cursor: pointer; transition: background 0.15s;
+    }
+    .scheme-c .table-row:hover { background: #f8fafc; }
+    .scheme-c .table-row.selected { background: #f0f4ff; }
+    .scheme-c .row-name { display: flex; align-items: center; gap: 12px; }
+    .scheme-c .row-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+    .scheme-c .row-title { font-weight: 500; }
+    .scheme-c .row-desc { font-size: 12px; color: #94a3b8; margin-top: 2px; }
+    .scheme-c .row-steps { display: flex; gap: 4px; }
+    .scheme-c .mini-step { width: 24px; height: 24px; border-radius: 4px; background: #f1f5f9; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #64748b; }
+    .scheme-c .row-badge { background: #f1f5f9; padding: 4px 10px; border-radius: 4px; font-size: 12px; }
+    .scheme-c .row-badge.recommended { background: #dcfce7; color: #166534; }
+    .scheme-c .select-btn { padding: 8px 16px; border-radius: 6px; border: 1px solid #e2e8f0; background: white; cursor: pointer; font-size: 13px; transition: all 0.15s; }
+    .scheme-c .select-btn:hover { border-color: #667eea; color: #667eea; }
+    .scheme-c .select-btn.selected { background: #667eea; color: white; border-color: #667eea; }
+
+    /* 说明文字 */
+    .scheme-desc { background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; border-left: 4px solid #667eea; }
+    .scheme-desc h3 { color: #667eea; margin-bottom: 8px; }
+    .scheme-desc p { color: #64748b; font-size: 14px; line-height: 1.6; }
+    .scheme-desc .pros-cons { display: flex; gap: 20px; margin-top: 12px; }
+    .scheme-desc .pros { color: #059669; }
+    .scheme-desc .cons { color: #dc2626; }
+    .scheme-desc .pros-cons span { font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div class="demo-header">
+    <h1>流程模板选择 - 三种设计方案</h1>
+    <p>点击下方标签切换查看不同方案</p>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="showScheme('a')">方案 A: 卡片优化</button>
+    <button class="tab-btn" onclick="showScheme('b')">方案 B: 双栏布局</button>
+    <button class="tab-btn" onclick="showScheme('c')">方案 C: 表格式</button>
+  </div>
+
+  <div class="demo-container">
+    <!-- 方案 A -->
+    <div id="scheme-a" class="demo-section scheme-a active">
+      <div class="scheme-desc">
+        <h3>方案 A: 卡片优化</h3>
+        <p>在现有卡片基础上增强：添加搜索框、分类筛选标签、hover 快速预览。保留弹窗详情，但用户可以先通过 hover 粗略了解。</p>
+        <div class="pros-cons">
+          <span class="pros">+ 改动最小，保留现有交互习惯</span>
+          <span class="cons">- 模板很多时仍需滚动</span>
+        </div>
+      </div>
+
+      <div class="search-bar">
+        <input type="text" placeholder="搜索流程模板...">
+        <div class="filter-chips">
+          <span class="chip active">全部</span>
+          <span class="chip">开发流程</span>
+          <span class="chip">评审流程</span>
+          <span class="chip">修复流程</span>
+          <span class="chip">重构流程</span>
+        </div>
+      </div>
+
+      <div class="card-grid">
+        <div class="card selected">
+          <span class="card-badge">推荐</span>
+          <div class="card-header">
+            <div class="card-icon dev">▣</div>
+            <div>
+              <div class="card-title">软件开发完整流程</div>
+              <div class="card-subtitle">需求 → 设计 → 开发 → 审查 → 测试</div>
+            </div>
+          </div>
+          <div class="card-steps">
+            <span class="step-badge active">需求分析</span>
+            <span class="step-badge">UI/UX</span>
+            <span class="step-badge">前端开发</span>
+            <span class="step-badge">代码审查</span>
+            <span class="step-badge">测试验证</span>
+          </div>
+          <div class="card-meta">
+            <span>5 步骤</span>
+            <span>v1</span>
+            <span>2 人工决策</span>
+          </div>
+          <div class="card-hover-preview">
+            <strong>快速预览</strong>
+            <p style="font-size:12px;color:#64748b;margin-top:8px;">完整软件开发生命周期，适合新项目从零开始开发。</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon review">▣</div>
+            <div>
+              <div class="card-title">设计评审流程</div>
+              <div class="card-subtitle">提交 → 评审 → 修改 → 通过</div>
+            </div>
+          </div>
+          <div class="card-steps">
+            <span class="step-badge">设计提交</span>
+            <span class="step-badge">设计评审</span>
+            <span class="step-badge">设计修改</span>
+            <span class="step-badge">评审通过</span>
+          </div>
+          <div class="card-meta">
+            <span>4 步骤</span>
+            <span>v1</span>
+            <span>1 人工决策</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon bug">▣</div>
+            <div>
+              <div class="card-title">Bug 修复流程</div>
+              <div class="card-subtitle">定位 → 方案 → 修复 → 验证</div>
+            </div>
+          </div>
+          <div class="card-steps">
+            <span class="step-badge">问题定位</span>
+            <span class="step-badge">修复方案</span>
+            <span class="step-badge">代码修复</span>
+            <span class="step-badge">修复验证</span>
+          </div>
+          <div class="card-meta">
+            <span>4 步骤</span>
+            <span>v1</span>
+            <span>1 人工决策</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon refactor">▣</div>
+            <div>
+              <div class="card-title">代码重构流程</div>
+              <div class="card-subtitle">分析 → 计划 → 执行 → 验证</div>
+            </div>
+          </div>
+          <div class="card-steps">
+            <span class="step-badge">重构分析</span>
+            <span class="step-badge">重构计划</span>
+            <span class="step-badge">执行重构</span>
+            <span class="step-badge">重构验证</span>
+          </div>
+          <div class="card-meta">
+            <span>4 步骤</span>
+            <span>v1</span>
+            <span>1 人工决策</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 方案 B -->
+    <div id="scheme-b" class="demo-section scheme-b">
+      <div class="scheme-desc" style="margin-bottom: 20px;">
+        <h3>方案 B: 双栏布局</h3>
+        <p>左侧分类导航，中间模板列表，右侧详情预览。点击模板即刻预览，无需弹窗。适合模板数量较多的场景。</p>
+        <div class="pros-cons">
+          <span class="pros">+ 信息效率高，无弹窗打断</span>
+          <span class="cons">- 占用空间较大</span>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 0;">
+        <div class="sidebar">
+          <div class="sidebar-title">分类</div>
+          <div class="category-item active">
+            <span>▣</span> 全部
+            <span class="category-count">4</span>
+          </div>
+          <div class="category-item">
+            <span>▣</span> 开发流程
+            <span class="category-count">1</span>
+          </div>
+          <div class="category-item">
+            <span>▣</span> 评审流程
+            <span class="category-count">1</span>
+          </div>
+          <div class="category-item">
+            <span>▣</span> 修复流程
+            <span class="category-count">1</span>
+          </div>
+          <div class="category-item">
+            <span>▣</span> 重构流程
+            <span class="category-count">1</span>
+          </div>
+        </div>
+
+        <div class="list-panel">
+          <div class="list-item active">
+            <div class="list-item-title">软件开发完整流程</div>
+            <div class="list-item-desc">需求 → 设计 → 开发 → 审查 → 测试</div>
+            <div class="list-item-meta">
+              <span>5 步骤</span>
+              <span>推荐</span>
+            </div>
+          </div>
+          <div class="list-item">
+            <div class="list-item-title">设计评审流程</div>
+            <div class="list-item-desc">提交 → 评审 → 修改 → 通过</div>
+            <div class="list-item-meta">
+              <span>4 步骤</span>
+            </div>
+          </div>
+          <div class="list-item">
+            <div class="list-item-title">Bug 修复流程</div>
+            <div class="list-item-desc">定位 → 方案 → 修复 → 验证</div>
+            <div class="list-item-meta">
+              <span>4 步骤</span>
+            </div>
+          </div>
+          <div class="list-item">
+            <div class="list-item-title">代码重构流程</div>
+            <div class="list-item-desc">分析 → 计划 → 执行 → 验证</div>
+            <div class="list-item-meta">
+              <span>4 步骤</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="detail-panel">
+          <div class="detail-header">
+            <div class="detail-icon">▣</div>
+            <div>
+              <div class="detail-title">软件开发完整流程</div>
+              <div class="detail-subtitle">完整软件开发生命周期，适合新项目从零开发</div>
+            </div>
+          </div>
+
+          <div class="detail-steps">
+            <div class="detail-steps-title">流程步骤</div>
+            <div class="step-flow">
+              <span class="flow-step">需求分析</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-step">UI/UX 设计</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-step">前端开发</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-step">代码审查</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-step">测试验证</span>
+            </div>
+          </div>
+
+          <div style="margin-top: 20px; padding: 16px; background: #f8fafc; border-radius: 8px;">
+            <div style="display: flex; gap: 24px; font-size: 13px;">
+              <div><strong>5</strong> <span style="color:#94a3b8">步骤</span></div>
+              <div><strong>2</strong> <span style="color:#94a3b8">人工决策</span></div>
+              <div><strong>3</strong> <span style="color:#94a3b8">自动继续</span></div>
+              <div><strong>v1</strong> <span style="color:#94a3b8">版本</span></div>
+            </div>
+          </div>
+
+          <div class="detail-actions">
+            <button class="btn primary">✓ 确认选择</button>
+            <button class="btn ghost">查看完整详情</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 方案 C -->
+    <div id="scheme-c" class="demo-section scheme-c">
+      <div class="scheme-desc">
+        <h3>方案 C: 表格式</h3>
+        <p>紧凑的表格布局，一行一个模板。右侧可固定预览区，点击行即可预览。适合模板数量很多的场景，浏览效率最高。</p>
+        <div class="pros-cons">
+          <span class="pros">+ 浏览效率最高，一屏可看多个</span>
+          <span class="cons">- 视觉冲击力较弱</span>
+        </div>
+      </div>
+
+      <div class="table-header">
+        <span>模板名称</span>
+        <span>步骤数</span>
+        <span>决策点</span>
+        <span>版本</span>
+        <span>操作</span>
+      </div>
+
+      <div class="table-row selected">
+        <div class="row-name">
+          <div class="row-icon" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white;">▣</div>
+          <div>
+            <div class="row-title">软件开发完整流程</div>
+            <div class="row-desc">需求分析 → UI/UX 设计 → 前端开发 → 代码审查 → 测试验证</div>
+          </div>
+        </div>
+        <div class="row-steps">
+          <span class="mini-step">1</span>
+          <span class="mini-step">2</span>
+          <span class="mini-step">3</span>
+          <span class="mini-step">4</span>
+          <span class="mini-step">5</span>
+        </div>
+        <div><span class="row-badge recommended">2 人工</span></div>
+        <div>v1</div>
+        <div><button class="select-btn selected">已选择</button></div>
+      </div>
+
+      <div class="table-row">
+        <div class="row-name">
+          <div class="row-icon" style="background: linear-gradient(135deg, #11998e, #38ef7d); color: white;">▣</div>
+          <div>
+            <div class="row-title">设计评审流程</div>
+            <div class="row-desc">设计方案提交 → 设计评审 → 设计修改 → 评审通过</div>
+          </div>
+        </div>
+        <div class="row-steps">
+          <span class="mini-step">1</span>
+          <span class="mini-step">2</span>
+          <span class="mini-step">3</span>
+          <span class="mini-step">4</span>
+        </div>
+        <div><span class="row-badge">1 人工</span></div>
+        <div>v1</div>
+        <div><button class="select-btn">选择</button></div>
+      </div>
+
+      <div class="table-row">
+        <div class="row-name">
+          <div class="row-icon" style="background: linear-gradient(135deg, #eb3349, #f45c43); color: white;">▣</div>
+          <div>
+            <div class="row-title">Bug 修复流程</div>
+            <div class="row-desc">问题定位 → 修复方案 → 代码修复 → 修复验证</div>
+          </div>
+        </div>
+        <div class="row-steps">
+          <span class="mini-step">1</span>
+          <span class="mini-step">2</span>
+          <span class="mini-step">3</span>
+          <span class="mini-step">4</span>
+        </div>
+        <div><span class="row-badge">1 人工</span></div>
+        <div>v1</div>
+        <div><button class="select-btn">选择</button></div>
+      </div>
+
+      <div class="table-row">
+        <div class="row-name">
+          <div class="row-icon" style="background: linear-gradient(135deg, #4facfe, #00f2fe); color: white;">▣</div>
+          <div>
+            <div class="row-title">代码重构流程</div>
+            <div class="row-desc">重构分析 → 重构计划 → 执行重构 → 重构验证</div>
+          </div>
+        </div>
+        <div class="row-steps">
+          <span class="mini-step">1</span>
+          <span class="mini-step">2</span>
+          <span class="mini-step">3</span>
+          <span class="mini-step">4</span>
+        </div>
+        <div><span class="row-badge">1 人工</span></div>
+        <div>v1</div>
+        <div><button class="select-btn">选择</button></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showScheme(scheme) {
+      document.querySelectorAll('.demo-section').forEach(s => s.classList.remove('active'));
+      document.getElementById('scheme-' + scheme).classList.add('active');
+      document.querySelectorAll('.tab-btn').forEach((btn, i) => {
+        btn.classList.toggle('active', btn.textContent.toLowerCase().includes(scheme));
+      });
+    }
+  </script>
+</body>
+</html>

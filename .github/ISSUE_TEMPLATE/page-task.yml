@@ -1,0 +1,53 @@
+name: 页面与功能任务
+description: 所有页面调整、功能修改和缺陷修复都从这里建 Issue
+title: "[Task] "
+labels:
+  - page-task
+body:
+  - type: dropdown
+    id: page
+    attributes:
+      label: 页面/模块
+      options:
+        - 工作台
+        - 流程管理
+        - 常规流程设计
+        - AI 流程设计
+        - 项目管理
+        - 新建项目
+        - 导入已有项目
+        - AI 建项
+        - 项目详情
+        - 记忆管理
+        - 设置中心
+        - 跨页面
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: 修改范围
+      description: 写清楚要改什么、不要改什么。
+      placeholder: 例如：项目详情页顶部布局调整，保持右侧详情面板样式不回退。
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 验收标准
+      placeholder: |
+        - 页面边距与工作台一致
+        - 构建通过
+        - 不回退已定稿样式
+    validations:
+      required: true
+  - type: checkboxes
+    id: workflow
+    attributes:
+      label: 协作规则
+      options:
+        - label: 我确认本任务会使用独立分支和独立 worktree。
+          required: true
+        - label: 我确认不会直接在 main 上开发。
+          required: true
+

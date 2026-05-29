@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI 建项助手 - HTML 原型</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand"><div class="brand-icon">AG</div><span>Agent 工程管理系统</span></div>
+      <nav class="nav">
+        <a class="nav-item" href="./workbench-v1.html"><div class="icon">▣</div><span>工作台</span></a>
+        <a class="nav-item active" href="./project-management-overview-ai-briefing-v1.html"><div class="icon">▤</div><span>项目管理</span></a>
+        <a class="nav-item" href="./workflow-builder-dual-mode-v1.html"><div class="icon">◇</div><span>流程编排</span></a>
+        <a class="nav-item" href="./memory-management-knowledge-center-v1.html"><div class="icon">◫</div><span>记忆管理</span></a>
+      </nav>
+    </aside>
+    <main class="main">
+      <header class="topbar"><div class="breadcrumb">AgentDevelop / 项目管理 / AI 建项</div><span class="chip ai">统一上下文入口</span></header>
+      <section class="page">
+        <div class="page-title">
+          <div><h1>AI 建项助手</h1><p class="muted">和 AI 讨论项目，或上传/粘贴已有资料，自动整理为可执行项目计划。</p></div>
+          <div class="row"><span class="chip">资料 4</span><span class="chip warn">待确认 6</span><span class="chip ai">AI 正在解析上下文</span></div>
+        </div>
+        <div class="split-wide">
+          <section class="panel ai-chat">
+            <div class="between"><h2>项目讨论区</h2><div class="row"><span class="chip">当前会话</span><span class="chip">上传文档</span><span class="chip">粘贴内容</span><span class="chip">协同文件</span></div></div>
+            <div class="chat-body">
+              <div class="bubble user">我想做一个 Agent 工程管理系统，先做个人本地 Web MVP，后续再做工程层和团队桌面版。</div>
+              <div class="bubble">我会先把项目目标、阶段边界、页面范围、角色流程和验收标准整理成项目草案。</div>
+              <div class="bubble user">已上传：PRD.md、会议记录.docx、当前会话摘要。</div>
+              <div class="bubble">已识别 4 类上下文：产品目标、工作台设计、项目管理改版、记忆管理设计。建议创建 Phase 1 Web MVP 项目，并生成 7 个核心页面任务。</div>
+            </div>
+            <div class="composer">
+              <textarea class="textarea" placeholder="描述项目、粘贴对话或拖入文档..."></textarea>
+              <div class="between">
+                <div class="row"><button class="btn">上传资料</button><button class="btn">引用当前会话</button><button class="btn">清空上下文</button></div>
+                <button class="btn primary">分析并生成项目草案</button>
+              </div>
+            </div>
+          </section>
+          <aside class="panel stack">
+            <div class="between"><h2>项目草案</h2><span class="chip warn">等待确认</span></div>
+            <div class="card stack"><div class="between"><h3>项目目标</h3><span class="chip ok">92%</span></div><p class="muted">构建本地 Agent 工程管理 Web MVP，覆盖项目管理、工作台、流程编排、记忆管理和设置中心。</p></div>
+            <div class="card stack"><div class="between"><h3>范围边界</h3><span class="chip">Phase 1</span></div><p class="muted">仅前端 Web MVP，真实 CLI、Shell、Git、MCP 执行进入 Phase 2。</p></div>
+            <div class="card stack"><h3>角色池</h3><div class="row"><span class="chip">产品经理</span><span class="chip">UI/UX</span><span class="chip">前端工程师</span><span class="chip">测试工程师</span></div></div>
+            <div class="card stack"><h3>流程建议</h3><p class="muted">需求分析 → UI/UX 设计 → 前端开发 → 代码审查 → 测试验证 → 产品验收。</p></div>
+            <div class="card stack"><h3>风险与验收</h3><p class="muted">中文显示、导航职责、AI 入口统一、记忆复用、流程能力矩阵为验收重点。</p></div>
+            <div class="between"><button class="btn">继续讨论</button><button class="btn">重新生成</button><button class="btn primary">确认创建项目</button></div>
+          </aside>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>
+

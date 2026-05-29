@@ -1,0 +1,546 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI 软件项目经理工作台设计评审页</title>
+  <style>
+    :root {
+      --bg-primary: #f5f6f8;
+      --bg-secondary: #ffffff;
+      --bg-tertiary: #eef1f5;
+      --border: #d8dde6;
+      --text-primary: #151922;
+      --text-secondary: #687386;
+      --text-tertiary: #9aa4b5;
+      --accent: #2f6df6;
+      --accent-soft: #eaf1ff;
+      --success: #17a673;
+      --warning: #d98514;
+      --danger: #d94a3a;
+      --radius: 8px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-primary: #101215;
+        --bg-secondary: #171a1f;
+        --bg-tertiary: #20242b;
+        --border: #343b46;
+        --text-primary: #f4f7fb;
+        --text-secondary: #a8b0bd;
+        --text-tertiary: #747f8e;
+        --accent: #6ea0ff;
+        --accent-soft: rgba(79, 140, 255, 0.16);
+        --success: #51d6a1;
+        --warning: #f2b85b;
+        --danger: #f97066;
+      }
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.5;
+      letter-spacing: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .header {
+      height: 44px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      flex: none;
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 13px;
+      color: var(--text-secondary);
+      font-weight: 600;
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--success);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .status::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--success);
+    }
+
+    .main { flex: 1; overflow: auto; }
+    .content {
+      width: min(1180px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 32px 0 48px;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 26px;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin: 0 0 6px;
+      font-size: 16px;
+      line-height: 1.25;
+    }
+
+    p { margin: 0; }
+    .subtitle {
+      color: var(--text-secondary);
+      margin-top: 8px;
+      max-width: 760px;
+      font-size: 15px;
+    }
+
+    .section { margin-top: 28px; }
+    .section-label {
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .mockup {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-top: 14px;
+    }
+
+    .mockup-header {
+      min-height: 38px;
+      padding: 9px 14px;
+      background: var(--bg-tertiary);
+      border-bottom: 1px solid var(--border);
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-weight: 700;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .mockup-body { padding: 16px; }
+
+    .placeholder {
+      border: 1px dashed var(--border);
+      border-radius: var(--radius);
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+      padding: 16px;
+      min-height: 96px;
+    }
+
+    .placeholder strong {
+      color: var(--text-primary);
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+
+    .shell {
+      display: grid;
+      grid-template-columns: 22% minmax(0, 46%) 32%;
+      gap: 10px;
+      min-height: 360px;
+    }
+
+    .bottom-log { margin-top: 10px; min-height: 72px; }
+
+    .metric-row {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .metric {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px;
+    }
+
+    .metric span {
+      display: block;
+      color: var(--text-secondary);
+      font-size: 12px;
+    }
+
+    .metric strong {
+      display: block;
+      margin-top: 4px;
+      font-size: 22px;
+      line-height: 1.1;
+    }
+
+    .stepper {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .step {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px;
+      min-height: 64px;
+    }
+
+    .step.active {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+    }
+
+    .step small {
+      display: block;
+      color: var(--text-tertiary);
+      font-size: 11px;
+      margin-bottom: 4px;
+    }
+
+    .step strong { font-size: 13px; }
+
+    .split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      min-height: 150px;
+    }
+
+    .card p {
+      color: var(--text-secondary);
+      font-size: 13px;
+    }
+
+    .tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 12px;
+    }
+
+    .tag {
+      min-height: 24px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .tag.blue { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+    .tag.green { color: var(--success); }
+    .tag.orange { color: var(--warning); }
+
+    .settings-grid {
+      display: grid;
+      grid-template-columns: 260px minmax(0, 1fr);
+      gap: 12px;
+    }
+
+    .settings-nav {
+      display: grid;
+      gap: 8px;
+    }
+
+    .nav-pill {
+      min-height: 38px;
+      border-radius: var(--radius);
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      padding: 9px 12px;
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .nav-pill.active {
+      background: var(--accent-soft);
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .table {
+      display: grid;
+      gap: 8px;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 140px minmax(0, 1fr) 140px 120px;
+      gap: 8px;
+      align-items: center;
+      min-height: 46px;
+      padding: 8px 10px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 13px;
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .flow-node {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px;
+      min-height: 88px;
+      position: relative;
+    }
+
+    .flow-node::after {
+      content: "→";
+      position: absolute;
+      right: -12px;
+      top: 32px;
+      color: var(--text-tertiary);
+    }
+
+    .flow-node:last-child::after { content: ""; }
+
+    .indicator-bar {
+      min-height: 38px;
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border);
+      display: grid;
+      place-items: center;
+      color: var(--text-secondary);
+      font-size: 12px;
+      flex: none;
+    }
+
+    @media (max-width: 900px) {
+      .shell, .settings-grid, .split, .cards, .metric-row, .stepper, .flow {
+        grid-template-columns: 1fr;
+      }
+
+      .row { grid-template-columns: 1fr; }
+      .flow-node::after { content: ""; }
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <h1>AI 软件项目经理工作台 / UI 设计评审页</h1>
+    <div class="status">Design ready</div>
+  </header>
+
+  <main class="main">
+    <div class="content">
+      <h2>主工作台与设置中心设计</h2>
+      <p class="subtitle">沿用前面可视化辅助页面的评审形式：先看结构，再看重点交互，最后看设置中心。完整高保真版本仍保留在 HTML 效果图里。</p>
+
+      <section class="section">
+        <div class="section-label">01 / 工作台总览</div>
+        <div class="metric-row">
+          <div class="metric"><span>活跃项目</span><strong>3</strong></div>
+          <div class="metric"><span>运行 Agent</span><strong>7</strong></div>
+          <div class="metric"><span>测试通过率</span><strong>92%</strong></div>
+          <div class="metric"><span>待人工确认</span><strong>1</strong></div>
+        </div>
+
+        <div class="mockup">
+          <div class="mockup-header">
+            <span>主工作台三栏布局</span>
+            <span>目标：一个人同时管多个项目和多个 Agent</span>
+          </div>
+          <div class="mockup-body">
+            <div class="shell">
+              <div class="placeholder">
+                <strong>左侧：项目与任务</strong>
+                项目切换器、全局队列、当前项目任务树、Workflow 阶段分组、Agent 占用状态。
+                <div class="tag-row"><span class="tag blue">多项目</span><span class="tag">任务树</span><span class="tag green">Agent 状态</span></div>
+              </div>
+              <div class="placeholder">
+                <strong>中间：任务执行区</strong>
+                当前任务标题、Workflow 步骤条、Agent Run 时间线、输出摘要、manual gate 操作。
+                <div class="stepper" style="margin-top:12px">
+                  <div class="step"><small>01</small><strong>需求</strong></div>
+                  <div class="step"><small>02</small><strong>架构</strong></div>
+                  <div class="step active"><small>03</small><strong>UI</strong></div>
+                  <div class="step"><small>04</small><strong>前端</strong></div>
+                  <div class="step"><small>05</small><strong>测试</strong></div>
+                  <div class="step"><small>06</small><strong>合并</strong></div>
+                </div>
+              </div>
+              <div class="placeholder">
+                <strong>右侧：工程反馈</strong>
+                Diff 文件列表、测试结果、页面预览、运行产物、记忆建议、权限/能力使用记录、Commit/Merge 操作。
+                <div class="tag-row"><span class="tag green">Diff</span><span class="tag orange">测试</span><span class="tag">日志</span></div>
+              </div>
+            </div>
+            <div class="placeholder bottom-log">
+              <strong>底部：Terminal / Runner Logs</strong>
+              按 project、task、run 过滤，查看实时输出，也可以手动开终端接管。
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-label">02 / 核心交互</div>
+        <div class="cards">
+          <div class="card">
+            <h3>创建任务</h3>
+            <p>选择项目、任务模板、workflow，填写需求；系统准备 branch/worktree，并自动分配适合的 Agent Profile。</p>
+            <div class="tag-row"><span class="tag blue">Project</span><span class="tag">Workflow</span></div>
+          </div>
+          <div class="card">
+            <h3>运行 Workflow</h3>
+            <p>每个步骤可配置 auto 或 manual gate。自动步骤继续推进，高风险步骤等待你确认。</p>
+            <div class="tag-row"><span class="tag green">auto</span><span class="tag orange">manual gate</span></div>
+          </div>
+          <div class="card">
+            <h3>检查结果</h3>
+            <p>右侧统一查看 diff、测试、预览、日志、记忆建议和权限使用记录，避免在多个窗口里来回找。</p>
+            <div class="tag-row"><span class="tag">Diff</span><span class="tag">Preview</span><span class="tag">Logs</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-label">03 / Workflow 独立模块</div>
+        <div class="mockup">
+          <div class="mockup-header">
+            <span>Workflow Library：先定义流程，项目再选择流程</span>
+            <span>每个步骤绑定角色；流程和角色都可以任意定制</span>
+          </div>
+          <div class="mockup-body">
+            <div class="split">
+              <div class="placeholder">
+                <strong>左侧：Workflow 模板库</strong>
+                软件开发完整流程、UI 快速迭代、Bug 修复、重构、文档生成、发布检查等都可以作为模板保存。
+                <div class="tag-row"><span class="tag blue">可新增</span><span class="tag">可复制</span><span class="tag">可版本化</span></div>
+              </div>
+              <div class="placeholder">
+                <strong>右侧：步骤编排器</strong>
+                每一步配置步骤名、输入来源、输出要求、绑定角色、auto/manual gate、失败策略和可用能力包。
+                <div class="tag-row"><span class="tag green">角色绑定</span><span class="tag orange">Gate 策略</span><span class="tag">能力授权</span></div>
+              </div>
+            </div>
+            <div class="flow" style="margin-top:12px">
+              <div class="flow-node"><h3>需求澄清</h3><p class="subtitle" style="font-size:13px">绑定：产品经理 / manual</p></div>
+              <div class="flow-node"><h3>架构设计</h3><p class="subtitle" style="font-size:13px">绑定：架构师 / manual</p></div>
+              <div class="flow-node"><h3>前端实现</h3><p class="subtitle" style="font-size:13px">绑定：前端 Agent / auto</p></div>
+              <div class="flow-node"><h3>测试验证</h3><p class="subtitle" style="font-size:13px">绑定：测试 Agent / auto</p></div>
+              <div class="flow-node"><h3>合并发布</h3><p class="subtitle" style="font-size:13px">绑定：Review / manual</p></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-label">04 / 角色与项目选择</div>
+        <div class="mockup">
+          <div class="mockup-header">
+            <span>角色库独立维护，项目选择工作流模板</span>
+            <span>角色不是写死的，模型、Provider、能力和 Launcher 都可配置</span>
+          </div>
+          <div class="mockup-body">
+            <div class="settings-grid">
+              <div class="settings-nav">
+                <div class="nav-pill active">Role Library</div>
+                <div class="nav-pill">Workflow Library</div>
+                <div class="nav-pill">Project Workflow</div>
+                <div class="nav-pill">Provider / Model</div>
+                <div class="nav-pill">Capabilities</div>
+              </div>
+              <div class="table">
+                <div class="row">
+                  <strong>产品经理</strong>
+                  <span>需求拆解、验收标准、任务优先级</span>
+                  <span class="tag blue">DeepSeek</span>
+                  <span class="tag green">可绑定</span>
+                </div>
+                <div class="row">
+                  <strong>架构师</strong>
+                  <span>架构评审、数据模型、接口边界</span>
+                  <span class="tag blue">Tencent</span>
+                  <span class="tag green">可绑定</span>
+                </div>
+                <div class="row">
+                  <strong>自定义角色</strong>
+                  <span>用户可以新增 UI、测试、部署、文档、Review 等任意角色</span>
+                  <span class="tag">任意 Provider</span>
+                  <span class="tag orange">高级配置</span>
+                </div>
+                <div class="row">
+                  <strong>项目选择</strong>
+                  <span>每个项目选择默认 workflow，也可覆盖某些步骤绑定的角色</span>
+                  <span class="tag blue">模板引用</span>
+                  <span class="tag">项目覆盖</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-label">05 / 设计结论</div>
+        <div class="split">
+          <div class="placeholder">
+            <strong>第一版聚焦</strong>
+            个人本地模式、多项目、多 Agent Profile、自定义 workflow、manual gate、worktree、工程反馈、记忆建议。
+          </div>
+          <div class="placeholder">
+            <strong>后续扩展</strong>
+            团队模式、权限协作、云端 Agent 调度、向量检索/RAG、更完整的 Capability Marketplace。
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="indicator-bar">
+    这版是评审页形式；完整高保真工作台仍在 agent-workbench-ui.html
+  </footer>
+</body>
+</html>

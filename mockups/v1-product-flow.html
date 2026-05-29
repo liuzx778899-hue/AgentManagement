@@ -1,0 +1,970 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Agent Management - V1 产品闭环</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #090c10;
+        --panel: #111720;
+        --panel-2: #151d28;
+        --panel-3: #0e131b;
+        --line: #263244;
+        --line-soft: #1d2735;
+        --text: #e6edf7;
+        --muted: #91a0b5;
+        --faint: #657389;
+        --blue: #5b8cff;
+        --blue-2: #1d376b;
+        --green: #41d98c;
+        --green-2: #163d2d;
+        --amber: #f0b35a;
+        --amber-2: #4b3519;
+        --red: #ff6b7a;
+        --red-2: #4a1f28;
+        --purple: #b58cff;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        min-width: 320px;
+        background: var(--bg);
+        color: var(--text);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      button,
+      input,
+      select,
+      textarea {
+        font: inherit;
+      }
+
+      .app {
+        display: grid;
+        grid-template-columns: 248px minmax(0, 1fr);
+        min-height: 100vh;
+      }
+
+      .sidebar {
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        border-right: 1px solid var(--line);
+        background: #0c1118;
+        padding: 18px 14px;
+      }
+
+      .brand {
+        display: grid;
+        gap: 4px;
+        margin-bottom: 18px;
+      }
+
+      .brand strong {
+        font-size: 15px;
+      }
+
+      .brand span,
+      .side-title,
+      .muted {
+        color: var(--muted);
+      }
+
+      .side-title {
+        margin: 20px 8px 8px;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0;
+        text-transform: uppercase;
+      }
+
+      .nav {
+        display: grid;
+        gap: 6px;
+      }
+
+      .nav a {
+        display: flex;
+        align-items: center;
+        min-height: 38px;
+        gap: 10px;
+        border: 1px solid transparent;
+        border-radius: 8px;
+        color: #aebbd0;
+        padding: 8px 10px;
+        font-size: 13px;
+      }
+
+      .nav a.active,
+      .nav a:hover {
+        border-color: #2d3c52;
+        background: #151d28;
+        color: var(--text);
+      }
+
+      .symbol {
+        display: grid;
+        flex: 0 0 24px;
+        width: 24px;
+        height: 24px;
+        place-items: center;
+        border: 1px solid #334155;
+        border-radius: 7px;
+        background: #101723;
+        color: #9fb6d9;
+        font-size: 11px;
+        font-weight: 800;
+      }
+
+      main {
+        min-width: 0;
+      }
+
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        min-height: 64px;
+        border-bottom: 1px solid var(--line);
+        background: rgba(9, 12, 16, 0.92);
+        padding: 12px 20px;
+        backdrop-filter: blur(16px);
+      }
+
+      .topbar h1 {
+        margin: 0;
+        font-size: 18px;
+      }
+
+      .topbar p {
+        margin: 2px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .top-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .btn {
+        min-height: 36px;
+        border: 1px solid #334155;
+        border-radius: 8px;
+        background: #151d28;
+        color: var(--text);
+        padding: 7px 12px;
+        font-size: 13px;
+      }
+
+      .btn.primary {
+        border-color: #3867d6;
+        background: #1f4fb8;
+      }
+
+      .btn.danger {
+        border-color: #7a2d39;
+        background: #34171f;
+        color: #ffb8c0;
+      }
+
+      .content {
+        display: grid;
+        gap: 22px;
+        width: min(1380px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 22px 0 42px;
+      }
+
+      section {
+        scroll-margin-top: 82px;
+      }
+
+      .hero,
+      .panel,
+      .tile,
+      .step,
+      .decision,
+      .memory-card {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr);
+        gap: 16px;
+        padding: 22px;
+      }
+
+      h2,
+      h3,
+      h4,
+      p {
+        margin: 0;
+      }
+
+      .hero h2 {
+        max-width: 820px;
+        margin-top: 10px;
+        font-size: 32px;
+        line-height: 1.12;
+      }
+
+      .hero p,
+      .panel p,
+      .tile p,
+      .step p,
+      .decision p,
+      .memory-card p,
+      li {
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.6;
+      }
+
+      .hero p {
+        max-width: 760px;
+        margin-top: 12px;
+      }
+
+      .badge-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        min-height: 24px;
+        border: 1px solid #344255;
+        border-radius: 999px;
+        color: #b8c5d8;
+        padding: 3px 9px;
+        font-size: 12px;
+      }
+
+      .badge.blue { border-color: var(--blue); color: #a9c6ff; }
+      .badge.green { border-color: var(--green); color: #93f0c0; }
+      .badge.amber { border-color: var(--amber); color: #ffd99e; }
+      .badge.red { border-color: var(--red); color: #ffadb6; }
+      .badge.purple { border-color: var(--purple); color: #d5c0ff; }
+
+      .summary-card {
+        display: grid;
+        gap: 12px;
+        border: 1px solid #2d3a50;
+        border-radius: 8px;
+        background: var(--panel-2);
+        padding: 16px;
+      }
+
+      .summary-card strong {
+        font-size: 26px;
+        line-height: 1.2;
+      }
+
+      .flow-strip {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .step {
+        min-height: 126px;
+        padding: 13px;
+      }
+
+      .step small {
+        display: block;
+        color: var(--blue);
+        font-size: 11px;
+        font-weight: 800;
+        margin-bottom: 8px;
+      }
+
+      .step h3 {
+        margin-bottom: 8px;
+        font-size: 15px;
+      }
+
+      .panel {
+        display: grid;
+        gap: 14px;
+        padding: 18px;
+      }
+
+      .panel-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+      }
+
+      .panel-head div {
+        display: grid;
+        gap: 6px;
+      }
+
+      .panel-head h2 {
+        font-size: 20px;
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: 300px minmax(0, 1fr) 320px;
+        gap: 14px;
+      }
+
+      .layout.two {
+        grid-template-columns: 340px minmax(0, 1fr);
+      }
+
+      .stack {
+        display: grid;
+        gap: 10px;
+      }
+
+      .tile {
+        display: grid;
+        gap: 8px;
+        padding: 13px;
+        background: var(--panel-2);
+      }
+
+      .tile.active {
+        border-color: var(--blue);
+        background: #12213a;
+      }
+
+      .tile.warn {
+        border-color: #72501f;
+        background: #1d1a13;
+      }
+
+      .tile.good {
+        border-color: #245c40;
+        background: #101d18;
+      }
+
+      .tile h3 {
+        font-size: 14px;
+      }
+
+      .field-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .field {
+        display: grid;
+        gap: 6px;
+      }
+
+      label {
+        color: #cad5e5;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      input,
+      select,
+      textarea {
+        width: 100%;
+        min-height: 38px;
+        border: 1px solid #314155;
+        border-radius: 8px;
+        background: #0c121b;
+        color: var(--text);
+        padding: 8px 10px;
+      }
+
+      textarea {
+        min-height: 118px;
+        resize: vertical;
+      }
+
+      .checklist {
+        display: grid;
+        gap: 8px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .checklist li {
+        display: flex;
+        gap: 8px;
+        align-items: flex-start;
+      }
+
+      .check {
+        display: grid;
+        flex: 0 0 18px;
+        width: 18px;
+        height: 18px;
+        place-items: center;
+        border: 1px solid #315d46;
+        border-radius: 5px;
+        background: #102219;
+        color: var(--green);
+        font-size: 11px;
+        font-weight: 900;
+      }
+
+      .timeline {
+        display: grid;
+        gap: 8px;
+      }
+
+      .timeline-item {
+        display: grid;
+        grid-template-columns: 34px minmax(0, 1fr) auto;
+        gap: 10px;
+        align-items: start;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel-2);
+        padding: 10px;
+      }
+
+      .avatar {
+        display: grid;
+        width: 34px;
+        height: 34px;
+        place-items: center;
+        border: 1px solid #345078;
+        border-radius: 8px;
+        background: #142037;
+        color: #a9c6ff;
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .builder {
+        display: grid;
+        grid-template-columns: 280px minmax(0, 1fr);
+        gap: 14px;
+      }
+
+      .step-list {
+        display: grid;
+        gap: 8px;
+      }
+
+      .builder-step {
+        display: grid;
+        grid-template-columns: 28px minmax(0, 1fr);
+        gap: 10px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel-2);
+        padding: 10px;
+      }
+
+      .builder-step.active {
+        border-color: var(--blue);
+      }
+
+      .drag {
+        display: grid;
+        width: 28px;
+        height: 28px;
+        place-items: center;
+        border: 1px solid #334155;
+        border-radius: 7px;
+        color: var(--faint);
+      }
+
+      .decision-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 360px;
+        gap: 14px;
+      }
+
+      .evidence-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .decision {
+        display: grid;
+        gap: 10px;
+        padding: 14px;
+        background: var(--panel-2);
+      }
+
+      .decision.warn {
+        border-color: #72501f;
+        background: #1d1a13;
+      }
+
+      .decision.danger {
+        border-color: #7a2d39;
+        background: #211118;
+      }
+
+      .log {
+        overflow: auto;
+        max-height: 220px;
+        border: 1px solid #253144;
+        border-radius: 8px;
+        background: #070a0f;
+        color: #cfe1ff;
+        padding: 12px;
+        font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+        font-size: 12px;
+        line-height: 1.6;
+        white-space: pre-wrap;
+      }
+
+      .memory-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .memory-card {
+        display: grid;
+        gap: 10px;
+        padding: 14px;
+        background: var(--panel-2);
+      }
+
+      .scope-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .footer-note {
+        border: 1px solid #2d3a50;
+        border-radius: 8px;
+        background: #0e141d;
+        padding: 14px;
+      }
+
+      @media (max-width: 1180px) {
+        .app {
+          grid-template-columns: 76px minmax(0, 1fr);
+        }
+
+        .brand span,
+        .nav a span:last-child,
+        .side-title {
+          display: none;
+        }
+
+        .layout,
+        .layout.two,
+        .builder,
+        .decision-grid,
+        .memory-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 820px) {
+        .app {
+          grid-template-columns: 1fr;
+        }
+
+        .sidebar {
+          position: static;
+          height: auto;
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
+        }
+
+        .nav {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .topbar,
+        .panel-head,
+        .hero {
+          grid-template-columns: 1fr;
+          align-items: stretch;
+          flex-direction: column;
+        }
+
+        .hero h2 {
+          font-size: 26px;
+        }
+
+        .flow-strip,
+        .field-grid,
+        .evidence-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">
+          <strong>Agent Management</strong>
+          <span>V1 产品闭环设计</span>
+        </div>
+        <div class="side-title">流程页面</div>
+        <nav class="nav" aria-label="V1 页面导航">
+          <a class="active" href="#overview"><span class="symbol">总</span><span>总览</span></a>
+          <a href="#project-onboarding"><span class="symbol">项</span><span>项目接入</span></a>
+          <a href="#new-task"><span class="symbol">务</span><span>新建任务</span></a>
+          <a href="#workflow-builder"><span class="symbol">流</span><span>工作流编排</span></a>
+          <a href="#manual-gate"><span class="symbol">决</span><span>人工决策</span></a>
+          <a href="#memory"><span class="symbol">忆</span><span>记忆管理</span></a>
+        </nav>
+      </aside>
+
+      <main>
+        <header class="topbar">
+          <div>
+            <h1>第一版产品闭环设计</h1>
+            <p>项目接入 -> 新建任务 -> 工作流编排 -> Agent 运行 -> 人工决策 -> 记忆沉淀</p>
+            <p style="font-size: 11px; color: var(--faint); margin-top: 6px;">静态设计评审页 | React MVP 实现页: <a href="http://127.0.0.1:5173/" style="color: var(--blue);">http://127.0.0.1:5173/</a></p>
+          </div>
+          <div class="top-actions">
+            <a class="btn" href="/mockups/progress-review.html">进度评审</a>
+            <a class="btn" href="/mockups/agent-workbench-ui.html">高保真工作台</a>
+            <a class="btn primary" href="#project-onboarding">开始评审</a>
+          </div>
+        </header>
+
+        <div class="content">
+          <section class="hero" id="overview">
+            <div>
+              <div class="badge-row">
+                <span class="badge blue">V1 产品闭环</span>
+                <span class="badge green">个人本地优先</span>
+                <span class="badge amber">设计评审</span>
+              </div>
+              <h2>把第一版从“方向稿”收口成可实现的主路径</h2>
+              <p>
+                这组页面补齐上一轮缺口：项目如何接入、任务如何创建、Workflow 如何编辑、Manual Gate 如何决策、记忆如何沉淀。
+                它们是 React MVP 之前的产品闭环设计，不处理团队协作、云端调度和完整 RAG。
+              </p>
+            </div>
+            <aside class="summary-card">
+              <span class="badge amber">当前 Review 重点</span>
+              <strong>先锁 V1 主路径，再写应用代码</strong>
+              <p>每个页面都保留工程证据、人工确认、可追踪日志和记忆沉淀，避免变成普通聊天壳。</p>
+            </aside>
+          </section>
+
+          <section class="flow-strip" aria-label="V1 主流程">
+            <article class="step"><small>01</small><h3>项目接入</h3><p>仓库路径、技术栈识别、命令配置、worktree 根目录、项目记忆。</p></article>
+            <article class="step"><small>02</small><h3>新建任务</h3><p>目标、验收标准、工作流模板、角色分配、能力授权。</p></article>
+            <article class="step"><small>03</small><h3>工作流编排</h3><p>步骤、输入输出、角色、人工决策、失败策略、版本和覆盖。</p></article>
+            <article class="step"><small>04</small><h3>人工决策</h3><p>Diff、测试、截图、日志、权限、风险和决策动作。</p></article>
+            <article class="step"><small>05</small><h3>记忆管理</h3><p>项目记忆、角色记忆、任务记忆、作用域和引用策略。</p></article>
+          </section>
+
+          <section class="panel" id="project-onboarding">
+            <div class="panel-head">
+              <div>
+                <span class="badge blue">Page 01</span>
+                <h2>项目接入页</h2>
+                <p>目标：把一个本地仓库接入为可被 Agent 调度、测试、预览和记忆的项目。</p>
+              </div>
+              <button class="btn primary" type="button">保存项目配置</button>
+            </div>
+
+            <div class="layout">
+              <aside class="stack">
+                <article class="tile active">
+                  <h3>接入步骤</h3>
+                  <p>选择仓库 -> 扫描项目 -> 配置命令 -> 建立记忆 -> 完成接入。</p>
+                  <div class="badge-row"><span class="badge green">3/5 完成</span><span class="badge amber">待确认</span></div>
+                </article>
+                <article class="tile">
+                  <h3>检测结果</h3>
+                  <p>识别到 TypeScript、Vite、React、Vitest。未检测到 Playwright 配置。</p>
+                </article>
+                <article class="tile warn">
+                  <h3>风险提示</h3>
+                  <p>构建命令未运行过；首次启用 Agent 前需要一次 manual gate。</p>
+                </article>
+              </aside>
+
+              <div class="stack">
+                <article class="tile">
+                  <h3>仓库与工作区</h3>
+                  <div class="field-grid">
+                    <div class="field"><label for="repo">仓库路径</label><input id="repo" value="D:\work\vibecode\Agent Management" /></div>
+                    <div class="field"><label for="branch">默认分支</label><input id="branch" value="master" /></div>
+                    <div class="field"><label for="worktree">Worktree 根目录</label><input id="worktree" value="D:\work\vibecode\.worktrees" /></div>
+                    <div class="field"><label for="risk">高风险 Gate 策略</label><select id="risk"><option>人工确认后继续</option><option>仅记录并通知</option></select></div>
+                  </div>
+                </article>
+
+                <article class="tile">
+                  <h3>命令配置</h3>
+                  <div class="field-grid">
+                    <div class="field"><label for="install">安装</label><input id="install" value="npm install" /></div>
+                    <div class="field"><label for="build">构建</label><input id="build" value="npm run build" /></div>
+                    <div class="field"><label for="test">测试</label><input id="test" value="npm test" /></div>
+                    <div class="field"><label for="preview">预览</label><input id="preview" value="npm run dev -- --port 5173" /></div>
+                  </div>
+                </article>
+              </div>
+
+              <aside class="stack">
+                <article class="tile good">
+                  <h3>项目记忆草稿</h3>
+                  <ul class="checklist">
+                    <li><span class="check">✓</span><span>本项目优先走本地个人模式。</span></li>
+                    <li><span class="check">✓</span><span>UI 任务必须通过浏览器验证。</span></li>
+                    <li><span class="check">✓</span><span>高风险写入需要人工 gate。</span></li>
+                  </ul>
+                </article>
+                <article class="tile">
+                  <h3>接入完成条件</h3>
+                  <p>仓库路径有效、命令可运行、默认 Workflow 已选择、至少一个 Agent Role 可用。</p>
+                </article>
+              </aside>
+            </div>
+          </section>
+
+          <section class="panel" id="new-task">
+            <div class="panel-head">
+              <div>
+                <span class="badge blue">Page 02</span>
+                <h2>新建任务流程页</h2>
+                <p>目标：把用户的一句话需求变成可执行的 Agent 运行，包括工作流、角色、权限和 worktree。</p>
+              </div>
+              <button class="btn primary" type="button">创建并启动任务</button>
+            </div>
+
+            <div class="layout two">
+              <aside class="stack">
+                <article class="tile active"><h3>1. 任务目标</h3><p>用自然语言描述目标，并补验收标准。</p></article>
+                <article class="tile"><h3>2. 选择工作流</h3><p>选择模板或项目默认流程。</p></article>
+                <article class="tile"><h3>3. 分配角色</h3><p>确认角色、模型、能力包和权限。</p></article>
+                <article class="tile"><h3>4. 确认提交</h3><p>检查步骤/角色/模型矩阵，创建 worktree。</p></article>
+              </aside>
+
+              <div class="stack">
+                <article class="tile">
+                  <h3>任务定义</h3>
+                  <div class="field-grid">
+                    <div class="field"><label for="project">项目</label><select id="project"><option>Agent Management</option><option>Stock Research</option></select></div>
+                    <div class="field"><label for="workflow">工作流</label><select id="workflow"><option>软件开发完整流程 v0.1</option><option>UI 设计评审流程</option></select></div>
+                    <div class="field" style="grid-column: 1 / -1;"><label for="goal">目标</label><textarea id="goal">补齐 V1 产品闭环页面，并用 localhost:55179 展示。</textarea></div>
+                    <div class="field" style="grid-column: 1 / -1;"><label for="acceptance">验收标准</label><textarea id="acceptance">能看到项目接入、新建任务、工作流编排、人工决策、记忆管理五个页面；每页说明用户目标、输入、输出和决策点。</textarea></div>
+                  </div>
+                </article>
+
+                <article class="tile">
+                  <h3>角色和能力包</h3>
+                  <div class="timeline">
+                    <div class="timeline-item"><span class="avatar">PM</span><div><h4>产品经理</h4><p>澄清目标、验收标准、任务拆分。</p></div><span class="badge green">自动</span></div>
+                    <div class="timeline-item"><span class="avatar">UI</span><div><h4>UI Agent</h4><p>生成页面结构、响应式和视觉质量。</p></div><span class="badge amber">人工决策</span></div>
+                    <div class="timeline-item"><span class="avatar">RV</span><div><h4>Review Agent</h4><p>检查范围、风险、遗漏和测试建议。</p></div><span class="badge blue">人工确认</span></div>
+                  </div>
+                </article>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel" id="workflow-builder">
+            <div class="panel-head">
+              <div>
+                <span class="badge blue">Page 03</span>
+                <h2>工作流编排器</h2>
+                <p>目标：让工作流成为可复用、可版本化、可项目覆盖的独立资源。</p>
+              </div>
+              <div class="top-actions">
+                <button class="btn" type="button">复制模板</button>
+                <button class="btn primary" type="button">发布 v0.2</button>
+              </div>
+            </div>
+
+            <div class="builder">
+              <aside class="stack">
+                <article class="tile active">
+                  <h3>软件开发完整流程</h3>
+                  <p>v0.1 / 默认模板 / 5 个步骤</p>
+                  <div class="badge-row"><span class="badge blue">模板</span><span class="badge amber">2 个项目覆盖</span></div>
+                </article>
+                <article class="tile"><h3>UI 设计评审流程</h3><p>适合先产出 mockup 和截图验证。</p></article>
+                <article class="tile"><h3>修 Bug 快速流程</h3><p>定位 -> 修复 -> 测试 -> Review。</p></article>
+              </aside>
+
+              <div class="stack">
+                <article class="tile">
+                  <h3>步骤编排</h3>
+                  <div class="step-list">
+                    <div class="builder-step"><span class="drag">01</span><div><h4>需求澄清</h4><p>角色: 产品经理 / 决策: 自动 / 输出: 验收标准</p></div></div>
+                    <div class="builder-step"><span class="drag">02</span><div><h4>架构设计</h4><p>角色: 架构师 / 决策: 人工（数据模型变更时）</p></div></div>
+                    <div class="builder-step active"><span class="drag">03</span><div><h4>前端实现</h4><p>角色: UI + 前端 / 决策: 人工（截图验证）</p></div></div>
+                    <div class="builder-step"><span class="drag">04</span><div><h4>Review 与测试</h4><p>角色: Review + 测试 / 决策: 人工（失败时）</p></div></div>
+                    <div class="builder-step"><span class="drag">05</span><div><h4>合并发布</h4><p>角色: Release / 决策: 始终人工</p></div></div>
+                  </div>
+                </article>
+
+                <article class="tile">
+                  <h3>当前步骤配置：前端实现</h3>
+                  <div class="field-grid">
+                    <div class="field"><label for="step-role">绑定角色</label><select id="step-role"><option>前端 Agent</option><option>UI Agent</option></select></div>
+                    <div class="field"><label for="step-gate">决策模式</label><select id="step-gate"><option>截图验证后人工确认</option><option>自动继续</option></select></div>
+                    <div class="field"><label for="step-input">输入来源</label><input id="step-input" value="设计规格 + 当前 diff + 任务目标" /></div>
+                    <div class="field"><label for="step-output">输出要求</label><input id="step-output" value="页面、测试结果、截图、变更摘要" /></div>
+                  </div>
+                </article>
+              </div>
+            </div>
+          </section>
+
+          <section class=”panel” id=”manual-gate”>
+            <div class=”panel-head”>
+              <div>
+                <span class=”badge blue”>Page 04</span>
+                <h2>人工决策页</h2>
+                <p>目标：让用户基于证据做决策，而不是靠聊天猜测是否能继续。</p>
+              </div>
+              <div class=”top-actions”>
+                <button class=”btn danger” type=”button”>终止</button>
+                <button class=”btn” type=”button”>改派</button>
+                <button class=”btn” type=”button”>重跑</button>
+                <button class=”btn primary” type=”button”>确认继续</button>
+              </div>
+            </div>
+
+            <div class=”decision-grid”>
+              <div class=”stack”>
+                <article class=”decision warn”>
+                  <div class=”badge-row”><span class=”badge amber”>人工决策</span><span class=”badge”>UI 方向确认</span></div>
+                  <h3>前端 Agent 完成 V1 Flow mockup，等待人工确认</h3>
+                  <p>确认后进入实施计划更新；如果不满意，可以改派 UI Agent 继续打磨，或保存当前结论为记忆。</p>
+                </article>
+
+                <div class=”evidence-grid”>
+                  <article class=”decision”><h3>Diff 摘要</h3><p>新增 `mockups/v1-product-flow.html`，更新 `PROJECT_STATUS.md` 和 checkpoint。</p><span class=”badge green”>低风险</span></article>
+                  <article class=”decision”><h3>测试与预览</h3><p>localhost:55179 可访问；根路径展示 V1 Flow 页面。</p><span class=”badge green”>200 OK</span></article>
+                  <article class=”decision”><h3>权限使用</h3><p>本轮只写入当前项目目录；旧目录同步需要额外权限。</p><span class=”badge amber”>外部同步待处理</span></article>
+                  <article class=”decision”><h3>记忆建议</h3><p>”实现前先锁 V1 主路径”应保存为项目级设计原则。</p><span class=”badge blue”>待保存</span></article>
+                </div>
+
+                <article class=”decision”>
+                  <h3>运行日志摘要</h3>
+                  <div class=”log”>13:52 读取 PROJECT_STATUS.md
+13:53 生成 progress-review.html
+13:58 确认缺失 V1 页面
+14:02 设计项目接入/任务创建/工作流编排/人工决策/记忆管理
+14:05 等待人工决策确认</div>
+                </article>
+              </div>
+
+              <aside class=”stack”>
+                <article class=”decision danger”>
+                  <h3>阻塞项</h3>
+                  <p>第一版主路径尚未写入正式 spec；若直接写 React，后面很可能返工。</p>
+                </article>
+                <article class=”decision”>
+                  <h3>决策动作定义</h3>
+                  <ul class=”checklist”>
+                    <li><span class=”check”>✓</span><span>继续：接受当前输出，进入下一步骤。</span></li>
+                    <li><span class=”check”>✓</span><span>重跑：保留输入，重新执行当前步骤。</span></li>
+                    <li><span class=”check”>✓</span><span>改派：换角色/模型/能力包继续。</span></li>
+                    <li><span class=”check”>✓</span><span>终止：关闭任务并记录原因。</span></li>
+                    <li><span class=”check”>✓</span><span>保存记忆：写入项目/角色/任务记忆。</span></li>
+                  </ul>
+                </article>
+              </aside>
+            </div>
+          </section>
+
+          <section class="panel" id="memory">
+            <div class="panel-head">
+              <div>
+                <span class="badge blue">Page 05</span>
+                <h2>记忆管理页</h2>
+                <p>目标：把任务中产生的经验变成可审计、可启用、可撤销的上下文资产。</p>
+              </div>
+              <button class="btn primary" type="button">保存选中记忆</button>
+            </div>
+
+            <div class="memory-grid">
+              <article class="memory-card">
+                <div class="badge-row"><span class="badge green">项目记忆</span><span class="badge">已启用</span></div>
+                <h3>实现前先锁定 V1 主路径</h3>
+                <p>项目进入 React 实现前，必须先确认项目接入、新建任务、工作流、人工决策、记忆闭环。</p>
+                <div class="scope-row"><span class="badge blue">Agent Management</span><span class="badge">设计</span></div>
+              </article>
+
+              <article class="memory-card">
+                <div class="badge-row"><span class="badge purple">角色记忆</span><span class="badge amber">待评审</span></div>
+                <h3>UI Agent 输出必须带浏览器预览</h3>
+                <p>所有 UI mockup 都要能通过 localhost 页面查看，并避免只给静态文件路径。</p>
+                <div class="scope-row"><span class="badge blue">UI Agent</span><span class="badge">浏览器</span></div>
+              </article>
+
+              <article class="memory-card">
+                <div class="badge-row"><span class="badge blue">任务记忆</span><span class="badge">候选</span></div>
+                <h3>旧目录同步需要权限</h3>
+                <p>写入 `C:\Users\Administrator\Documents\New project` 可能触发审批超时，当前主目录优先。</p>
+                <div class="scope-row"><span class="badge amber">同步</span><span class="badge">权限</span></div>
+              </article>
+            </div>
+
+            <div class="layout two">
+              <article class="tile">
+                <h3>记忆编辑</h3>
+                <div class="field-grid">
+                  <div class="field"><label for="memory-title">标题</label><input id="memory-title" value="实现前先锁定 V1 主路径" /></div>
+                  <div class="field"><label for="memory-scope">作用域</label><select id="memory-scope"><option>项目: Agent Management</option><option>角色: UI Agent</option><option>任务: 当前任务</option></select></div>
+                  <div class="field" style="grid-column: 1 / -1;"><label for="memory-body">内容</label><textarea id="memory-body">在创建 React MVP 之前，必须先完成 v1-product-flow.md，并让用户确认第一版主路径。</textarea></div>
+                </div>
+              </article>
+
+              <article class="tile">
+                <h3>引用策略</h3>
+                <ul class="checklist">
+                  <li><span class="check">✓</span><span>项目记忆默认注入同项目任务。</span></li>
+                  <li><span class="check">✓</span><span>角色记忆只注入绑定该角色的步骤。</span></li>
+                  <li><span class="check">✓</span><span>任务记忆默认不跨项目复用，需人工提升作用域。</span></li>
+                  <li><span class="check">✓</span><span>高风险记忆修改进入人工决策。</span></li>
+                </ul>
+              </article>
+            </div>
+          </section>
+
+          <section class="footer-note">
+            <p>
+              下一步文档化：把本页固化为 <code>docs/superpowers/specs/2026-05-15-v1-product-flow.md</code>，
+              然后更新 MVP 实施计划，再进入 Vite + React + TypeScript 实现。
+              <br/>静态设计评审页: <code>http://localhost:55179/</code> | React MVP 实现页: <code>http://127.0.0.1:5173/</code>
+            </p>
+          </section>
+        </div>
+      </main>
+    </div>
+  </body>
+</html>
