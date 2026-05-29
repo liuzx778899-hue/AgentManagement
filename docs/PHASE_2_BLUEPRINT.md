@@ -203,6 +203,108 @@ src/
 
 ---
 
+## Phase 2 多 Agent 协同规范
+
+本节用于约束多个 AI 工具、多个 Agent 或人工与 AI 同时参与开发时的协作方式。核心目标是避免互相覆盖、重复实现、误回滚和上下文漂移。
+
+### 1. 任务归属
+
+- 一个 Agent 只能认领一个明确 Issue，不允许“顺手”处理其他 Issue。
+- 一个 Issue 同一时间只允许一个主执行 Agent。
+- 如果任务必须拆给多个 Agent，必须先拆成多个子 Issue，并声明依赖关系。
+- 每个 Agent 开始前必须在 Issue 或交付说明中写清楚：
+  - 要改哪些文件或目录。
+  - 不改哪些文件或目录。
+  - 可能影响哪些页面、状态、服务或样式。
+  - 需要等待哪些前置任务。
+
+### 2. Worktree 隔离
+
+- 每个 Agent 必须使用独立 worktree：`.worktrees/issue-<number>-<short-slug>`。
+- 不允许两个 Agent 在同一个 worktree 内并行修改。
+- 不允许 Agent 在别人的 worktree 内修复问题，除非对应 Issue 明确转交。
+- 创建 worktree 前必须基于最新 `main`。
+- 合并或关闭 Issue 后，清理 worktree 必须经过路径校验和人工确认。
+
+### 3. 文件占用与并行边界
+
+- 修改同一文件的任务默认不能并行，必须串行。
+- 下面这些文件或目录属于高冲突区，多个 Agent 同时修改前必须先协调：
+  - `src/components/AppShell.tsx`
+  - `src/components/ProjectDetailPage.tsx`
+  - `src/components/Workflow*.tsx`
+  - `src/components/ProjectManagement*.tsx`
+  - `src/styles/*.css`
+  - `src/data/*`
+  - `docs/HANDOFF_NEXT_TASKS.md`
+  - `docs/PHASE_2_BLUEPRINT.md`
+- 如果必须并行修改同一领域，优先拆成：
+  - 类型/数据层 Issue
+  - service/useCase Issue
+  - UI 接入 Issue
+  - 样式微调 Issue
+- 样式任务不得顺手改业务逻辑，工程层任务不得顺手改页面视觉。
+
+### 4. 上下文同步
+
+- Agent 开始前必须读取：
+  - 当前 Git 状态。
+  - 当前 Issue 描述。
+  - `docs/HANDOFF_NEXT_TASKS.md`
+  - `docs/PHASE_2_BLUEPRINT.md`
+- UI 任务还必须读取最新设计约束文档：
+  - `docs/design/DESIGN_OVERVIEW.md`
+  - `docs/design/PAGE_SPEC.md`
+  - `docs/frontend/FRONTEND_IMPLEMENTATION_PLAN.md`
+- 不允许根据旧截图、旧对话记忆或旧 mockup 回滚当前实现。
+- 如果代码与文档冲突，先在 Issue 中记录冲突，再按最新 `main`、最新协助文件和用户最新指令判断。
+
+### 5. 提交与交付
+
+- 每个 Agent 必须小步提交，一个 commit 对应一个可验证改动。
+- 提交前必须同步最新 `main`，解决冲突后重新验证。
+- commit message 必须引用 Issue：`Refs #<number>` 或 `Closes #<number>`。
+- 交付说明必须包含：
+  - 本次改了什么。
+  - 改了哪些文件。
+  - 跑了哪些验证命令。
+  - 是否存在未完成项或残余风险。
+  - 是否影响其他 Agent 的工作范围。
+- 不允许把“未验证”“可能坏了”“后面再修”的内容合入 `main`。
+
+### 6. 冲突处理
+
+- 遇到冲突时，Agent 必须先停下来检查对方提交，不允许直接覆盖。
+- 只解决自己 Issue 相关的冲突，不删除无关改动。
+- 如果冲突涉及产品决策、设计基线、数据模型或公共接口，必须先更新 Issue 说明或协助文件。
+- 冲突解决后必须重新运行 build；涉及逻辑必须重新运行 test。
+- 如果无法判断谁的改动优先，以最新用户指令、最新文档和最新 `main` 为准。
+
+### 7. 看板状态
+
+Phase 2 Issue 建议统一使用这些状态：
+
+- `Ready`：需求清楚，未开始。
+- `In Progress`：已有 Agent 认领并开始。
+- `Blocked`：等待用户、权限、外部工具或上游 Issue。
+- `Review`：代码完成，等待验证、检查或合并。
+- `Done`：已合并、验证通过、Issue 可关闭。
+
+一个 Issue 进入 `In Progress` 后，其他 Agent 不得重复认领。
+
+### 8. 禁止事项
+
+- 禁止多个 Agent 共用同一个 worktree。
+- 禁止直接在 `main` 写功能代码。
+- 禁止按旧上下文回滚当前页面。
+- 禁止无 Issue 修改代码。
+- 禁止一个提交混入多个无关任务。
+- 禁止为了解决冲突删除别人已完成的功能。
+- 禁止在没有验证的情况下宣布完成。
+- 禁止把口头约定只留在聊天里；协作规则变化必须写入文档。
+
+---
+
 ## Phase 2 开发里程碑
 
 | 里程碑 | 名称 | 目标 | 验收结果 |

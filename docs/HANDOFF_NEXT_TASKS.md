@@ -39,6 +39,17 @@ Phase 2 开发硬约束：
 - 每个任务提交前至少跑 `npm --cache .npm-cache run build`；涉及状态/逻辑/adapter/useCase 必须跑 `npm --cache .npm-cache test`。
 - 详细规范见 `docs/PHASE_2_BLUEPRINT.md` 的“Phase 2 开发规范与代码约束”。
 
+Phase 2 多 Agent 协同硬约束：
+
+- 一个 Issue 同一时间只允许一个主执行 Agent；需要并行时必须先拆子 Issue。
+- 每个 Agent 必须使用独立 worktree，禁止共用目录或在别人的 worktree 里修问题。
+- 开始前必须读取当前 Issue、Git 状态、`docs/HANDOFF_NEXT_TASKS.md` 和 `docs/PHASE_2_BLUEPRINT.md`。
+- 修改同一文件的任务默认不能并行；`AppShell`、`ProjectDetailPage`、`Workflow*`、`ProjectManagement*`、`src/styles/*.css` 和核心 docs 属于高冲突区。
+- 不允许按旧截图、旧 mockup 或旧聊天记忆回滚当前实现。
+- 交付必须说明改动文件、验证命令、残余风险和对其他 Agent 的影响。
+- 冲突处理只解决自己 Issue 相关部分，不删除无关改动。
+- 详细规范见 `docs/PHASE_2_BLUEPRINT.md` 的“Phase 2 多 Agent 协同规范”。
+
 第一批开发 Issue 建议：
 
 | Issue | 名称 | 范围 | 验收 |
