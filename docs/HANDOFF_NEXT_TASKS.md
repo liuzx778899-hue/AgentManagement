@@ -27,6 +27,18 @@ Phase 2 技术选型：
 - 数据先落到 `.agentmanagement/` 下的 JSON / JSONL / MD 文件，不引入数据库。
 - 详细定稿见 `docs/PHASE_2_BLUEPRINT.md` 的“Phase 2 技术选型定稿”。
 
+Phase 2 开发硬约束：
+
+- 每个任务必须先有 GitHub Issue；分支使用 `issue-<number>-<short-slug>`，worktree 使用 `.worktrees/issue-<number>-<short-slug>`。
+- `main` 只保存稳定基线，不直接开发；commit 必须引用 Issue。
+- UI 组件不得直接执行 shell、读写文件、访问 GitHub 或调用 LLM；必须通过 UseCase 和 Adapter。
+- 本地工程能力放到 `src/services/local/`，共享类型放到 `src/types/`，fixtures/mock 集中管理。
+- 命名规范：组件 `PascalCase.tsx`，hooks `useXxx.ts`，测试 `*.spec.ts(x)`，用户文案中文，代码标识英文。
+- 新增代码必须通过 TypeScript 编译，不允许随意使用 `any`；外部输入必须校验。
+- 高风险操作必须二次确认；命令执行必须有白名单、timeout、cwd、退出码和日志脱敏。
+- 每个任务提交前至少跑 `npm --cache .npm-cache run build`；涉及状态/逻辑/adapter/useCase 必须跑 `npm --cache .npm-cache test`。
+- 详细规范见 `docs/PHASE_2_BLUEPRINT.md` 的“Phase 2 开发规范与代码约束”。
+
 第一批开发 Issue 建议：
 
 | Issue | 名称 | 范围 | 验收 |

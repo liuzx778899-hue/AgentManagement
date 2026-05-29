@@ -105,6 +105,104 @@ src/
 
 ---
 
+## Phase 2 开发规范与代码约束
+
+本节为 Phase 2 后续所有任务的硬约束。任何 Issue、worktree、AI 工具或人工修改都必须遵守。
+
+### 1. Git / Issue / Worktree 规范
+
+- 每个开发任务必须先有 GitHub Issue 编号。
+- 分支命名：`issue-<number>-<short-slug>`，例如 `issue-12-local-git-status`。
+- worktree 命名：`.worktrees/issue-<number>-<short-slug>`。
+- 一个 Issue 对应一个分支和一个 worktree，不同 AI 工具不得共用同一个 worktree。
+- `main` 只保存稳定基线，不直接开发，不堆积半成品。
+- commit 必须引用 Issue：`Refs #<number>` 或 `Closes #<number>`。
+- 一个 commit 只解决一个清晰主题，避免把页面调整、工程层能力、重构和文档混在一起。
+
+### 2. 目录与模块边界
+
+- 页面组件只放 UI 和交互编排，不直接执行 Git、文件系统、进程、网络或 LLM 调用。
+- 本地工程能力统一放在 `src/services/local/` 下。
+- 外部能力只能通过 Adapter 暴露，例如 `GitAdapter`、`WorktreeAdapter`、`ProcessRunnerAdapter`、`FileStoreAdapter`、`GitHubAdapter`、`LlmAdapter`。
+- 业务流程放在 UseCase，例如 `createIssueWorktree`、`readGitStatus`、`startWorkflowRun`。
+- 文件读写放在 Repository，例如 `ProjectRepository`、`WorkflowRepository`、`MemoryRepository`。
+- 共享类型放在 `src/types/`，禁止在多个页面重复定义同一套结构。
+- fixtures/mock 数据必须集中管理，不允许散落在组件内部。
+
+### 3. 命名规范
+
+- 文件名：
+  - React 组件：`PascalCase.tsx`，例如 `ProjectDetailPage.tsx`。
+  - hooks：`useXxx.ts`，例如 `useGitStatus.ts`。
+  - service / adapter / repository：`camelCase.ts` 或明确类名文件，例如 `gitAdapter.ts`、`projectRepository.ts`。
+  - 测试文件：`*.spec.ts` / `*.spec.tsx`。
+- 类型命名：
+  - interface/type 使用 `PascalCase`，例如 `LocalGitStatus`、`WorkflowRunState`。
+  - union 字面量使用小写短横线或小写枚举值，例如 `'running' | 'waiting-gate' | 'failed' | 'completed'`。
+- 函数命名：
+  - 读操作用 `get/read/list`。
+  - 写操作用 `create/update/delete/save`。
+  - 命令型操作用 `run/start/stop/close/archive`。
+- CSS class 继续沿用现有语义化命名，不新增无意义缩写。
+- 用户可见文案使用中文；代码标识、文件名、类型名使用英文。
+
+### 4. TypeScript 与代码质量
+
+- 新增代码必须通过 TypeScript 编译，不允许使用 `any` 绕过类型，确需使用时必须局部说明原因。
+- 外部输入必须校验，包括命令输出、文件 JSON、GitHub API、LLM 返回值和用户输入。
+- 异步操作必须显式处理 loading / success / error / empty 四类状态。
+- 禁止在组件 render 中写复杂业务判断；复杂逻辑抽到 selector、helper 或 UseCase。
+- 禁止复制大段相似逻辑；第二次重复可以接受，第三次必须抽公共函数或组件。
+- 注释只解释非显而易见的业务规则、安全边界或兼容原因，不写“代码做了什么”的空注释。
+- 不做无关重构；需要重构时必须服务于当前 Issue 的可验证目标。
+
+### 5. UI 与交互规范
+
+- Phase 2 默认不改 Phase 1 已定稿页面视觉，除非工程层能力接入需要新增状态或错误提示。
+- 所有页面继续遵守 Workbench 视觉基线：共享 Sidebar、AppTopbar、内容边距、按钮密度、图标体系。
+- 使用 `lucide-react` 图标，禁止混用 emoji、纯文字伪图标或随机 SVG。
+- 新增交互必须有明确 disabled、loading、error、empty 状态。
+- 高风险操作必须二次确认，例如删除 worktree、执行 shell、push、覆盖文件。
+- 列表、面板和日志区超过可视高度时使用局部滚动，不让整页失控溢出。
+- 不允许用浏览器缩放、`transform: scale(...)` 或页面级缩放解决布局问题。
+
+### 6. 本地命令与安全规范
+
+- 命令执行必须经过 Command/Adapter 层，不允许组件直接拼接 shell。
+- 命令参数必须数组化传入，避免字符串拼接注入。
+- 所有命令必须有 timeout、cwd、退出码、stderr/stdout 截断和错误结构。
+- 默认只允许当前项目根目录及授权 worktree 内的读写操作。
+- 删除、移动、覆盖文件前必须校验目标路径在允许目录内。
+- 高风险命令默认禁止，必须通过白名单和用户确认。
+- 日志必须脱敏，不写入 token、API key、cookie、凭据和完整密钥。
+
+### 7. 数据持久化规范
+
+- Phase 2 数据写入 `.agentmanagement/`，不写入散乱的项目根目录文件。
+- 写文件前先生成临时文件或备份，成功后再替换目标，避免半写入损坏。
+- JSON 文件必须格式化输出，便于 diff。
+- 运行日志使用 JSONL 追加写入，避免频繁改写大 JSON。
+- 所有持久化结构必须有 `version` 字段，方便后续迁移。
+- 文件读取失败必须能降级到空状态或 mock fallback，页面不得白屏。
+
+### 8. 测试与验收规范
+
+- 每个任务提交前至少运行：`npm --cache .npm-cache run build`。
+- 涉及状态、reducer、adapter、useCase 或数据转换的任务必须运行：`npm --cache .npm-cache test`。
+- 新增 UseCase / Adapter 必须覆盖成功、失败、超时或非法输入中的关键路径。
+- 涉及 UI 交互的任务必须进行浏览器走查或截图验证。
+- 修 bug 必须先描述复现条件，再说明验证结果。
+- 不能运行测试时，必须在提交说明或交付说明中写明原因和残余风险。
+
+### 9. 文档与协助文件规范
+
+- 改变架构、流程、目录、命名、协作规则时，必须同步更新 `docs/PHASE_2_BLUEPRINT.md` 或 `docs/HANDOFF_NEXT_TASKS.md`。
+- 页面视觉定稿只写入 design/frontend 相关文档；工程层规则写入 Phase 2 蓝图。
+- 文档必须使用 UTF-8，避免中文乱码。
+- 新增文档要写清楚“做什么 / 不做什么 / 验收方式”，避免只写口号。
+
+---
+
 ## Phase 2 开发里程碑
 
 | 里程碑 | 名称 | 目标 | 验收结果 |
