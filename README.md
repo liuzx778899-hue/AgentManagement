@@ -1,6 +1,6 @@
-# AgentDevelop
+# AgentManagement
 
-AgentDevelop 是一个个人本地优先的 AI 软件项目管理系统。当前仓库用于保存页面定稿基线、后续 issue 驱动开发，以及多 AI 工具通过 worktree 并行协作的工程记录。
+AgentManagement 是一个个人本地优先的 AI 软件项目管理系统。当前仓库用于保存页面定稿基线、后续 issue 驱动开发，以及多 AI 工具通过 worktree 并行协作的工程记录。
 
 ## 当前基线
 

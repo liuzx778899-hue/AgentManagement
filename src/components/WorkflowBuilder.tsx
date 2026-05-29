@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Check, ChevronDown, List, Paperclip, Plus, Send, Sparkles, Trash2 } from "lucide-react";
 import type { WorkbenchData, WorkflowStep, WorkflowTemplate } from "../domain/workbench";
 import { useWorkbenchState } from "../state";

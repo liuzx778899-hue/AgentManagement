@@ -28,8 +28,8 @@ export const workbenchData: WorkbenchData = {
   projects: [
     {
       id: "proj-001",
-      name: "AgentDevelop",
-      repoPath: "D:/work/vibecode/AgentDevelop",
+      name: "AgentManagement",
+      repoPath: "D:/work/vibecode/AgentManagement",
       defaultBranch: "main",
       worktreeRoot: ".claude/worktrees",
       scope: "personal",
@@ -65,7 +65,7 @@ export const workbenchData: WorkbenchData = {
       lastCheckAt: "2026-05-17T08:00:00.000Z",
       discoveryChanges: 5,
       runStatus: "running",
-      projectMarkdown: `# AgentDevelop 项目背景
+      projectMarkdown: `# AgentManagement 项目背景
 
 ## 项目概述
 AI 软件项目经理工作台，第一版是个人本地 Web MVP。
@@ -890,7 +890,7 @@ AI 软件项目经理工作台，第一版是个人本地 Web MVP。
       projectId: "proj-001",
       roleId: null,
       taskId: null,
-      title: "AgentDevelop 项目背景",
+      title: "AgentManagement 项目背景",
       body: "AI 软件项目经理工作台，第一版是个人本地 Web MVP，采用 Vite + React + TypeScript 技术栈。",
       citation: [
         {

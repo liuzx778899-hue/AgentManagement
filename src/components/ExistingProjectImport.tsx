@@ -201,7 +201,7 @@ const TYPE_BADGE_CLASS: Record<string, string> = {
 
 function inferProjectMetadata(path: string, type: DetectedType): InferredProjectMetadata {
   const lower = path.toLowerCase();
-  const looksLikeReact = /react|vite|frontend|web|agentdevelop|agent-develop/.test(lower);
+  const looksLikeReact = /react|vite|frontend|web|agentmanagement|agent-develop/.test(lower);
   const looksLikeNode = /node|npm|package/.test(lower);
 
   if (looksLikeReact || type === "claude-code" || type === "codex" || type === "mixed") {

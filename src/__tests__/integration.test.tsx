@@ -19,7 +19,7 @@ describe("品牌统一验证", () => {
 
   it("fixtures 没有乱码中文", () => {
     // 检查 fixtures 数据中的中文是否正常
-    expect(initialData.projects[0].name).toBe("AgentDevelop");
+    expect(initialData.projects[0].name).toBe("AgentManagement");
     expect(initialData.roles[0].name).toBe("产品经理");
     expect(initialData.roles[1].name).toBe("UI/UX 设计师");
     // 没有 Unicode 乱码序列

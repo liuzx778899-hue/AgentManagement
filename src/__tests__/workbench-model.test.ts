@@ -3,7 +3,7 @@ import { activeGate, workbenchData } from "../data/fixtures";
 
 describe("workbench fixtures", () => {
   it("covers the V1 flow pages", () => {
-    expect(workbenchData.projects[0].repoPath).toContain("AgentDevelop");
+    expect(workbenchData.projects[0].repoPath).toContain("AgentManagement");
     expect(workbenchData.tasks[0].workflowTemplateId).toBe("software-dev-v1");
     expect(workbenchData.workflowTemplates[0].steps.some((step) => step.gateMode === "manual")).toBe(true);
     expect(activeGate(workbenchData)?.status).toBe("waiting");

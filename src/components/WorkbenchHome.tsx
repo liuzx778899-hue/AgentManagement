@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Brain,
   Camera,
@@ -46,7 +46,7 @@ function mockTabs(data: WorkbenchData): MockTab[] {
     const content =
       index === 0
         ? [
-            `<span class="green">RUN</span>  v1.6.0 /home/agentdev/AgentDevelop`,
+            `<span class="green">RUN</span>  v1.6.0 /home/agentdev/AgentManagement`,
             `  <span class="green">鉁?/span> src/utils/format.ts (18)`,
             `  <span class="green">鉁?/span> src/components/__tests__/NavBar.spec.tsx (12)`,
             `  <span class="green">鉁?/span> src/pages/__tests__/dashboard.spec.tsx (14)`,
@@ -173,7 +173,7 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
         : popover === "branch-select"
           ? [project.defaultBranch ?? "main", "develop", "release/v1"].map((item) => ({ key: item, icon: <GitBranch size={14} />, label: item }))
           : popover === "worktree-select"
-            ? [project.worktreeRoot ?? ".codex/worktrees/agentdevelop", ".claude/worktrees", "D:/work/vibecode/AgentDevelop"].map((item) => ({
+            ? [project.worktreeRoot ?? ".codex/worktrees/agentmanagement", ".claude/worktrees", "D:/work/vibecode/AgentManagement"].map((item) => ({
                 key: item,
                 icon: <GitBranch size={14} />,
                 label: item,
@@ -274,7 +274,7 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
           </button>
           <button className={`wb-select-pill wide${popover === "worktree-select" ? " active" : ""}`} type="button" onClick={(event) => togglePopover("worktree-select", event.currentTarget)}>
             <GitBranch className="wb-inline-icon" />
-            {project.worktreeRoot ?? ".codex/worktrees/agentdevelop"}
+            {project.worktreeRoot ?? ".codex/worktrees/agentmanagement"}
             <ChevronDown className="wb-inline-icon" />
           </button>
           <button className={`wb-select-pill phase${popover === "phase-select" ? " active" : ""}`} type="button" onClick={(event) => togglePopover("phase-select", event.currentTarget)}>
@@ -401,10 +401,10 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
                   className="wb-terminal-output"
                   dangerouslySetInnerHTML={{
                     __html:
-                      `<span class="terminal-prompt">agentdev@AgentDevelop</span>:<span class="terminal-path">~/AgentDevelop</span>$ npm run dev\n\n` +
-                      `> agentdevelop@0.1.0 dev\n> vite\n\n` +
+                      `<span class="terminal-prompt">agentdev@AgentManagement</span>:<span class="terminal-path">~/AgentManagement</span>$ npm run dev\n\n` +
+                      `> agentmanagement@0.1.0 dev\n> vite\n\n` +
                       activeTab.content +
-                      `\n\n<span class="terminal-prompt">agentdev@AgentDevelop</span>:<span class="terminal-path">~/AgentDevelop</span>$ <span class="terminal-cursor"></span>`,
+                      `\n\n<span class="terminal-prompt">agentdev@AgentManagement</span>:<span class="terminal-path">~/AgentManagement</span>$ <span class="terminal-cursor"></span>`,
                   }}
                 />
                 <div className="wb-terminal-status-bar">

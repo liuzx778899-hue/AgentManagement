@@ -60,7 +60,7 @@ export function AiWorkflowDesign({ data: _data }: AiWorkflowDesignProps) {
       {/* ===== GLOBAL BAR (breadcrumb) ===== */}
       <header className="awd-globalbar">
         <div className="awd-breadcrumb">
-          <span>AgentDevelop</span><span>/</span><span>流程管理</span><span>/</span><strong>AI 流程设计</strong>
+          <span>AgentManagement</span><span>/</span><span>流程管理</span><span>/</span><strong>AI 流程设计</strong>
         </div>
         <div className="awd-top-chip"><span className="awd-dot" /> 个人本地版</div>
       </header>
@@ -68,7 +68,7 @@ export function AiWorkflowDesign({ data: _data }: AiWorkflowDesignProps) {
       {/* ===== TOOLBAR ===== */}
       <div className="awd-toolbar">
         <div className="awd-toolbar-left">
-          <div className="awd-select-pill"><span>▣</span> AgentDevelop <ChevronDown size={14} /></div>
+          <div className="awd-select-pill"><span>▣</span> AgentManagement <ChevronDown size={14} /></div>
           <div className="awd-select-pill wide"><span>上下文：</span> 项目计划 + 协同文件 + 当前流程 <ChevronDown size={14} /></div>
           <div className="awd-select-pill flow"><span>目标流程：</span> 软件开发完整流程 <ChevronDown size={14} /></div>
           <div className="awd-source-chip">已收集 {MOCK_FILES.length} 个来源 · {draftGenerated ? "草案已生成" : "草案未生成"}</div>

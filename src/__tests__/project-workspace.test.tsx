@@ -219,10 +219,10 @@ describe("ProjectWorkspace", () => {
     const mdOverlay = document.querySelector(".md-viewer-overlay");
     expect(mdOverlay).toBeInTheDocument();
 
-    // Header should show project name (project name from fixtures is "AgentDevelop")
+    // Header should show project name (project name from fixtures is "AgentManagement")
     const mdHeader = document.querySelector(".md-viewer-title strong");
     expect(mdHeader).toBeInTheDocument();
-    expect(mdHeader?.textContent).toContain("AgentDevelop");
+    expect(mdHeader?.textContent).toContain("AgentManagement");
 
     // Close button should close the panel
     const closeBtn = document.querySelector(".md-viewer-panel .btn-icon");
@@ -250,7 +250,7 @@ describe("ProjectWorkspace", () => {
     const mdContent = document.querySelector(".md-viewer-content");
     expect(mdContent).toBeInTheDocument();
     // The content includes repo path or commands
-    expect(mdContent?.textContent).toMatch(/AgentDevelop|npm|仓库/);
+    expect(mdContent?.textContent).toMatch(/AgentManagement|npm|仓库/);
 
     // Source indicator should show either "项目自定义" or "自动生成"
     const mdSource = document.querySelector(".md-viewer-source");

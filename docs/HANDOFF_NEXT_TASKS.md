@@ -263,7 +263,7 @@ Required:
 - AppTopbar must remain stable across pages:
   - height: `64px`
   - breadcrumb position and typography must not change
-  - format: `AgentDevelop / 当前页面`
+  - format: `AgentManagement / 当前页面`
   - right-side status/actions must use the same button density and icon sizing
 - Content layout must use the same page spacing rules:
   - normal management pages: `24px` content padding
@@ -1035,7 +1035,7 @@ Required layout:
 - Sidebar active item: `流程管理`.
 - Page: `流程管理 / AI 流程设计`.
 - Secondary context header:
-  - left: `AgentDevelop`
+  - left: `AgentManagement`
   - context selector: `上下文：项目计划 + 协同文件 + 当前流程`
   - target selector: `目标流程：软件开发完整流程`
   - status: `已收集 5 个来源 · 草案未生成`

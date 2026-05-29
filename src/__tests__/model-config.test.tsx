@@ -259,7 +259,7 @@ describe("CLI Runner Configuration", () => {
     expect(screen.getByText("CLI Runner")).toBeInTheDocument();
 
     // Check that default runner option exists in the runner select
-    expect(screen.getByText("— 使用默认 Runner —")).toBeInTheDocument();
+    expect(screen.getByText("使用默认 Runner")).toBeInTheDocument();
 
     // Check that enabled runners appear as options (Claude Code CLI and Codex CLI are enabled in fixtures)
     expect(screen.getByText("Claude Code CLI (claude)")).toBeInTheDocument();

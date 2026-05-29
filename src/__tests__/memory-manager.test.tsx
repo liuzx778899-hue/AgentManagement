@@ -64,7 +64,7 @@ describe("MemoryManager", () => {
   it("shows memory cards from fixtures", () => {
     render(<MemoryManager data={workbenchData} />, { wrapper });
 
-    expect(screen.getByText("AgentDevelop 项目背景")).toBeInTheDocument();
+    expect(screen.getByText("AgentManagement 项目背景")).toBeInTheDocument();
   });
 
   it("filters memories by category tab", () => {
@@ -75,7 +75,7 @@ describe("MemoryManager", () => {
     fireEvent.click(projectTab);
 
     // Should still show the project memory
-    expect(screen.getByText("AgentDevelop 项目背景")).toBeInTheDocument();
+    expect(screen.getByText("AgentManagement 项目背景")).toBeInTheDocument();
   });
 
   it("shows add memory button in header", () => {
@@ -147,8 +147,8 @@ describe("MemoryManager", () => {
     // Left tree should show "知识库" node and project names exist
     expect(screen.getByText("知识库")).toBeInTheDocument();
 
-    // "AgentDevelop" appears both in tree and card meta, so use getAllByText
-    const treeItems = screen.getAllByText("AgentDevelop");
+    // "AgentManagement" appears both in tree and card meta, so use getAllByText
+    const treeItems = screen.getAllByText("AgentManagement");
     expect(treeItems.length).toBeGreaterThan(0);
   });
 

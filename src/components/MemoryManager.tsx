@@ -511,21 +511,21 @@ function MemoryIntelligencePanel({ data: _data }: MemoryIntelligencePanelProps) 
   // Mock insights
   const insights = [
     { id: "i1", text: "3个项目都遇到了TypeScript strictNullChecks问题" },
-    { id: "i2", text: "SSR预取策略在AgentDevelop和智能客服平台中采用相同模式" },
+    { id: "i2", text: "SSR预取策略在AgentManagement和智能客服平台中采用相同模式" },
     { id: "i3", text: "所有项目均使用Vitest作为测试框架" },
   ];
 
   // Mock knowledge queue
   const queue = [
-    { id: "kq1", title: "React useEffect清理函数最佳实践", source: "AgentDevelop / 前端工程师" },
-    { id: "kq2", title: "Git worktree工作流隔离方案", source: "AgentDevelop / 架构师" },
+    { id: "kq1", title: "React useEffect清理函数最佳实践", source: "AgentManagement / 前端工程师" },
+    { id: "kq2", title: "Git worktree工作流隔离方案", source: "AgentManagement / 架构师" },
     { id: "kq3", title: "Prisma迁移回滚策略", source: "智能客服平台 / 后端工程师" },
   ];
 
   // Mock reuse suggestions
   const reuseItems = [
-    { id: "ru1", title: "暗色主题设计系统", source: "来自: AgentDevelop", reason: "可复用于所有新项目" },
-    { id: "ru2", title: "Agent工作流模板引擎", source: "来自: AgentDevelop", reason: "通用任务调度框架" },
+    { id: "ru1", title: "暗色主题设计系统", source: "来自: AgentManagement", reason: "可复用于所有新项目" },
+    { id: "ru2", title: "Agent工作流模板引擎", source: "来自: AgentManagement", reason: "通用任务调度框架" },
   ];
 
   // Mock audit trail

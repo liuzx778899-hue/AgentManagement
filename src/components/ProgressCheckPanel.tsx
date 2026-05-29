@@ -134,7 +134,7 @@ function generateMockProgressDiffs(data: WorkbenchData): ProgressDiffItem[] {
     diffs.push({
       id: `diff-${diffs.length + 1}`,
       projectId: waitingGates[0].taskId,
-      projectName: "AgentDevelop",
+      projectName: "AgentManagement",
       type: "gate",
       direction: "neutral",
       previous: "运行中",

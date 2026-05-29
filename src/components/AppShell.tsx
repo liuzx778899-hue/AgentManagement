@@ -77,7 +77,7 @@ export function AppShell({
       <div className="main-area">
         <header className="topbar">
           <div className="topbar-left">
-            <span className="topbar-breadcrumb">AgentDevelop</span>
+            <span className="topbar-breadcrumb">AgentManagement</span>
             <span className="topbar-separator">/</span>
             <span className="topbar-view-label">
               {NAV_ITEMS.find((n) => n.view === activeView)?.label ?? (activeView === "project-workspace" ? "项目工作区" : activeView === "project-detail" ? "项目详情" : activeView === "ai-briefing" ? "AI 建项" : activeView === "workflows" ? "流程设计" : activeView === "ai-workflow-design" ? "AI 流程设计" : activeView)}

@@ -51,7 +51,7 @@ export function ProjectManagement({ data, onEnterProject, onEnterDetail, onEnter
     return () => document.removeEventListener("mousedown", handler);
   }, [activeDropdown]);
 
-  const portfolioOptions = ["全部项目组合", "重点项目", "AgentDevelop 相关", "测试项目"];
+  const portfolioOptions = ["全部项目组合", "重点项目", "AgentManagement 相关", "测试项目"];
   const viewOptions = ["本周视图", "本月视图", "全部视图", "自定义范围"];
   const sortOptions = ["按风险优先", "按进度排序", "按健康分排序", "按更新时间"];
 
@@ -87,7 +87,7 @@ export function ProjectManagement({ data, onEnterProject, onEnterDetail, onEnter
   [data.manualGates]);
 
   const milestones = useMemo(() => [
-    { date: "05-20", text: "AgentDevelop 完成 AI 流程设计对齐", tag: "今天", tagColor: "ok" as const },
+    { date: "05-20", text: "AgentManagement 完成 AI 流程设计对齐", tag: "今天", tagColor: "ok" as const },
     { date: "05-21", text: "Stock Agent 工程层风险复核", tag: "明天", tagColor: "warn" as const },
     { date: "05-23", text: "Docs Automation 计划确认", tag: "本周", tagColor: "" as const },
   ], []);
@@ -201,7 +201,7 @@ export function ProjectManagement({ data, onEnterProject, onEnterDetail, onEnter
             <div className="pm-v2-commander-icon"><AlertTriangle size={18} /></div>
             <div>
               <h3>今日必须决策</h3>
-              <p>AgentDevelop 流程草案是否应用，Stock Agent 是否先暂停工程层。</p>
+              <p>AgentManagement 流程草案是否应用，Stock Agent 是否先暂停工程层。</p>
             </div>
             <div className="pm-v2-commander-metric">{urgentGates.length}<span>待拍板</span></div>
           </div>
@@ -278,7 +278,7 @@ export function ProjectManagement({ data, onEnterProject, onEnterDetail, onEnter
               </div>
               <div className="pm-v2-attention">
                 <span className="pm-v2-pill pm-v2-pill-warn">中</span>
-                <div><h3>AgentDevelop Gate 待处理</h3><p>前端页面已成型，需确认流程草案是否应用。</p></div>
+                <div><h3>AgentManagement Gate 待处理</h3><p>前端页面已成型，需确认流程草案是否应用。</p></div>
                 <span className="pm-v2-badge">Gate</span>
               </div>
             </div>
