@@ -11,6 +11,7 @@ import type {
   ImAdapter,
   ImEventType,
   GitCredential,
+  GitStatus,
 } from "../domain/workbench";
 import type { RunnerProfile } from "../domain/runner";
 
@@ -48,7 +49,9 @@ export type WorkbenchAction =
   | { type: "UPDATE_WORKFLOW_TEMPLATE"; templateId: string; updates: Partial<WorkflowTemplate> }
   | { type: "DELETE_WORKFLOW_TEMPLATE"; templateId: string }
   | { type: "UPDATE_RUNNER"; runnerId: string; updates: Partial<RunnerProfile> }
-  | { type: "SET_DEFAULT_RUNNER"; runnerId: string | undefined };
+  | { type: "SET_DEFAULT_RUNNER"; runnerId: string | undefined }
+  | { type: "REFRESH_GIT_STATUS_START"; payload: { projectId: string } }
+  | { type: "UPDATE_GIT_STATUS"; payload: { projectId: string; status: Partial<GitStatus> } };
 
 // Action Creators
 export function updateGateStatus(gateId: string, status: GateStatus): WorkbenchAction {
@@ -181,4 +184,13 @@ export function updateRunner(runnerId: string, updates: Partial<RunnerProfile>):
 
 export function setDefaultRunner(runnerId: string | undefined): WorkbenchAction {
   return { type: "SET_DEFAULT_RUNNER", runnerId };
+}
+
+// Git Status Actions
+export function refreshGitStatusStart(projectId: string): WorkbenchAction {
+  return { type: "REFRESH_GIT_STATUS_START", payload: { projectId } };
+}
+
+export function updateGitStatusAction(projectId: string, status: Partial<GitStatus>): WorkbenchAction {
+  return { type: "UPDATE_GIT_STATUS", payload: { projectId, status } };
 }

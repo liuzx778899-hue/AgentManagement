@@ -1,4 +1,4 @@
-import type { WorkbenchData, ManualGate, AgentRun, Task, GitCredential, WorkflowTemplate, AgentRole } from "../domain/workbench";
+import type { WorkbenchData, ManualGate, AgentRun, Task, GitCredential, WorkflowTemplate, AgentRole, GitStatus } from "../domain/workbench";
 import type { WorkbenchAction } from "./workbenchActions";
 
 export function generateId(): string {
@@ -323,6 +323,29 @@ export function workbenchReducer(state: WorkbenchData, action: WorkbenchAction):
 
     case "SET_DEFAULT_RUNNER":
       return { ...state, defaultRunner: action.runnerId };
+
+    case "REFRESH_GIT_STATUS_START":
+      // 可以设置 loading 状态
+      return state;
+
+    case "UPDATE_GIT_STATUS": {
+      const { projectId, status } = action.payload;
+      const existingStatus = state.gitStatuses.find(s => s.projectId === projectId);
+
+      if (existingStatus) {
+        return {
+          ...state,
+          gitStatuses: state.gitStatuses.map(s =>
+            s.projectId === projectId ? { ...s, ...status } as GitStatus : s
+          ),
+        };
+      }
+
+      return {
+        ...state,
+        gitStatuses: [...state.gitStatuses, { projectId, ...status } as GitStatus],
+      };
+    }
 
     default:
       return state;
