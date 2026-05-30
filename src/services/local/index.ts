@@ -32,9 +32,15 @@ import { GitAdapter } from './adapters/gitAdapter';
 import { FileStoreAdapter } from './adapters/fileStoreAdapter';
 import { ProcessRunnerAdapter } from './adapters/processRunnerAdapter';
 import { ProjectRepository, MemoryRepository, WorkflowRepository } from './repositories';
-import type { AdapterConfig } from '../../types/localEngineering';
+import type { AdapterConfig, RunnerProcess, LogEntry } from '../../types/localEngineering';
+import type { RunnerKind } from '../../domain/runner';
+import type { Project } from '../../domain/project';
+import type { Memory, MemoryKind, MemoryScope } from '../../domain/memory';
+import type { AppSettings } from '../../types/settings';
+import type { WorkflowRun } from './useCases/workflowExecutionUseCase';
 
 export interface LocalEngineeringServices {
+  // Core adapters
   git: GitAdapter;
   fileStore: FileStoreAdapter;
   processRunner: ProcessRunnerAdapter;
@@ -43,6 +49,44 @@ export interface LocalEngineeringServices {
     memory: MemoryRepository;
     workflow: WorkflowRepository;
   };
+
+  // Runner service methods
+  startRunner?: (runnerId: string, kind: RunnerKind, cwd: string) => Promise<{ ok: boolean; data?: RunnerProcess; error?: { code: string; message: string } }>;
+  stopRunner?: (processId: string) => Promise<{ ok: boolean; error?: { code: string; message: string } }>;
+  getLogs?: (processId: string) => Promise<{ ok: boolean; data?: LogEntry[]; error?: { code: string; message: string } }>;
+  getStatus?: (processId: string) => Promise<{ ok: boolean; data?: RunnerProcess; error?: { code: string; message: string } }>;
+  listProcesses?: () => Promise<{ ok: boolean; data?: RunnerProcess[]; error?: { code: string; message: string } }>;
+
+  // Project service methods
+  createProject?: (input: { name: string; repoPath: string; defaultBranch: string; worktreeRoot: string; workflowTemplateId?: string }) => Promise<{ ok: boolean; data?: Project; error?: { code: string; message: string } }>;
+  importProject?: (path: string) => Promise<{ ok: boolean; data?: Project; error?: { code: string; message: string } }>;
+  getProject?: (id: string) => Promise<{ ok: boolean; data?: Project; error?: { code: string; message: string } }>;
+  listProjects?: () => Promise<{ ok: boolean; data?: Project[]; error?: { code: string; message: string } }>;
+  updateProject?: (id: string, input: Partial<Project>) => Promise<{ ok: boolean; data?: Project; error?: { code: string; message: string } }>;
+  deleteProject?: (id: string) => Promise<{ ok: boolean; error?: { code: string; message: string } }>;
+
+  // Workflow service methods
+  createWorkflowRun?: (projectId: string, templateId: string) => Promise<{ ok: boolean; data?: { runId: string }; error?: { code: string; message: string } }>;
+  pauseWorkflowRun?: (runId: string) => Promise<{ ok: boolean; error?: { code: string; message: string } }>;
+  resumeWorkflowRun?: (runId: string) => Promise<{ ok: boolean; error?: { code: string; message: string } }>;
+  cancelWorkflowRun?: (runId: string) => Promise<{ ok: boolean; error?: { code: string; message: string } }>;
+  getWorkflowRunStatus?: (runId: string) => Promise<{ ok: boolean; data?: WorkflowRun; error?: { code: string; message: string } }>;
+
+  // Git service methods (additional)
+  getGitStatus?: (repoPath: string) => Promise<{ ok: boolean; data?: { branch: string; ahead: number; behind: number; staged: number; unstaged: number; untracked: number; isClean: boolean }; error?: { code: string; message: string } }>;
+  getGitBranches?: (repoPath: string) => Promise<{ ok: boolean; data?: string[]; error?: { code: string; message: string } }>;
+  getGitWorktrees?: (repoPath: string) => Promise<{ ok: boolean; data?: { path: string; branch: string; commitSha: string; isMainWorktree: boolean }[]; error?: { code: string; message: string } }>;
+
+  // Memory service methods
+  createMemory?: (input: { kind: MemoryKind; scope: MemoryScope; projectId: string; roleId?: string | null; taskId?: string | null; title: string; body: string }) => Promise<{ ok: boolean; data?: Memory; error?: { code: string; message: string } }>;
+  updateMemory?: (id: string, input: { title?: string; body?: string; scope?: MemoryScope }) => Promise<{ ok: boolean; data?: Memory; error?: { code: string; message: string } }>;
+  deleteMemory?: (id: string) => Promise<{ ok: boolean; error?: { code: string; message: string } }>;
+  listMemories?: (projectId: string) => Promise<{ ok: boolean; data?: Memory[]; error?: { code: string; message: string } }>;
+  searchMemories?: (keyword: string, projectId?: string) => Promise<{ ok: boolean; data?: Memory[]; error?: { code: string; message: string } }>;
+
+  // Settings service methods
+  getSettings?: () => Promise<{ ok: boolean; data?: AppSettings; error?: { code: string; message: string } }>;
+  saveSettings?: (settings: Partial<AppSettings>) => Promise<{ ok: boolean; data?: AppSettings; error?: { code: string; message: string } }>;
 }
 
 /**
