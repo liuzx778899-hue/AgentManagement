@@ -1,0 +1,8 @@
+# CODEOWNERS
+# 所有代码变更需要 Owner review
+
+* @liuzx8888
+
+# 特定目录的权限
+/docs/ @liuzx8888
+/src/ @liuzx8888
