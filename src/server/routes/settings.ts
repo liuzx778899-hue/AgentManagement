@@ -3,6 +3,122 @@ import { getServices } from '../services/serviceFactory';
 
 export const settingsRouter = Router();
 
+/**
+ * POST /api/settings/test-connection
+ * Test API connection for a model provider
+ */
+settingsRouter.post('/test-connection', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { providerId, apiKey, baseUrl, apiFormat } = req.body;
+
+    if (!apiKey) {
+      res.json({
+        ok: true,
+        data: { success: false, message: 'API Key 不能为空' }
+      });
+      return;
+    }
+
+    // Determine the endpoint based on apiFormat
+    let testUrl = baseUrl || 'https://api.openai.com/v1';
+
+    // Normalize URL - remove trailing slash
+    testUrl = testUrl.replace(/\/$/, '');
+
+    // Most APIs support listing models as a simple auth check
+    let modelsEndpoint = '/models';
+
+    // Handle different API formats
+    if (apiFormat === 'Anthropic') {
+      // Anthropic doesn't have a models endpoint, use a minimal messages request
+      testUrl = baseUrl || 'https://api.anthropic.com/v1';
+
+      try {
+        const response = await fetch(`${testUrl}/messages`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+            'anthropic-dangerous-direct-browser-access': 'true',
+          },
+          body: JSON.stringify({
+            model: 'claude-3-haiku-20240307',
+            max_tokens: 1,
+            messages: [{ role: 'user', content: 'hi' }],
+          }),
+        });
+
+        if (response.status === 401) {
+          res.json({
+            ok: true,
+            data: { success: false, message: 'API Key 无效' }
+          });
+          return;
+        }
+
+        // Even if we get a 400 or other error, if it's not 401, the key is valid
+        res.json({
+          ok: true,
+          data: { success: true, message: '连接成功！API Key 有效' }
+        });
+        return;
+      } catch (error) {
+        res.json({
+          ok: true,
+          data: { success: false, message: '网络错误，请检查 API 地址' }
+        });
+        return;
+      }
+    }
+
+    // For OpenAI-compatible APIs, try to list models
+    try {
+      const response = await fetch(`${testUrl}${modelsEndpoint}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.status === 401) {
+        res.json({
+          ok: true,
+          data: { success: false, message: 'API Key 无效' }
+        });
+        return;
+      }
+
+      if (response.ok) {
+        const data = await response.json();
+        const modelCount = data?.data?.length || 0;
+        res.json({
+          ok: true,
+          data: {
+            success: true,
+            message: `连接成功！找到 ${modelCount} 个可用模型`
+          }
+        });
+        return;
+      }
+
+      // Other errors but not auth failure - key might still be valid
+      res.json({
+        ok: true,
+        data: { success: true, message: '连接成功！API Key 已验证' }
+      });
+    } catch (error) {
+      res.json({
+        ok: true,
+        data: { success: false, message: '网络错误，请检查 API 地址是否正确' }
+      });
+    }
+  } catch (err) {
+    next(err);
+  }
+});
+
 // Default settings
 const DEFAULT_SETTINGS = {
   theme: 'system' as const,

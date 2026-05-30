@@ -1,8 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
+  AlertCircle,
+  AlertTriangle,
   Check,
+  CheckCircle2,
   Cpu,
   Key,
+  Loader2,
   Plus,
   Sparkles,
   Trash2,
@@ -23,6 +27,18 @@ interface ModelConfigPanelProps {
   onSetAiAssistantModel: (providerId: string, modelName: string) => void;
 }
 
+interface ConfirmDialogState {
+  open: boolean;
+  title: string;
+  message: string;
+  onConfirm: () => void;
+}
+
+interface ToastState {
+  message: string;
+  type: 'success' | 'error';
+}
+
 export function ModelConfigPanel({
   modelProviders,
   aiAssistantModel,
@@ -41,10 +57,69 @@ export function ModelConfigPanel({
   const [newModelName, setNewModelName] = useState("");
   const [editingProviderDetail, setEditingProviderDetail] = useState<{ providerId: string; apiKey: string; apiFormat: string; baseUrl: string } | null>(null);
 
+  // Connection testing state
+  const [testingConnection, setTestingConnection] = useState(false);
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  // Custom dialog state
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState | null>(null);
+  const [toast, setToast] = useState<ToastState | null>(null);
+
   // AI Assistant model config state
   const [aiProviderId, setAiProviderId] = useState<string>(aiAssistantModel?.providerId || modelProviders.find(p => p.enabled)?.id || "");
   const aiProvider = modelProviders.find(p => p.id === aiProviderId);
   const [aiModelName, setAiModelName] = useState<string>(aiAssistantModel?.modelName || aiProvider?.models[0]?.name || "");
+
+  // Auto-hide toast after 3 seconds
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
+
+  // Show toast helper
+  const showToast = (message: string, type: 'success' | 'error') => {
+    setToast({ message, type });
+  };
+
+  // Show confirm dialog helper
+  const showConfirm = (title: string, message: string, onConfirm: () => void) => {
+    setConfirmDialog({ open: true, title, message, onConfirm });
+  };
+
+  // Test connection handler
+  const handleTestConnection = async () => {
+    if (!editingProviderDetail) return;
+
+    setTestingConnection(true);
+    setTestResult(null);
+
+    try {
+      const response = await fetch('http://localhost:3001/api/settings/test-connection', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          providerId: editingProviderDetail.providerId,
+          apiKey: editingProviderDetail.apiKey,
+          baseUrl: editingProviderDetail.baseUrl,
+          apiFormat: editingProviderDetail.apiFormat,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.ok && result.data) {
+        setTestResult(result.data);
+      } else {
+        setTestResult({ success: false, message: result.data?.message || '连接测试失败' });
+      }
+    } catch (error) {
+      setTestResult({ success: false, message: '网络错误，请确保后端服务正在运行' });
+    }
+
+    setTestingConnection(false);
+  };
 
   return (
     <div className="settings-panel">
@@ -109,7 +184,7 @@ export function ModelConfigPanel({
                   </div>
                 </div>
                 <div className="provider-card-right">
-                  <button className="btn ghost btn-sm" onClick={(e) => { e.stopPropagation(); if (confirm(`确定删除供应商 ${provider.name}？`)) onDeleteProvider(provider.id); }} style={{ color: "var(--danger)" }} aria-label="删除供应商" title="删除供应商"><Trash2 size={14} /></button>
+                  <button className="btn ghost btn-sm" onClick={(e) => { e.stopPropagation(); showConfirm('删除供应商', `确定删除供应商 ${provider.name}？`, () => onDeleteProvider(provider.id)); }} style={{ color: "var(--danger)" }} aria-label="删除供应商" title="删除供应商"><Trash2 size={14} /></button>
                 </div>
               </div>
             </div>
@@ -144,7 +219,7 @@ export function ModelConfigPanel({
               </select>
             </div>
           </div>
-          <button className="btn primary btn-sm" onClick={() => { onSetAiAssistantModel(aiProviderId, aiModelName); alert("AI 助手模型配置已保存"); }}>保存配置</button>
+          <button className="btn primary btn-sm" onClick={() => { onSetAiAssistantModel(aiProviderId, aiModelName); showToast("AI 助手模型配置已保存", "success"); }}>保存配置</button>
         </div>
         {editingProviderDetail && (() => {
           const p = modelProviders.find(x => x.id === editingProviderDetail.providerId);
@@ -245,7 +320,7 @@ export function ModelConfigPanel({
                             <button className="model-inline-btn" onClick={() => onSetDefaultModel(p.id, m.name)}>设默认</button>
                           )}
                           {m.name !== p.defaultModel && (
-                            <button className="model-inline-btn danger" onClick={() => { if (confirm(`确定删除模型 ${m.name}？`)) onDeleteModel(p.id, m.name); }}>删除</button>
+                            <button className="model-inline-btn danger" onClick={() => { showConfirm('删除模型', `确定删除模型 ${m.name}？`, () => onDeleteModel(p.id, m.name)); }}>删除</button>
                           )}
                         </span>
                       </div>
@@ -264,13 +339,21 @@ export function ModelConfigPanel({
                   )}
                 </div>
                 <div className="md-editor-footer" style={{ justifyContent: "space-between" }}>
-                  <button className="btn btn-sm" style={{ color: "var(--success)" }} onClick={() => {
-                    onUpdateProvider(editingProviderDetail.providerId, { apiKey: editingProviderDetail.apiKey, apiFormat: editingProviderDetail.apiFormat, baseUrl: editingProviderDetail.baseUrl, apiKeyStatus: editingProviderDetail.apiKey ? "configured" : "missing" });
-                    alert("配置已保存，测试连接功能开发中");
-                  }}>测试连接</button>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <button className="btn btn-sm" style={{ color: "var(--success)" }} disabled={testingConnection} onClick={handleTestConnection}>
+                      {testingConnection ? <Loader2 size={14} className="spin" /> : <Check size={14} />}
+                      {testingConnection ? "测试中..." : "测试连接"}
+                    </button>
+                    {testResult && (
+                      <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
+                        {testResult.success ? <CheckCircle2 size={14} style={{ color: "var(--ok)" }} /> : <AlertCircle size={14} style={{ color: "var(--danger)" }} />}
+                        <span style={{ color: testResult.success ? "var(--ok)" : "var(--danger)" }}>{testResult.message}</span>
+                      </span>
+                    )}
+                  </div>
                   <div style={{ display: "flex", gap: 8 }}>
                     <button className="btn btn-sm" onClick={() => setEditingProviderDetail(null)}>取消</button>
-                    <button className="btn primary btn-sm" onClick={() => { onUpdateProvider(editingProviderDetail.providerId, { apiKey: editingProviderDetail.apiKey, apiFormat: editingProviderDetail.apiFormat, baseUrl: editingProviderDetail.baseUrl, apiKeyStatus: editingProviderDetail.apiKey ? "configured" : "missing" }); setEditingProviderDetail(null); }}>保存</button>
+                    <button className="btn primary btn-sm" onClick={() => { onUpdateProvider(editingProviderDetail.providerId, { apiKey: editingProviderDetail.apiKey, apiFormat: editingProviderDetail.apiFormat, baseUrl: editingProviderDetail.baseUrl, apiKeyStatus: editingProviderDetail.apiKey ? "configured" : "missing" }); showToast("配置已保存", "success"); setEditingProviderDetail(null); }}>保存</button>
                   </div>
                 </div>
               </div>
@@ -278,6 +361,36 @@ export function ModelConfigPanel({
           );
         })()}
       </div>
+
+      {/* Custom Confirm Dialog */}
+      {confirmDialog?.open && (
+        <div className="confirm-overlay" onClick={() => setConfirmDialog(null)}>
+          <div className="confirm-dialog" onClick={e => e.stopPropagation()}>
+            <div className="confirm-header">
+              <AlertTriangle size={18} />
+              <span>{confirmDialog.title}</span>
+            </div>
+            <div className="confirm-body">
+              <p>{confirmDialog.message}</p>
+            </div>
+            <div className="confirm-footer">
+              <button className="btn" onClick={() => setConfirmDialog(null)}>取消</button>
+              <button className="btn danger" onClick={() => {
+                confirmDialog.onConfirm();
+                setConfirmDialog(null);
+              }}>确认</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toast && (
+        <div className={`toast ${toast.type}`}>
+          {toast.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+          <span>{toast.message}</span>
+        </div>
+      )}
     </div>
   );
 }
