@@ -95,8 +95,12 @@ describe("UI Integration Tests", () => {
         ok: true,
         data: {},
       });
+      const mockSaveModelProviders = vi.fn().mockResolvedValue({
+        ok: true,
+      });
       const mockServices = createMockServices({
         saveSettings: mockSaveSettings,
+        saveModelProviders: mockSaveModelProviders,
       });
 
       render(
@@ -114,6 +118,7 @@ describe("UI Integration Tests", () => {
 
       await waitFor(() => {
         expect(mockSaveSettings).toHaveBeenCalled();
+        expect(mockSaveModelProviders).toHaveBeenCalled();
       });
     });
   });

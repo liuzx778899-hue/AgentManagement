@@ -10,8 +10,43 @@ import {
   listProjectWorkflowRuns,
 } from '../../services/local/useCases';
 import type { Workflow, WorkflowStep } from '../../domain/workflow';
+import { readdir, readFile } from 'fs/promises';
+import { join } from 'path';
 
 export const workflowRouter = Router();
+
+/**
+ * GET /api/workflow/templates
+ * List all workflow templates
+ */
+workflowRouter.get('/templates', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const templates: Workflow[] = [];
+    const templatesDir = join(process.cwd(), '.agentmanagement', 'workflows');
+
+    try {
+      const files = await readdir(templatesDir);
+      for (const file of files) {
+        if (!file.endsWith('.json')) continue;
+        try {
+          const content = await readFile(join(templatesDir, file), 'utf-8');
+          const template = JSON.parse(content);
+          if (!template.deleted) {
+            templates.push(template);
+          }
+        } catch {
+          // Skip invalid files
+        }
+      }
+    } catch {
+      // Directory doesn't exist
+    }
+
+    res.json({ ok: true, data: templates });
+  } catch (err) {
+    next(err);
+  }
+});
 
 // Mock workflow templates (in real implementation, these would come from a repository)
 const workflowTemplates: Record<string, Workflow> = {

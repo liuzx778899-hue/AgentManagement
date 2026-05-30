@@ -1,0 +1,44 @@
+{
+  "version": "1.0",
+  "lastUpdated": "2026-05-30T11:09:02.377Z",
+  "projects": [
+    {
+      "id": "c942ff64-8912-4a1e-b465-3cf81e5a47ef",
+      "name": "AgentManagement"
+    },
+    {
+      "id": "91933452-9281-4ac0-ab55-2e4039dfcdfb",
+      "name": "示例Web应用"
+    }
+  ],
+  "workflows": [
+    {
+      "id": "software-dev-v1",
+      "name": "软件开发流程"
+    },
+    {
+      "id": "bug-fix-v1",
+      "name": "Bug修复流程"
+    },
+    {
+      "id": "design-review-v1",
+      "name": "设计评审流程"
+    }
+  ],
+  "memories": [
+    {
+      "id": "567467c1-684a-49e7-9f85-cd9733ef2519",
+      "title": "项目架构决策"
+    },
+    {
+      "id": "28833a42-a278-4f47-a148-6cb7de8c99ed",
+      "title": "技术栈选择"
+    }
+  ],
+  "modelProviders": [
+    {
+      "id": "anthropic",
+      "name": "Anthropic Claude"
+    }
+  ]
+}

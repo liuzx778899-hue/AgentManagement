@@ -1,5 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { getServices } from '../services/serviceFactory';
+import type { ModelProvider } from '../../domain/model';
 
 export const settingsRouter = Router();
 
@@ -138,6 +139,7 @@ const DEFAULT_SETTINGS = {
 };
 
 const SETTINGS_PATH = '.agentmanagement/settings.json';
+const MODEL_PROVIDERS_PATH = '.agentmanagement/model-providers.json';
 
 /**
  * GET /api/settings
@@ -184,6 +186,69 @@ settingsRouter.put('/', async (req: Request, res: Response, next: NextFunction) 
     const result = await services.fileStore.writeJson(SETTINGS_PATH, {
       ...DEFAULT_SETTINGS,
       ...(settings || {}),
+      updatedAt: new Date().toISOString(),
+    });
+
+    if (!result.ok) {
+      res.json(result);
+      return;
+    }
+
+    res.json({
+      ok: true,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * GET /api/settings/model-providers
+ * Get model providers configuration
+ */
+settingsRouter.get('/model-providers', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const services = getServices();
+    const result = await services.fileStore.readJson(MODEL_PROVIDERS_PATH);
+
+    if (!result.ok) {
+      // Return empty structure if file doesn't exist
+      res.json({
+        ok: true,
+        data: {
+          providers: [],
+          aiAssistantModel: null,
+        },
+      });
+      return;
+    }
+
+    // Ensure the data has the expected structure
+    const fileData = result.data as { providers?: ModelProvider[]; aiAssistantModel?: { providerId: string; modelName: string } | null } || { providers: [], aiAssistantModel: null };
+    res.json({
+      ok: true,
+      data: {
+        providers: fileData.providers || [],
+        aiAssistantModel: fileData.aiAssistantModel || null,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * PUT /api/settings/model-providers
+ * Save model providers configuration
+ */
+settingsRouter.put('/model-providers', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { providers, aiAssistantModel } = req.body;
+
+    const services = getServices();
+    const result = await services.fileStore.writeJson(MODEL_PROVIDERS_PATH, {
+      providers: providers || [],
+      aiAssistantModel: aiAssistantModel || null,
       updatedAt: new Date().toISOString(),
     });
 

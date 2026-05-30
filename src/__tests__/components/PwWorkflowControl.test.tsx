@@ -345,7 +345,7 @@ describe('PwWorkflowControl', () => {
         />
       );
 
-      // Start -> Pause -> Resume
+      // Start workflow first
       const startButton = screen.getByRole('button', { name: /启动工作流/i });
       fireEvent.click(startButton);
 
@@ -356,8 +356,9 @@ describe('PwWorkflowControl', () => {
       const pauseButton = screen.getByRole('button', { name: /暂停/i });
       fireEvent.click(pauseButton);
 
+      // Wait for PAUSED status and resume button
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /恢复/i })).toBeInTheDocument();
+        expect(screen.getByText('PAUSED')).toBeInTheDocument();
       });
 
       const resumeButton = screen.getByRole('button', { name: /恢复/i });

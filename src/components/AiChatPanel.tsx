@@ -11,6 +11,26 @@ interface AiChatPanelProps {
   contextMode?: string;
 }
 
+/**
+ * 获取配置的 AI 助手模型信息
+ */
+function getAiAssistantModelInfo(data: WorkbenchData): { providerId: string; modelName: string } | null {
+  if (!data.aiAssistantModel) {
+    return null;
+  }
+
+  // 验证 provider 存在且有 API Key
+  const provider = data.modelProviders.find(p => p.id === data.aiAssistantModel?.providerId);
+  if (!provider || provider.apiKeyStatus !== 'configured') {
+    return null;
+  }
+
+  return {
+    providerId: data.aiAssistantModel.providerId,
+    modelName: data.aiAssistantModel.modelName,
+  };
+}
+
 interface ChatMessage {
   id: string;
   role: "user" | "assistant";
@@ -341,6 +361,9 @@ export function AiChatPanel({ view, data, onNavigate, contextMode }: AiChatPanel
 角色数量: ${data.roles.length}
 任务数量: ${data.tasks.length}`;
 
+    // 获取配置的 AI 助手模型
+    const modelInfo = getAiAssistantModelInfo(data);
+
     try {
       // Try real API call first
       if (serverAvailable) {
@@ -350,7 +373,11 @@ export function AiChatPanel({ view, data, onNavigate, contextMode }: AiChatPanel
 
         apiMessages.push({ role: "user", content: trimmed });
 
-        const result = await aiApi.chat(apiMessages, contextInfo);
+        const result = await aiApi.chat(apiMessages, {
+          context: contextInfo,
+          providerId: modelInfo?.providerId,
+          modelName: modelInfo?.modelName,
+        });
 
         if (result.ok && result.data) {
           const assistantMsg: ChatMessage = {

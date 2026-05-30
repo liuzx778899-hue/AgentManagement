@@ -25,6 +25,7 @@ interface ModelConfigPanelProps {
   onDeleteModel: (providerId: string, modelName: string) => void;
   onSetDefaultModel: (providerId: string, modelName: string) => void;
   onSetAiAssistantModel: (providerId: string, modelName: string) => void;
+  onSave?: () => Promise<void>;
 }
 
 interface ConfirmDialogState {
@@ -49,6 +50,7 @@ export function ModelConfigPanel({
   onDeleteModel,
   onSetDefaultModel,
   onSetAiAssistantModel,
+  onSave,
 }: ModelConfigPanelProps) {
   // Model CRUD local state
   const [showAddProvider, setShowAddProvider] = useState(false);
@@ -60,6 +62,9 @@ export function ModelConfigPanel({
   // Connection testing state
   const [testingConnection, setTestingConnection] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  // Saving state for inline save
+  const [saving, setSaving] = useState(false);
 
   // Custom dialog state
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState | null>(null);
@@ -219,7 +224,15 @@ export function ModelConfigPanel({
               </select>
             </div>
           </div>
-          <button className="btn primary btn-sm" onClick={() => { onSetAiAssistantModel(aiProviderId, aiModelName); showToast("AI 助手模型配置已保存", "success"); }}>保存配置</button>
+          <button className="btn primary btn-sm" disabled={saving} onClick={async () => {
+              setSaving(true);
+              onSetAiAssistantModel(aiProviderId, aiModelName);
+              if (onSave) {
+                await onSave();
+              }
+              showToast("AI 助手模型配置已保存", "success");
+              setSaving(false);
+            }}>{saving ? "保存中..." : "保存配置"}</button>
         </div>
         {editingProviderDetail && (() => {
           const p = modelProviders.find(x => x.id === editingProviderDetail.providerId);
@@ -353,7 +366,22 @@ export function ModelConfigPanel({
                   </div>
                   <div style={{ display: "flex", gap: 8 }}>
                     <button className="btn btn-sm" onClick={() => setEditingProviderDetail(null)}>取消</button>
-                    <button className="btn primary btn-sm" onClick={() => { onUpdateProvider(editingProviderDetail.providerId, { apiKey: editingProviderDetail.apiKey, apiFormat: editingProviderDetail.apiFormat, baseUrl: editingProviderDetail.baseUrl, apiKeyStatus: editingProviderDetail.apiKey ? "configured" : "missing" }); showToast("配置已保存", "success"); setEditingProviderDetail(null); }}>保存</button>
+                    <button className="btn primary btn-sm" disabled={saving} onClick={async () => {
+                      setSaving(true);
+                      onUpdateProvider(editingProviderDetail.providerId, {
+                        apiKey: editingProviderDetail.apiKey,
+                        apiFormat: editingProviderDetail.apiFormat,
+                        baseUrl: editingProviderDetail.baseUrl,
+                        apiKeyStatus: editingProviderDetail.apiKey ? "configured" : "missing"
+                      });
+                      // Also persist to file system
+                      if (onSave) {
+                        await onSave();
+                      }
+                      showToast("配置已保存", "success");
+                      setEditingProviderDetail(null);
+                      setSaving(false);
+                    }}>{saving ? "保存中..." : "保存"}</button>
                   </div>
                 </div>
               </div>

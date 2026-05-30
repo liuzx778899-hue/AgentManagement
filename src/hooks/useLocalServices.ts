@@ -158,6 +158,10 @@ function createApiServices(): LocalEngineeringServices {
       const result = await settingsApi.save(settings);
       return result as { ok: boolean; data?: AppSettings; error?: { code: string; message: string } };
     },
+    saveModelProviders: async (data: { providers: any[]; aiAssistantModel?: any }) => {
+      const result = await settingsApi.saveModelProviders(data);
+      return result as { ok: boolean; error?: { code: string; message: string } };
+    },
   };
 }
 

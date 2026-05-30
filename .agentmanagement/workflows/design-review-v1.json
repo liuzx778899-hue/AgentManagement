@@ -1,0 +1,32 @@
+{
+  "id": "design-review-v1",
+  "name": "设计评审流程",
+  "description": "设计方案的评审流程",
+  "steps": [
+    {
+      "id": "submit",
+      "name": "提交方案",
+      "type": "manual",
+      "order": 1,
+      "config": {}
+    },
+    {
+      "id": "review",
+      "name": "评审会议",
+      "type": "gate",
+      "order": 2,
+      "config": {
+        "approver": "architect"
+      }
+    },
+    {
+      "id": "approve",
+      "name": "批准执行",
+      "type": "manual",
+      "order": 3,
+      "config": {}
+    }
+  ],
+  "createdAt": "2026-05-30T11:09:02.377Z",
+  "updatedAt": "2026-05-30T11:09:02.377Z"
+}

@@ -53,7 +53,48 @@ import {
   setProjects as setProjectsAction,
   setMemories as setMemoriesAction,
 } from "./workbenchActions";
-import { projectApi, memoryApi, settingsApi, checkServerAvailable } from "../services/api";
+import { projectApi, memoryApi, settingsApi, checkServerAvailable, workflowApi } from "../services/api";
+import { setModelProviders as setModelProvidersAction, setWorkflowTemplates as setWorkflowTemplatesAction } from "./workbenchActions";
+
+// Default runner profiles - commonly used CLI tools
+const defaultRunnerProfiles: RunnerProfile[] = [
+  {
+    id: "runner-claude-code",
+    kind: "claude-code",
+    displayName: "Claude Code",
+    command: "claude",
+    defaultArgs: [],
+    description: "Anthropic's official CLI for Claude AI",
+    enabled: true,
+  },
+  {
+    id: "runner-codex-cli",
+    kind: "codex-cli",
+    displayName: "Codex CLI",
+    command: "codex",
+    defaultArgs: [],
+    description: "OpenAI's Codex command-line interface",
+    enabled: true,
+  },
+  {
+    id: "runner-cursor-cli",
+    kind: "cursor-cli",
+    displayName: "Cursor CLI",
+    command: "cursor",
+    defaultArgs: [],
+    description: "Cursor AI code editor CLI",
+    enabled: false,
+  },
+  {
+    id: "runner-gemini-cli",
+    kind: "gemini-cli",
+    displayName: "Gemini CLI",
+    command: "gemini",
+    defaultArgs: [],
+    description: "Google Gemini command-line interface",
+    enabled: false,
+  },
+];
 
 // Empty initial data - loads everything from API
 const emptyData: WorkbenchData = {
@@ -83,8 +124,8 @@ const emptyData: WorkbenchData = {
   ciPipelines: [],
   repoCommits: [],
   gitBranches: [],
-  runnerProfiles: [],
-  defaultRunner: undefined,
+  runnerProfiles: defaultRunnerProfiles,
+  defaultRunner: "runner-claude-code",
 };
 
 // State Context
@@ -169,10 +210,12 @@ export function WorkbenchProvider({ children }: WorkbenchProviderProps) {
 
       try {
         // 并行加载所有数据
-        const [projectsResult, memoriesResult, settingsResult] = await Promise.all([
+        const [projectsResult, memoriesResult, settingsResult, modelProvidersResult, workflowTemplatesResult] = await Promise.all([
           projectApi.list(),
           memoryApi.list(),
           settingsApi.get(),
+          settingsApi.getModelProviders(),
+          workflowApi.listTemplates(),
         ]);
 
         if (!isMounted.current) return;
@@ -206,9 +249,24 @@ export function WorkbenchProvider({ children }: WorkbenchProviderProps) {
           // TODO: 添加设置相关的 action
         }
 
+        // 更新模型配置
+        if (modelProvidersResult.ok && modelProvidersResult.data) {
+          dispatch(setModelProvidersAction(
+            modelProvidersResult.data.providers,
+            modelProvidersResult.data.aiAssistantModel
+          ));
+        }
+
+        // 更新工作流模板
+        if (workflowTemplatesResult.ok && workflowTemplatesResult.data) {
+          dispatch(setWorkflowTemplatesAction(workflowTemplatesResult.data));
+        }
+
         console.log('[WorkbenchProvider] Loaded data from API:', {
           projects: projectsResult.ok ? projectsResult.data?.length : 'failed',
           memories: memoriesResult.ok ? memoriesResult.data?.length : 'failed',
+          modelProviders: modelProvidersResult.ok ? modelProvidersResult.data?.providers?.length : 'failed',
+          workflowTemplates: workflowTemplatesResult.ok ? workflowTemplatesResult.data?.length : 'failed',
         });
       } catch (error) {
         console.error('[WorkbenchProvider] Failed to load data from API:', error);

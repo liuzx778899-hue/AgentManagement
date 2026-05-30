@@ -3,6 +3,7 @@
  */
 import { apiCall, type ApiResponse } from './client';
 import type { WorkflowRun } from '../../services/local/useCases/workflowExecutionUseCase';
+import type { WorkflowTemplate } from '../../domain/workbench';
 
 export const workflowApi = {
   run: (projectId: string, templateId: string) =>
@@ -19,4 +20,7 @@ export const workflowApi = {
 
   getStatus: (runId: string) =>
     apiCall<WorkflowRun>('GET', `/workflow/status/${runId}`),
+
+  listTemplates: () =>
+    apiCall<WorkflowTemplate[]>('GET', '/workflow/templates'),
 };

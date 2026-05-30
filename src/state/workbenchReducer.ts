@@ -330,6 +330,16 @@ export function workbenchReducer(state: WorkbenchData, action: WorkbenchAction):
     case "SET_MEMORIES":
       return { ...state, memories: action.payload };
 
+    case "SET_MODEL_PROVIDERS":
+      return {
+        ...state,
+        modelProviders: action.payload.providers,
+        aiAssistantModel: action.payload.aiAssistantModel || undefined,
+      };
+
+    case "SET_WORKFLOW_TEMPLATES":
+      return { ...state, workflowTemplates: action.payload };
+
     case "REFRESH_GIT_STATUS_START":
       // 可以设置 loading 状态
       return state;

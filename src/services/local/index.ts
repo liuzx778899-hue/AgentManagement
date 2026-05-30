@@ -89,6 +89,7 @@ export interface LocalEngineeringServices {
   // Settings service methods
   getSettings?: () => Promise<{ ok: boolean; data?: AppSettings; error?: { code: string; message: string } }>;
   saveSettings?: (settings: Partial<AppSettings>) => Promise<{ ok: boolean; data?: AppSettings; error?: { code: string; message: string } }>;
+  saveModelProviders?: (data: { providers: any[]; aiAssistantModel?: any }) => Promise<{ ok: boolean; error?: { code: string; message: string } }>;
 }
 
 /**

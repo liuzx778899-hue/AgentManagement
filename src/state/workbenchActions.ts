@@ -54,7 +54,9 @@ export type WorkbenchAction =
   | { type: "REFRESH_GIT_STATUS_START"; payload: { projectId: string } }
   | { type: "UPDATE_GIT_STATUS"; payload: { projectId: string; status: Partial<GitStatus> } }
   | { type: "SET_PROJECTS"; payload: Project[] }
-  | { type: "SET_MEMORIES"; payload: MemoryItem[] };
+  | { type: "SET_MEMORIES"; payload: MemoryItem[] }
+  | { type: "SET_MODEL_PROVIDERS"; payload: { providers: ModelProvider[]; aiAssistantModel?: { providerId: string; modelName: string } | null } }
+  | { type: "SET_WORKFLOW_TEMPLATES"; payload: WorkflowTemplate[] }
 
 // Action Creators
 export function updateGateStatus(gateId: string, status: GateStatus): WorkbenchAction {
@@ -205,4 +207,12 @@ export function setProjects(projects: Project[]): WorkbenchAction {
 
 export function setMemories(memories: MemoryItem[]): WorkbenchAction {
   return { type: "SET_MEMORIES", payload: memories };
+}
+
+export function setModelProviders(providers: ModelProvider[], aiAssistantModel?: { providerId: string; modelName: string } | null): WorkbenchAction {
+  return { type: "SET_MODEL_PROVIDERS", payload: { providers, aiAssistantModel } };
+}
+
+export function setWorkflowTemplates(templates: WorkflowTemplate[]): WorkbenchAction {
+  return { type: "SET_WORKFLOW_TEMPLATES", payload: templates };
 }

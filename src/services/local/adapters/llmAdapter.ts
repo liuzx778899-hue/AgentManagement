@@ -18,6 +18,10 @@ export interface CompleteConfig {
   maxTokens?: number;
   temperature?: number;
   stopSequences?: string[];
+  // 可选的动态配置
+  apiKey?: string;
+  baseUrl?: string;
+  apiFormat?: string; // 'OpenAI' | 'Anthropic' | 'DeepSeek' | etc.
 }
 
 /**
@@ -49,6 +53,7 @@ export interface ModelInfo {
 interface ProviderConfig {
   apiKey?: string;
   baseUrl?: string;
+  apiFormat?: string;
 }
 
 /**
@@ -59,12 +64,15 @@ export class LlmAdapter extends BaseAdapter {
 
   constructor(config: AdapterConfig) {
     super(config);
-    // 默认配置
+    // 默认配置从环境变量读取
     this.providers.set('anthropic', {
       apiKey: process.env.ANTHROPIC_API_KEY,
+      apiFormat: 'Anthropic',
     });
     this.providers.set('openai', {
       apiKey: process.env.OPENAI_API_KEY,
+      baseUrl: 'https://api.openai.com/v1',
+      apiFormat: 'OpenAI',
     });
   }
 
@@ -72,7 +80,8 @@ export class LlmAdapter extends BaseAdapter {
    * 设置 Provider 配置
    */
   setProviderConfig(provider: string, config: ProviderConfig): void {
-    this.providers.set(provider, config);
+    const existing = this.providers.get(provider) || {};
+    this.providers.set(provider, { ...existing, ...config });
   }
 
   /**
@@ -80,8 +89,28 @@ export class LlmAdapter extends BaseAdapter {
    */
   private getProviderForModel(model: string): string {
     if (model.startsWith('claude')) return 'anthropic';
-    if (model.startsWith('gpt') || model.startsWith('o1')) return 'openai';
+    if (model.startsWith('gpt') || model.startsWith('o1') || model.startsWith('o3')) return 'openai';
     if (model.startsWith('gemini')) return 'google';
+    if (model.startsWith('deepseek')) return 'deepseek';
+    return 'unknown';
+  }
+
+  /**
+   * 根据 apiFormat 确定 provider key
+   */
+  private getProviderKey(apiFormat?: string, model?: string): string {
+    if (apiFormat) {
+      const formatMap: Record<string, string> = {
+        'Anthropic': 'anthropic',
+        'OpenAI': 'openai',
+        'DeepSeek': 'deepseek',
+        'Google': 'google',
+      };
+      return formatMap[apiFormat] || apiFormat.toLowerCase();
+    }
+    if (model) {
+      return this.getProviderForModel(model);
+    }
     return 'unknown';
   }
 
@@ -89,7 +118,7 @@ export class LlmAdapter extends BaseAdapter {
    * 完成请求
    */
   async complete(config: CompleteConfig): Promise<LocalResult<CompleteResponse>> {
-    const { messages, model, maxTokens = 4096, temperature = 0.7 } = config;
+    const { messages, model, maxTokens = 4096, temperature = 0.7, apiKey, baseUrl, apiFormat } = config;
 
     if (this.isMockEnabled) {
       // Mock 响应
@@ -108,28 +137,47 @@ export class LlmAdapter extends BaseAdapter {
       });
     }
 
-    const provider = this.getProviderForModel(model);
-    const providerConfig = this.providers.get(provider);
+    // 确定使用哪个 provider 配置
+    // 优先使用传入的动态配置
+    const providerKey = this.getProviderKey(apiFormat, model);
+    let providerConfig = this.providers.get(providerKey);
 
-    if (!providerConfig?.apiKey) {
-      return this.err('PERMISSION_DENIED', `未配置 ${provider} API Key`);
+    // 如果传入了动态配置，创建临时配置
+    const effectiveConfig: ProviderConfig = {
+      apiKey: apiKey || providerConfig?.apiKey,
+      baseUrl: baseUrl || providerConfig?.baseUrl,
+      apiFormat: apiFormat || providerConfig?.apiFormat,
+    };
+
+    if (!effectiveConfig.apiKey) {
+      return this.err('PERMISSION_DENIED', `未配置 ${providerKey} API Key`);
     }
 
     try {
-      // 实际 API 调用
-      if (provider === 'anthropic') {
-        return await this.callAnthropic(messages, model, maxTokens, temperature);
+      // 根据 apiFormat 选择调用方式
+      const format = effectiveConfig.apiFormat || this.getApiFormatForModel(model);
+
+      if (format === 'Anthropic') {
+        return await this.callAnthropic(messages, model, maxTokens, temperature, effectiveConfig);
       }
 
-      if (provider === 'openai') {
-        return await this.callOpenAI(messages, model, maxTokens, temperature);
-      }
-
-      return this.err('INVALID_INPUT', `不支持的模型: ${model}`);
+      // OpenAI-compatible API (OpenAI, DeepSeek, etc.)
+      return await this.callOpenAICompatible(messages, model, maxTokens, temperature, effectiveConfig);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       return this.err('UNKNOWN', 'LLM 调用失败', errorMessage);
     }
+  }
+
+  /**
+   * 根据模型名推断 API 格式
+   */
+  private getApiFormatForModel(model: string): string {
+    if (model.startsWith('claude')) return 'Anthropic';
+    if (model.startsWith('deepseek')) return 'DeepSeek';
+    if (model.startsWith('gemini')) return 'Google';
+    // 默认 OpenAI 兼容格式
+    return 'OpenAI';
   }
 
   /**
@@ -139,37 +187,110 @@ export class LlmAdapter extends BaseAdapter {
     messages: ChatMessage[],
     model: string,
     maxTokens: number,
-    temperature: number
+    temperature: number,
+    config: ProviderConfig
   ): Promise<LocalResult<CompleteResponse>> {
-    const providerConfig = this.providers.get('anthropic')!;
+    const apiKey = config.apiKey!;
+    const baseUrl = (config.baseUrl || 'https://api.anthropic.com/v1').replace(/\/$/, '');
 
-    // 这里应该使用实际的 API SDK
-    // 目前使用模拟实现
-    return this.ok({
-      content: '[Anthropic API 响应]',
-      model,
-      usage: { inputTokens: 100, outputTokens: 100 },
-      finishReason: 'stop',
-    });
+    try {
+      const response = await fetch(`${baseUrl}/messages`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify({
+          model,
+          max_tokens: maxTokens,
+          temperature,
+          messages: messages
+            .filter(m => m.role !== 'system')
+            .map(m => ({ role: m.role, content: m.content })),
+          system: messages.find(m => m.role === 'system')?.content,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        if (response.status === 401) {
+          return this.err('PERMISSION_DENIED', 'API Key 无效');
+        }
+        return this.err('API_ERROR', `API 错误: ${response.status} - ${errorText}`);
+      }
+
+      const data = await response.json();
+      const content = data.content?.[0]?.text || '';
+
+      return this.ok({
+        content,
+        model,
+        usage: {
+          inputTokens: data.usage?.input_tokens || 0,
+          outputTokens: data.usage?.output_tokens || 0,
+        },
+        finishReason: data.stop_reason === 'end_turn' ? 'stop' : 'max_tokens',
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return this.err('NETWORK_ERROR', `网络错误: ${errorMessage}`);
+    }
   }
 
   /**
-   * 调用 OpenAI API
+   * 调用 OpenAI 兼容 API (OpenAI, DeepSeek, etc.)
    */
-  private async callOpenAI(
+  private async callOpenAICompatible(
     messages: ChatMessage[],
     model: string,
     maxTokens: number,
-    temperature: number
+    temperature: number,
+    config: ProviderConfig
   ): Promise<LocalResult<CompleteResponse>> {
-    const providerConfig = this.providers.get('openai')!;
+    const apiKey = config.apiKey!;
+    const baseUrl = (config.baseUrl || 'https://api.openai.com/v1').replace(/\/$/, '');
 
-    return this.ok({
-      content: '[OpenAI API 响应]',
-      model,
-      usage: { inputTokens: 100, outputTokens: 100 },
-      finishReason: 'stop',
-    });
+    try {
+      const response = await fetch(`${baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model,
+          max_tokens: maxTokens,
+          temperature,
+          messages: messages.map(m => ({ role: m.role, content: m.content })),
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        if (response.status === 401) {
+          return this.err('PERMISSION_DENIED', 'API Key 无效');
+        }
+        return this.err('API_ERROR', `API 错误: ${response.status} - ${errorText}`);
+      }
+
+      const data = await response.json();
+      const content = data.choices?.[0]?.message?.content || '';
+
+      return this.ok({
+        content,
+        model: data.model || model,
+        usage: {
+          inputTokens: data.usage?.prompt_tokens || 0,
+          outputTokens: data.usage?.completion_tokens || 0,
+        },
+        finishReason: data.choices?.[0]?.finish_reason === 'stop' ? 'stop' : 'max_tokens',
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return this.err('NETWORK_ERROR', `网络错误: ${errorMessage}`);
+    }
   }
 
   /**

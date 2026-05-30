@@ -13,7 +13,8 @@
     "test:watch": "vitest",
     "lint": "eslint src/ --ext .ts,.tsx",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
-    "preview": "vite preview --host 127.0.0.1"
+    "preview": "vite preview --host 127.0.0.1",
+    "seed": "tsx src/scripts/seed-data.ts"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^4.3.4",

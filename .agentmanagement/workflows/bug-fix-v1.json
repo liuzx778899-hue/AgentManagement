@@ -1,0 +1,36 @@
+{
+  "id": "bug-fix-v1",
+  "name": "Bug修复流程",
+  "description": "Bug修复的标准流程，包含分析、修复、验证阶段",
+  "steps": [
+    {
+      "id": "analyze",
+      "name": "问题分析",
+      "type": "agent",
+      "order": 1,
+      "config": {
+        "autoRun": true
+      }
+    },
+    {
+      "id": "fix",
+      "name": "修复实现",
+      "type": "agent",
+      "order": 2,
+      "config": {
+        "autoRun": true
+      }
+    },
+    {
+      "id": "verify",
+      "name": "验证测试",
+      "type": "gate",
+      "order": 3,
+      "config": {
+        "approver": "qa"
+      }
+    }
+  ],
+  "createdAt": "2026-05-30T11:09:02.377Z",
+  "updatedAt": "2026-05-30T11:09:02.377Z"
+}

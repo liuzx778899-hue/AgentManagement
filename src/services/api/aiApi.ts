@@ -14,7 +14,23 @@ export interface ChatResponse {
   };
 }
 
+export interface AiChatOptions {
+  context?: string;
+  modelId?: string;
+  providerId?: string;
+  modelName?: string;
+}
+
 export const aiApi = {
-  chat: (messages: ChatMessage[], context?: string, modelId?: string): Promise<ApiResponse<ChatResponse>> =>
-    apiCall<ChatResponse>('POST', '/ai/chat', { messages, context, modelId }),
+  chat: (
+    messages: ChatMessage[],
+    options?: AiChatOptions
+  ): Promise<ApiResponse<ChatResponse>> =>
+    apiCall<ChatResponse>('POST', '/ai/chat', {
+      messages,
+      context: options?.context,
+      modelId: options?.modelId,
+      providerId: options?.providerId,
+      modelName: options?.modelName,
+    }),
 };

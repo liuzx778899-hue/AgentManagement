@@ -31,6 +31,7 @@ export type LocalErrorCode =
   | 'INVALID_INPUT'
   | 'NETWORK_ERROR'
   | 'PARSE_ERROR'
+  | 'API_ERROR'
   | 'UNKNOWN';
 
 /**

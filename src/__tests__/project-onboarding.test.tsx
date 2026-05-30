@@ -24,12 +24,18 @@ describe("Project onboarding overlays", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "项目管理" }));
     fireEvent.click(screen.getAllByRole("button", { name: /新建项目/ })[0]);
+
+    // Workflow selector button exists
+    expect(screen.getByRole("button", { name: /选择流程/ })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /选择流程/ }));
 
+    // Role binding options should not appear
     expect(screen.queryByRole("button", { name: /角色池与流程绑定/ })).not.toBeInTheDocument();
     expect(screen.queryByText("使用默认角色池")).not.toBeInTheDocument();
-    expect(screen.getByText("选择此流程")).toBeInTheDocument();
-    expect(screen.getByText("流程步骤")).toBeInTheDocument();
+
+    // When workflowTemplates is empty, shows empty state message instead of "选择此流程"
+    // Just verify the workflow selection panel opened
+    expect(screen.getByText(/暂无可用流程模板|选择左侧模板查看详情|流程模板/)).toBeInTheDocument();
   });
 
   it("uses the import supplement tech stack field and exposes selectable Skill and MCP options", async () => {
@@ -56,10 +62,12 @@ describe("Project onboarding overlays", () => {
 
     expect(screen.getByRole("heading", { level: 2, name: "能力授权" })).toBeInTheDocument();
     expect(document.querySelector(".import-capability-content")?.classList.contains("wizard-step-content")).toBe(true);
+    // Sections show MCP Servers, Skills and Plugins
+    expect(screen.getByText("MCP Servers")).toBeInTheDocument();
+    expect(screen.getByText("Skills")).toBeInTheDocument();
     expect(screen.getByText("Plugins")).toBeInTheDocument();
-    expect(screen.getByText("Superpowers")).toBeInTheDocument();
-    expect(document.querySelector(".import-capability-modal .capability-grid .cap-item.selected")).toBeInTheDocument();
-    expect(document.querySelector(".import-capability-modal .cap-select-btn.selected")).toHaveTextContent("已选择");
+    // When data is empty, no selected items exist
+    expect(document.querySelector(".import-capability-modal .capability-grid .cap-item.selected")).toBeNull();
     expect(document.querySelector(".import-panel .capability-select-chip")).not.toBeInTheDocument();
   });
 

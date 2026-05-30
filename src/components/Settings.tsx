@@ -56,15 +56,33 @@ export function Settings({ data }: SettingsProps) {
     setDefaultRunner(runnerId);
   };
 
+  const handleSaveModelProviders = async () => {
+    if (!services.saveModelProviders) {
+      setError('服务不可用');
+      return;
+    }
+
+    const result = await services.saveModelProviders({
+      providers: data.modelProviders,
+      aiAssistantModel: data.aiAssistantModel,
+    });
+
+    if (!result.ok) {
+      setError(result.error?.message || '保存模型配置失败');
+    }
+  };
+
   const handleSave = async () => {
     setSaving(true);
     setError(null);
 
     try {
-      if (!services.saveSettings) {
+      if (!services.saveSettings || !services.saveModelProviders) {
         throw new Error('服务不可用');
       }
-      const result = await services.saveSettings({
+
+      // 保存一般设置
+      const settingsResult = await services.saveSettings({
         theme: 'system',
         language: 'zh-CN',
         notifications: true,
@@ -81,10 +99,16 @@ export function Settings({ data }: SettingsProps) {
         },
       });
 
-      if (result.ok) {
+      // 保存模型配置
+      const modelProvidersResult = await services.saveModelProviders({
+        providers: data.modelProviders,
+        aiAssistantModel: data.aiAssistantModel,
+      });
+
+      if (settingsResult.ok && modelProvidersResult.ok) {
         setSaved(true);
       } else {
-        setError(result.error?.message || '保存失败');
+        setError(settingsResult.error?.message || modelProvidersResult.error?.message || '保存失败');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : '保存失败');
@@ -156,6 +180,7 @@ export function Settings({ data }: SettingsProps) {
               onDeleteModel={deleteProviderModel}
               onSetDefaultModel={setDefaultProviderModel}
               onSetAiAssistantModel={setAiAssistantModel}
+              onSave={handleSaveModelProviders}
             />
           )}
 

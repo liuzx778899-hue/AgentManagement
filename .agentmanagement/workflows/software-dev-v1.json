@@ -1,0 +1,63 @@
+{
+  "id": "software-dev-v1",
+  "name": "软件开发流程",
+  "description": "标准的软件开发流程，包含需求、设计、开发、测试、部署阶段",
+  "steps": [
+    {
+      "id": "req",
+      "name": "需求分析",
+      "type": "manual",
+      "order": 1,
+      "config": {
+        "required": true
+      }
+    },
+    {
+      "id": "design",
+      "name": "技术设计",
+      "type": "manual",
+      "order": 2,
+      "config": {
+        "required": true
+      }
+    },
+    {
+      "id": "dev",
+      "name": "开发实现",
+      "type": "agent",
+      "order": 3,
+      "config": {
+        "autoRun": true
+      }
+    },
+    {
+      "id": "review",
+      "name": "代码审查",
+      "type": "gate",
+      "order": 4,
+      "config": {
+        "approver": "tech-lead"
+      }
+    },
+    {
+      "id": "test",
+      "name": "自动化测试",
+      "type": "agent",
+      "order": 5,
+      "config": {
+        "autoRun": true
+      }
+    },
+    {
+      "id": "deploy",
+      "name": "部署发布",
+      "type": "manual",
+      "order": 6,
+      "config": {
+        "env": "staging"
+      }
+    }
+  ],
+  "createdAt": "2026-05-30T11:09:02.377Z",
+  "updatedAt": "2026-05-30T11:09:02.377Z"
+}

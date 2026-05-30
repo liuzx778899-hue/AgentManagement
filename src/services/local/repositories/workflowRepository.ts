@@ -106,21 +106,41 @@ export class WorkflowRepository {
    * 列出所有 Workflow
    */
   async listAll(): Promise<LocalResult<PersistedWorkflow[]>> {
-    const result = await this.fileStore.readJson<PersistedWorkflow[]>(
-      `${this.basePath}/workflows/index.json`
-    );
+    const workflows: PersistedWorkflow[] = [];
 
-    if (!result.ok) {
+    try {
+      const { readdir } = await import('fs/promises');
+      const { join } = await import('path');
+      const workflowsDir = join(process.cwd(), this.basePath, 'workflows');
+      const files = await readdir(workflowsDir);
+
+      for (const file of files) {
+        if (!file.endsWith('.json')) continue;
+
+        try {
+          const result = await this.fileStore.readJson<PersistedWorkflow>(
+            `${this.basePath}/workflows/${file}`
+          );
+          if (result.ok && result.data) {
+            // Skip deleted workflows
+            if ('deleted' in result.data && (result.data as any).deleted) continue;
+            workflows.push(result.data);
+          }
+        } catch {
+          continue;
+        }
+      }
+
+      return {
+        ok: true,
+        data: workflows,
+      };
+    } catch {
       return {
         ok: true,
         data: [],
       };
     }
-
-    return {
-      ok: true,
-      data: result.data!.filter(w => !('deleted' in w)),
-    };
   }
 
   /**
