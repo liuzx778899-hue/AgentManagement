@@ -6,7 +6,7 @@ import { gitRouter } from './git';
 import { memoryRouter } from './memory';
 import { settingsRouter } from './settings';
 
-export async function createRouter(): Promise<Router> {
+export function createRouter(): Router {
   const router = Router();
 
   // Mount all route handlers

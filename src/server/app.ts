@@ -3,7 +3,7 @@ import cors from 'cors';
 import { createRouter } from './routes';
 import { errorHandler } from './middleware/errorHandler';
 
-export async function createApp() {
+export function createApp() {
   const app = express();
 
   // CORS - only allow localhost:5173 (Vite dev server)
@@ -20,7 +20,7 @@ export async function createApp() {
   });
 
   // API routes
-  app.use('/api', await createRouter());
+  app.use('/api', createRouter());
 
   // Error handler (must be last)
   app.use(errorHandler);
