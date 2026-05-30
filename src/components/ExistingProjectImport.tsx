@@ -3,6 +3,7 @@ import { Check, Code2, FolderOpen, FolderSearch, Loader2, Search, ServerCog, Ale
 import type { WorkbenchData, AgentRole } from "../domain/workbench";
 import type { ProjectSourceType } from "../domain/project";
 import { useWorkbenchState } from "../App";
+import { useLocalServices } from "../hooks/useLocalServices";
 
 interface ExistingProjectImportProps {
   data: WorkbenchData;
@@ -236,6 +237,7 @@ function normalizeCapabilityName(value: string): string {
 
 export function ExistingProjectImport({ data }: ExistingProjectImportProps) {
   const { addProject } = useWorkbenchState();
+  const services = useLocalServices();
   const [repoPath, setRepoPath] = useState("");
   const [detecting, setDetecting] = useState(false);
   const [detectionStatus, setDetectionStatus] = useState<DetectionStatus>("idle");
@@ -263,6 +265,8 @@ export function ExistingProjectImport({ data }: ExistingProjectImportProps) {
   const [selectedMcpIds, setSelectedMcpIds] = useState<Set<string>>(new Set());
   const [selectedPluginIds, setSelectedPluginIds] = useState<Set<string>>(new Set());
   const [showCapabilityModal, setShowCapabilityModal] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
 
   // Check if File System Access API is supported
   useEffect(() => {
@@ -479,58 +483,69 @@ export function ExistingProjectImport({ data }: ExistingProjectImportProps) {
     setShowSupplement(false);
   };
 
-  const handleImport = () => {
+  const handleImport = async () => {
     if (!detected) return;
+
+    setImporting(true);
+    setImportError(null);
 
     const sourceType: ProjectSourceType = detectedType === "generic" && showSupplement
       ? "generic"
       : (detectedType ?? "generic");
 
-    addProject({
-      name: detected.projectName,
-      repoPath: repoPath,
-      defaultBranch: detected.defaultBranch,
-      worktreeRoot: ".claude/worktrees",
-      scope: "personal",
-      desktopIntegrationStatus: "deferred",
-      permissions: { permissionLevel: "owner" },
-      settings: {
-        installCommand: supplementForm.installCmd || detected.installCommand,
-        testCommand: supplementForm.testCmd || detected.testCommand,
-        buildCommand: supplementForm.buildCmd || detected.buildCommand,
-        previewCommand: "npm run dev",
-        detectedStack: supplementForm.techStack || detected.techStack,
-        riskSummary: "已从项目配置导入。",
-        projectDescription: supplementForm.projectGoals || undefined,
-      },
-      workflowTemplateId: selectedWorkflowId || (data.workflowTemplates[0]?.id ?? ""),
-      sourceType,
-    });
-    setDetected(null);
-    setDetectedType(null);
-    setDetectionStatus("idle");
-    setRepoPath("");
-    setShowSupplement(false);
-    setSupplementForm({
-      projectGoals: "",
-      currentProgress: "",
-      painPoints: "",
-      techStack: "",
-      installCmd: "",
-      testCmd: "",
-      buildCmd: "",
-      moduleBoundaries: "",
-      aiIntegrationMethod: "",
-    });
-    setGenerateCollaboration(false);
-    setSelectedWorkflowId("");
-    setPreviewWorkflowId(null);
-    setActiveWorkflowCategory("all");
-    setWorkflowSearchQuery("");
-    setSelectedSkillIds(new Set());
-    setSelectedMcpIds(new Set());
-    setSelectedPluginIds(new Set());
-    setShowCapabilityModal(false);
+    try {
+      if (!services.importProject) {
+        throw new Error('服务不可用');
+      }
+      const result = await services.importProject(repoPath);
+
+      if (result.ok && result.data) {
+        addProject({
+          name: result.data.name,
+          repoPath: result.data.repoPath,
+          defaultBranch: result.data.defaultBranch,
+          worktreeRoot: result.data.worktreeRoot,
+          scope: result.data.scope,
+          desktopIntegrationStatus: result.data.desktopIntegrationStatus,
+          permissions: result.data.permissions,
+          settings: result.data.settings,
+          workflowTemplateId: selectedWorkflowId || result.data.workflowTemplateId || (data.workflowTemplates[0]?.id ?? ""),
+          sourceType,
+        });
+        // Reset state
+        setDetected(null);
+        setDetectedType(null);
+        setDetectionStatus("idle");
+        setRepoPath("");
+        setShowSupplement(false);
+        setSupplementForm({
+          projectGoals: "",
+          currentProgress: "",
+          painPoints: "",
+          techStack: "",
+          installCmd: "",
+          testCmd: "",
+          buildCmd: "",
+          moduleBoundaries: "",
+          aiIntegrationMethod: "",
+        });
+        setGenerateCollaboration(false);
+        setSelectedWorkflowId("");
+        setPreviewWorkflowId(null);
+        setActiveWorkflowCategory("all");
+        setWorkflowSearchQuery("");
+        setSelectedSkillIds(new Set());
+        setSelectedMcpIds(new Set());
+        setSelectedPluginIds(new Set());
+        setShowCapabilityModal(false);
+      } else {
+        setImportError(result.error?.message || '导入项目失败');
+      }
+    } catch (err) {
+      setImportError(err instanceof Error ? err.message : '导入项目失败');
+    }
+
+    setImporting(false);
   };
 
   const getBadgeClass = (type: DetectedType): string => {
@@ -1119,9 +1134,17 @@ export function ExistingProjectImport({ data }: ExistingProjectImportProps) {
             </div>
           </div>
 
+          {importError && (
+            <div className="wizard-error-banner">
+              <AlertTriangle size={16} />
+              <span>{importError}</span>
+            </div>
+          )}
+
           <div className="import-actions">
-            <button className="btn primary" onClick={handleImport}>
-              导入适配
+            <button className="btn primary" onClick={handleImport} disabled={importing}>
+              {importing ? <Loader2 size={14} className="spin" /> : null}
+              {importing ? '导入中...' : '导入适配'}
             </button>
             <button className="btn ghost" onClick={() => {
               setDetected(null);
@@ -1132,6 +1155,7 @@ export function ExistingProjectImport({ data }: ExistingProjectImportProps) {
               setSelectedMcpIds(new Set());
               setSelectedPluginIds(new Set());
               setShowCapabilityModal(false);
+              setImportError(null);
             }}>
               取消
             </button>

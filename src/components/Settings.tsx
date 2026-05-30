@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { Settings as SettingsIcon, Key, MessageSquare } from "lucide-react";
+import { Settings as SettingsIcon, Key, MessageSquare, Loader2 } from "lucide-react";
 import type { WorkbenchData } from "../domain/workbench";
 import { useWorkbenchState } from "../App";
+import { useLocalServices } from "../hooks/useLocalServices";
 import { IconBadge } from "./IconBadge";
 import { CapabilityCenter } from "./CapabilityCenter";
 import { ImAdapterSettings } from "./ImAdapterSettings";
@@ -31,8 +32,11 @@ export function Settings({ data }: SettingsProps) {
     updateRunner,
     setDefaultRunner,
   } = useWorkbenchState();
+  const services = useLocalServices();
   const [activeTab, setActiveTab] = useState<SettingsTab>("user");
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     if (saved) {
       const timer = setTimeout(() => setSaved(false), 2000);
@@ -52,6 +56,43 @@ export function Settings({ data }: SettingsProps) {
     setDefaultRunner(runnerId);
   };
 
+  const handleSave = async () => {
+    setSaving(true);
+    setError(null);
+
+    try {
+      if (!services.saveSettings) {
+        throw new Error('服务不可用');
+      }
+      const result = await services.saveSettings({
+        theme: 'system',
+        language: 'zh-CN',
+        notifications: true,
+        autoSave: true,
+        editorFontSize: 14,
+        editorFontFamily: 'monospace',
+        runner: {
+          defaultTimeout: 300000,
+          autoRestart: false,
+        },
+        git: {
+          autoFetch: true,
+          fetchInterval: 60000,
+        },
+      });
+
+      if (result.ok) {
+        setSaved(true);
+      } else {
+        setError(result.error?.message || '保存失败');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '保存失败');
+    }
+
+    setSaving(false);
+  };
+
   return (
     <div className="settings-page">
       <header className="settings-header">
@@ -62,8 +103,12 @@ export function Settings({ data }: SettingsProps) {
             <span>管理用户偏好、项目配置、模型供应商和能力授权。</span>
           </div>
         </div>
-        <button className="btn primary" onClick={() => { setSaved(true); }}>保存配置</button>
+        <button className="btn primary" onClick={handleSave} disabled={saving}>
+          {saving ? <Loader2 size={14} className="spin" /> : null}
+          {saving ? '保存中...' : '保存配置'}
+        </button>
         {saved && <span className="settings-saved-msg">已保存</span>}
+        {error && <span className="settings-error-msg">{error}</span>}
       </header>
 
       <div className="settings-layout">

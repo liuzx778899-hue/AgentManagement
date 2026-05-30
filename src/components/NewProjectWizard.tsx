@@ -3,6 +3,8 @@ import { Check, Loader2, ArrowRight, Search, Code2, FileCheck, Bug, Wrench, Laye
 import type { WorkbenchData } from "../domain/workbench";
 import type { AgentRole } from "../domain/role";
 import { useWorkbenchState } from "../App";
+import { useLocalServices } from "../hooks/useLocalServices";
+import type { CreateProjectInput } from "../services/api/projectApi";
 
 interface NewProjectWizardProps {
   data: WorkbenchData;
@@ -51,6 +53,7 @@ const categoryConfig: Record<TemplateCategory, { label: string; icon: React.Reac
 
 export function NewProjectWizard({ data }: NewProjectWizardProps) {
   const { addProject } = useWorkbenchState();
+  const services = useLocalServices();
   const [step, setStep] = useState<WizardStep>("info");
   const [wizardState, setWizardState] = useState<WizardState>("empty");
   const [errorMessage, setErrorMessage] = useState<string>("");
@@ -78,6 +81,7 @@ export function NewProjectWizard({ data }: NewProjectWizardProps) {
   // Creation state
   const [creating, setCreating] = useState(false);
   const [created, setCreated] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Category and search state
   const [activeCategory, setActiveCategory] = useState<TemplateCategory>("all");
@@ -172,7 +176,7 @@ export function NewProjectWizard({ data }: NewProjectWizardProps) {
     setStepConfigs(configs);
   };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!projectInfo.name || !projectInfo.repoPath) return;
 
     // Validation
@@ -185,35 +189,53 @@ export function NewProjectWizard({ data }: NewProjectWizardProps) {
 
     setCreating(true);
     setWizardState("loading");
+    setError(null);
 
-    setTimeout(() => {
-      addProject({
-        name: projectInfo.name,
-        repoPath: projectInfo.repoPath,
-        defaultBranch: projectInfo.defaultBranch,
-        worktreeRoot: projectInfo.worktreeRoot,
-        scope: "personal",
-        desktopIntegrationStatus: "deferred",
-        permissions: { permissionLevel: "owner" },
-        settings: {
-          installCommand: "npm install",
-          testCommand: "npm test",
-          buildCommand: "npm run build",
-          previewCommand: "npm run dev",
-          detectedStack: "Unknown",
-          riskSummary: "新建项目。",
-        },
-        workflowTemplateId: selectedWorkflowId,
-        roleOverrides: Object.fromEntries(
-          stepConfigs.length > 0
-            ? stepConfigs.map((sc) => [sc.stepId, sc.roleId])
-            : selectedWorkflow?.steps.map((s) => [s.id, s.roleId]) ?? []
-        ),
-      });
+    const input: CreateProjectInput = {
+      name: projectInfo.name,
+      repoPath: projectInfo.repoPath,
+      defaultBranch: projectInfo.defaultBranch,
+      worktreeRoot: projectInfo.worktreeRoot,
+      workflowTemplateId: selectedWorkflowId,
+    };
+
+    try {
+      if (!services.createProject) {
+        throw new Error('服务不可用');
+      }
+      const result = await services.createProject(input);
+
+      if (result.ok && result.data) {
+        // Update reducer state with new project
+        addProject({
+          name: result.data.name,
+          repoPath: result.data.repoPath,
+          defaultBranch: result.data.defaultBranch,
+          worktreeRoot: result.data.worktreeRoot,
+          scope: result.data.scope,
+          desktopIntegrationStatus: result.data.desktopIntegrationStatus,
+          permissions: result.data.permissions,
+          settings: result.data.settings,
+          workflowTemplateId: result.data.workflowTemplateId,
+          roleOverrides: result.data.roleOverrides,
+        });
+        setCreating(false);
+        setCreated(true);
+        setWizardState("success");
+      } else {
+        setCreating(false);
+        setWizardState("error");
+        const errorMsg = result.error?.message || '创建项目失败';
+        setErrorMessage(errorMsg);
+        setError(errorMsg);
+      }
+    } catch (err) {
       setCreating(false);
-      setCreated(true);
-      setWizardState("success");
-    }, 1000);
+      setWizardState("error");
+      const errorMsg = err instanceof Error ? err.message : '创建项目失败';
+      setErrorMessage(errorMsg);
+      setError(errorMsg);
+    }
   };
 
   if (created) {

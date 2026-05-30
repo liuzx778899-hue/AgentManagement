@@ -12,8 +12,10 @@ import {
   FlagTriangleRight,
   Clock,
   GitCompare,
+  Loader2,
 } from "lucide-react";
 import type { Project, WorkbenchData, ManualGate } from "../domain/workbench";
+import { useLocalServices } from "../hooks/useLocalServices";
 
 interface ProjectCardProps {
   project: Project;
@@ -75,8 +77,11 @@ function formatSyncTime(iso: string | undefined): string {
 }
 
 export function ProjectCard({ project, data, onClick, onGateClick, onDelete, onEnterWorkbench }: ProjectCardProps) {
+  const services = useLocalServices();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteInput, setDeleteInput] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const projectTasks = useMemo(
     () => data.tasks.filter((t) => t.projectId === project.id),
@@ -119,6 +124,32 @@ export function ProjectCard({ project, data, onClick, onGateClick, onDelete, onE
   const handleWorkbenchClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (onEnterWorkbench) onEnterWorkbench(project.id);
+  };
+
+  const handleDelete = async () => {
+    if (deleteInput !== project.name) return;
+
+    setDeleting(true);
+    setDeleteError(null);
+
+    try {
+      if (!services.deleteProject) {
+        throw new Error('服务不可用');
+      }
+      const result = await services.deleteProject(project.id);
+
+      if (result.ok) {
+        if (onDelete) onDelete(project.id);
+        setShowDeleteConfirm(false);
+        setDeleteInput("");
+      } else {
+        setDeleteError(result.error?.message || '删除项目失败');
+      }
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : '删除项目失败');
+    }
+
+    setDeleting(false);
   };
 
   const riskLevel = project.riskLevel ?? "low";
@@ -231,7 +262,7 @@ export function ProjectCard({ project, data, onClick, onGateClick, onDelete, onE
             <div className="pm-v2-pc-confirm-header">
               <AlertTriangle size={16} color="var(--danger)" />
               <span>删除项目</span>
-              <button className="pm-v2-btn" onClick={() => { setShowDeleteConfirm(false); setDeleteInput(""); }} type="button">
+              <button className="pm-v2-btn" onClick={() => { setShowDeleteConfirm(false); setDeleteInput(""); setDeleteError(null); }} type="button">
                 <X size={14} />
               </button>
             </div>
@@ -243,21 +274,27 @@ export function ProjectCard({ project, data, onClick, onGateClick, onDelete, onE
                 placeholder={project.name}
                 autoFocus
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && deleteInput === project.name && onDelete) {
-                    onDelete(project.id);
+                  if (e.key === "Enter" && deleteInput === project.name && !deleting) {
+                    handleDelete();
                   }
                 }}
               />
+              {deleteError && (
+                <p style={{ color: "var(--danger)", marginTop: "8px", fontSize: "12px" }}>
+                  {deleteError}
+                </p>
+              )}
             </div>
             <div className="pm-v2-pc-confirm-footer">
-              <button className="pm-v2-btn" onClick={() => { setShowDeleteConfirm(false); setDeleteInput(""); }} type="button">取消</button>
+              <button className="pm-v2-btn" onClick={() => { setShowDeleteConfirm(false); setDeleteInput(""); setDeleteError(null); }} type="button">取消</button>
               <button
                 className="pm-v2-btn pm-v2-btn-danger"
-                disabled={deleteInput !== project.name}
-                onClick={() => { if (onDelete) onDelete(project.id); }}
+                disabled={deleteInput !== project.name || deleting}
+                onClick={handleDelete}
                 type="button"
               >
-                确认删除
+                {deleting ? <Loader2 size={14} className="spin" /> : null}
+                {deleting ? '删除中...' : '确认删除'}
               </button>
             </div>
           </div>
