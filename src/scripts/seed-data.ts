@@ -38,13 +38,22 @@ interface SeedProject {
 interface SeedWorkflowTemplate {
   id: string;
   name: string;
-  description: string;
+  version: number;
+  status: string;
   steps: Array<{
     id: string;
-    name: string;
-    type: string;
     order: number;
-    config: Record<string, unknown>;
+    name: string;
+    roleId: string;
+    modelProviderId: string;
+    modelName: string;
+    inputs: string[];
+    outputs: string[];
+    gateMode: string;
+    gateType?: string;
+    failureStrategy: string;
+    projectOverride: boolean;
+    runnerId?: string;
   }>;
   createdAt: string;
   updatedAt: string;
@@ -82,6 +91,15 @@ interface SeedModelProvider {
   updatedAt: string;
 }
 
+interface SeedRole {
+  id: string;
+  name: string;
+  description: string;
+  capabilities: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 async function seedData() {
   console.log('🚀 开始初始化数据...\n');
 
@@ -90,16 +108,279 @@ async function seedData() {
   const workflowsDir = join(BASE_DIR, 'workflows');
   const memoriesDir = join(BASE_DIR, 'memories');
   const modelsDir = join(BASE_DIR, 'model-providers');
+  const rolesDir = join(BASE_DIR, 'roles');
 
   await mkdir(projectsDir, { recursive: true });
   await mkdir(workflowsDir, { recursive: true });
   await mkdir(memoriesDir, { recursive: true });
   await mkdir(modelsDir, { recursive: true });
+  await mkdir(rolesDir, { recursive: true });
 
   const now = new Date().toISOString();
 
-  // 1. 创建示例项目
-  console.log('📦 创建示例项目...');
+  // 1. 创建角色定义
+  console.log('👤 创建角色定义...');
+  const roles: SeedRole[] = [
+    {
+      id: 'role-pm',
+      name: '产品经理',
+      description: '负责需求分析、用户故事和产品规划',
+      capabilities: ['需求分析', '用户故事编写', '优先级排序'],
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: 'role-tech-lead',
+      name: '技术负责人',
+      description: '负责技术架构设计和代码审查',
+      capabilities: ['架构设计', '代码审查', '技术决策'],
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: 'role-dev',
+      name: '开发工程师',
+      description: '负责功能开发和代码实现',
+      capabilities: ['编码实现', '单元测试', '代码重构'],
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: 'role-qa',
+      name: '测试工程师',
+      description: '负责测试用例设计和质量保障',
+      capabilities: ['测试设计', '自动化测试', '缺陷追踪'],
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: 'role-devops',
+      name: 'DevOps工程师',
+      description: '负责部署和运维自动化',
+      capabilities: ['CI/CD', '容器化', '监控告警'],
+      createdAt: now,
+      updatedAt: now,
+    },
+  ];
+
+  for (const role of roles) {
+    await writeFile(join(rolesDir, `${role.id}.json`), JSON.stringify(role, null, 2));
+    console.log(`  ✓ 创建角色: ${role.name}`);
+  }
+
+  // 2. 创建工作流模板（带角色绑定）
+  console.log('\n📋 创建工作流模板...');
+  const workflows: SeedWorkflowTemplate[] = [
+    {
+      id: 'software-dev-v1',
+      name: '软件开发流程',
+      version: 1,
+      status: 'enabled',
+      steps: [
+        {
+          id: 'step-req',
+          order: 0,
+          name: '需求分析',
+          roleId: 'role-pm',
+          modelProviderId: 'anthropic',
+          modelName: 'claude-3-haiku',
+          inputs: [],
+          outputs: ['requirements.md'],
+          gateMode: 'manual',
+          gateType: 'manual',
+          failureStrategy: 'stop',
+          projectOverride: false,
+        },
+        {
+          id: 'step-design',
+          order: 1,
+          name: '技术设计',
+          roleId: 'role-tech-lead',
+          modelProviderId: 'anthropic',
+          modelName: 'claude-3-sonnet',
+          inputs: ['requirements.md'],
+          outputs: ['design.md'],
+          gateMode: 'manual',
+          gateType: 'manual',
+          failureStrategy: 'stop',
+          projectOverride: false,
+        },
+        {
+          id: 'step-dev',
+          order: 2,
+          name: '开发实现',
+          roleId: 'role-dev',
+          modelProviderId: 'anthropic',
+          modelName: 'claude-3-sonnet',
+          inputs: ['design.md'],
+          outputs: ['src/'],
+          gateMode: 'auto',
+          failureStrategy: 'stop',
+          projectOverride: false,
+          runnerId: 'runner-claude-code',
+        },
+        {
+          id: 'step-review',
+          order: 3,
+          name: '代码审查',
+          roleId: 'role-tech-lead',
+          modelProviderId: 'anthropic',
+          modelName: 'claude-3-sonnet',
+          inputs: ['src/'],
+          outputs: [],
+          gateMode: 'manual',
+          gateType: 'manual',
+          failureStrategy: 'stop',
+          projectOverride: false,
+        },
+        {
+          id: 'step-test',
+          order: 4,
+          name: '自动化测试',
+          roleId: 'role-qa',
+          modelProviderId: 'anthropic',
+          modelName: 'claude-3-haiku',
+          inputs: ['src/'],
+          outputs: ['test-results/'],
+          gateMode: 'auto',
+          failureStrategy: 'stop',
+          projectOverride: false,
+          runnerId: 'runner-claude-code',
+        },
+        {
+          id: 'step-deploy',
+          order: 5,
+          name: '部署发布',
+          roleId: 'role-devops',
+          modelProviderId: 'anthropic',
+          modelName: 'claude-3-haiku',
+          inputs: ['test-results/'],
+          outputs: [],
+          gateMode: 'manual',
+          gateType: 'manual',
+          failureStrategy: 'stop',
+          projectOverride: false,
+        },
+      ],
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: 'bug-fix-v1',
+      name: 'Bug修复流程',
+      version: 1,
+      status: 'enabled',
+      steps: [
+        {
+          id: 'step-analyze',
+          order: 0,
+          name: '问题分析',
+          roleId: 'role-dev',
+          modelProviderId: 'anthropic',
+          modelName: 'claude-3-sonnet',
+          inputs: [],
+          outputs: ['analysis.md'],
+          gateMode: 'auto',
+          failureStrategy: 'stop',
+          projectOverride: false,
+          runnerId: 'runner-claude-code',
+        },
+        {
+          id: 'step-fix',
+          order: 1,
+          name: '修复实现',
+          roleId: 'role-dev',
+          modelProviderId: 'anthropic',
+          modelName: 'claude-3-sonnet',
+          inputs: ['analysis.md'],
+          outputs: ['fix/'],
+          gateMode: 'auto',
+          failureStrategy: 'stop',
+          projectOverride: false,
+          runnerId: 'runner-claude-code',
+        },
+        {
+          id: 'step-verify',
+          order: 2,
+          name: '验证测试',
+          roleId: 'role-qa',
+          modelProviderId: 'anthropic',
+          modelName: 'claude-3-haiku',
+          inputs: ['fix/'],
+          outputs: ['verify-results/'],
+          gateMode: 'manual',
+          gateType: 'manual',
+          failureStrategy: 'stop',
+          projectOverride: false,
+        },
+      ],
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: 'design-review-v1',
+      name: '设计评审流程',
+      version: 1,
+      status: 'enabled',
+      steps: [
+        {
+          id: 'step-submit',
+          order: 0,
+          name: '提交方案',
+          roleId: 'role-tech-lead',
+          modelProviderId: 'anthropic',
+          modelName: 'claude-3-sonnet',
+          inputs: [],
+          outputs: ['proposal.md'],
+          gateMode: 'manual',
+          gateType: 'manual',
+          failureStrategy: 'stop',
+          projectOverride: false,
+        },
+        {
+          id: 'step-review',
+          order: 1,
+          name: '评审会议',
+          roleId: 'role-tech-lead',
+          modelProviderId: 'anthropic',
+          modelName: 'claude-3-sonnet',
+          inputs: ['proposal.md'],
+          outputs: ['review-notes.md'],
+          gateMode: 'manual',
+          gateType: 'manual',
+          failureStrategy: 'stop',
+          projectOverride: false,
+        },
+        {
+          id: 'step-approve',
+          order: 2,
+          name: '批准执行',
+          roleId: 'role-pm',
+          modelProviderId: 'anthropic',
+          modelName: 'claude-3-haiku',
+          inputs: ['review-notes.md'],
+          outputs: [],
+          gateMode: 'manual',
+          gateType: 'manual',
+          failureStrategy: 'stop',
+          projectOverride: false,
+        },
+      ],
+      createdAt: now,
+      updatedAt: now,
+    },
+  ];
+
+  for (const workflow of workflows) {
+    await writeFile(join(workflowsDir, `${workflow.id}.json`), JSON.stringify(workflow, null, 2));
+    console.log(`  ✓ 创建工作流: ${workflow.name}`);
+    workflow.steps.forEach(step => {
+      console.log(`      - ${step.name} → ${step.roleId}`);
+    });
+  }
+
+  // 3. 创建示例项目
+  console.log('\n📦 创建示例项目...');
   const projects: SeedProject[] = [
     {
       id: randomUUID(),
@@ -160,56 +441,7 @@ async function seedData() {
     console.log(`  ✓ 创建项目: ${project.name}`);
   }
 
-  // 2. 创建工作流模板
-  console.log('\n📋 创建工作流模板...');
-  const workflows: SeedWorkflowTemplate[] = [
-    {
-      id: 'software-dev-v1',
-      name: '软件开发流程',
-      description: '标准的软件开发流程，包含需求、设计、开发、测试、部署阶段',
-      steps: [
-        { id: 'req', name: '需求分析', type: 'manual', order: 1, config: { required: true } },
-        { id: 'design', name: '技术设计', type: 'manual', order: 2, config: { required: true } },
-        { id: 'dev', name: '开发实现', type: 'agent', order: 3, config: { autoRun: true } },
-        { id: 'review', name: '代码审查', type: 'gate', order: 4, config: { approver: 'tech-lead' } },
-        { id: 'test', name: '自动化测试', type: 'agent', order: 5, config: { autoRun: true } },
-        { id: 'deploy', name: '部署发布', type: 'manual', order: 6, config: { env: 'staging' } },
-      ],
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      id: 'bug-fix-v1',
-      name: 'Bug修复流程',
-      description: 'Bug修复的标准流程，包含分析、修复、验证阶段',
-      steps: [
-        { id: 'analyze', name: '问题分析', type: 'agent', order: 1, config: { autoRun: true } },
-        { id: 'fix', name: '修复实现', type: 'agent', order: 2, config: { autoRun: true } },
-        { id: 'verify', name: '验证测试', type: 'gate', order: 3, config: { approver: 'qa' } },
-      ],
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      id: 'design-review-v1',
-      name: '设计评审流程',
-      description: '设计方案的评审流程',
-      steps: [
-        { id: 'submit', name: '提交方案', type: 'manual', order: 1, config: {} },
-        { id: 'review', name: '评审会议', type: 'gate', order: 2, config: { approver: 'architect' } },
-        { id: 'approve', name: '批准执行', type: 'manual', order: 3, config: {} },
-      ],
-      createdAt: now,
-      updatedAt: now,
-    },
-  ];
-
-  for (const workflow of workflows) {
-    await writeFile(join(workflowsDir, `${workflow.id}.json`), JSON.stringify(workflow, null, 2));
-    console.log(`  ✓ 创建工作流: ${workflow.name}`);
-  }
-
-  // 3. 创建示例记忆
+  // 4. 创建示例记忆
   console.log('\n📝 创建示例记忆...');
   const memories: SeedMemory[] = [
     {
@@ -245,7 +477,7 @@ async function seedData() {
     console.log(`  ✓ 创建记忆: ${memory.title}`);
   }
 
-  // 4. 创建模型配置
+  // 5. 创建模型配置
   console.log('\n🤖 创建模型配置...');
   const modelProviders: SeedModelProvider[] = [
     {
@@ -286,7 +518,7 @@ async function seedData() {
   await writeFile(join(modelsDir, 'providers.json'), JSON.stringify({ providers: modelProviders, aiAssistantModel: null }, null, 2));
   console.log(`  ✓ 创建模型配置: ${modelProviders[0].name}`);
 
-  // 5. 创建索引文件
+  // 6. 创建索引文件
   console.log('\n📑 创建索引文件...');
   await writeFile(join(BASE_DIR, 'index.json'), JSON.stringify({
     version: '1.0',
@@ -295,6 +527,7 @@ async function seedData() {
     workflows: workflows.map(w => ({ id: w.id, name: w.name })),
     memories: memories.map(m => ({ id: m.id, title: m.title })),
     modelProviders: modelProviders.map(mp => ({ id: mp.id, name: mp.name })),
+    roles: roles.map(r => ({ id: r.id, name: r.name })),
   }, null, 2));
   console.log('  ✓ 创建索引文件');
 
@@ -302,6 +535,7 @@ async function seedData() {
   console.log('创建的数据:');
   console.log(`  - ${projects.length} 个项目`);
   console.log(`  - ${workflows.length} 个工作流模板`);
+  console.log(`  - ${roles.length} 个角色`);
   console.log(`  - ${memories.length} 条记忆`);
   console.log(`  - ${modelProviders.length} 个模型配置`);
 }

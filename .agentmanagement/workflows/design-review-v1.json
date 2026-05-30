@@ -1,32 +1,60 @@
 {
   "id": "design-review-v1",
   "name": "设计评审流程",
-  "description": "设计方案的评审流程",
+  "version": 1,
+  "status": "enabled",
   "steps": [
     {
-      "id": "submit",
+      "id": "step-submit",
+      "order": 0,
       "name": "提交方案",
-      "type": "manual",
+      "roleId": "role-tech-lead",
+      "modelProviderId": "anthropic",
+      "modelName": "claude-3-sonnet",
+      "inputs": [],
+      "outputs": [
+        "proposal.md"
+      ],
+      "gateMode": "manual",
+      "gateType": "manual",
+      "failureStrategy": "stop",
+      "projectOverride": false
+    },
+    {
+      "id": "step-review",
       "order": 1,
-      "config": {}
-    },
-    {
-      "id": "review",
       "name": "评审会议",
-      "type": "gate",
-      "order": 2,
-      "config": {
-        "approver": "architect"
-      }
+      "roleId": "role-tech-lead",
+      "modelProviderId": "anthropic",
+      "modelName": "claude-3-sonnet",
+      "inputs": [
+        "proposal.md"
+      ],
+      "outputs": [
+        "review-notes.md"
+      ],
+      "gateMode": "manual",
+      "gateType": "manual",
+      "failureStrategy": "stop",
+      "projectOverride": false
     },
     {
-      "id": "approve",
+      "id": "step-approve",
+      "order": 2,
       "name": "批准执行",
-      "type": "manual",
-      "order": 3,
-      "config": {}
+      "roleId": "role-pm",
+      "modelProviderId": "anthropic",
+      "modelName": "claude-3-haiku",
+      "inputs": [
+        "review-notes.md"
+      ],
+      "outputs": [],
+      "gateMode": "manual",
+      "gateType": "manual",
+      "failureStrategy": "stop",
+      "projectOverride": false
     }
   ],
-  "createdAt": "2026-05-30T11:09:02.377Z",
-  "updatedAt": "2026-05-30T11:09:02.377Z"
+  "createdAt": "2026-05-30T11:35:41.125Z",
+  "updatedAt": "2026-05-30T11:35:41.125Z"
 }

@@ -6,6 +6,7 @@ import { gitRouter } from './git';
 import { memoryRouter } from './memory';
 import { settingsRouter } from './settings';
 import { aiRouter } from './ai';
+import { rolesRouter } from './roles';
 
 export function createRouter(): Router {
   const router = Router();
@@ -18,6 +19,7 @@ export function createRouter(): Router {
   router.use('/memory', memoryRouter);
   router.use('/settings', settingsRouter);
   router.use('/ai', aiRouter);
+  router.use('/roles', rolesRouter);
 
   return router;
 }

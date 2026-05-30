@@ -53,8 +53,8 @@ import {
   setProjects as setProjectsAction,
   setMemories as setMemoriesAction,
 } from "./workbenchActions";
-import { projectApi, memoryApi, settingsApi, checkServerAvailable, workflowApi } from "../services/api";
-import { setModelProviders as setModelProvidersAction, setWorkflowTemplates as setWorkflowTemplatesAction } from "./workbenchActions";
+import { projectApi, memoryApi, settingsApi, checkServerAvailable, workflowApi, rolesApi } from "../services/api";
+import { setModelProviders as setModelProvidersAction, setWorkflowTemplates as setWorkflowTemplatesAction, setRoles as setRolesAction } from "./workbenchActions";
 
 // Default runner profiles - commonly used CLI tools
 const defaultRunnerProfiles: RunnerProfile[] = [
@@ -210,12 +210,13 @@ export function WorkbenchProvider({ children }: WorkbenchProviderProps) {
 
       try {
         // 并行加载所有数据
-        const [projectsResult, memoriesResult, settingsResult, modelProvidersResult, workflowTemplatesResult] = await Promise.all([
+        const [projectsResult, memoriesResult, settingsResult, modelProvidersResult, workflowTemplatesResult, rolesResult] = await Promise.all([
           projectApi.list(),
           memoryApi.list(),
           settingsApi.get(),
           settingsApi.getModelProviders(),
           workflowApi.listTemplates(),
+          rolesApi.list(),
         ]);
 
         if (!isMounted.current) return;
@@ -262,11 +263,17 @@ export function WorkbenchProvider({ children }: WorkbenchProviderProps) {
           dispatch(setWorkflowTemplatesAction(workflowTemplatesResult.data));
         }
 
+        // 更新角色列表
+        if (rolesResult.ok && rolesResult.data) {
+          dispatch(setRolesAction(rolesResult.data));
+        }
+
         console.log('[WorkbenchProvider] Loaded data from API:', {
           projects: projectsResult.ok ? projectsResult.data?.length : 'failed',
           memories: memoriesResult.ok ? memoriesResult.data?.length : 'failed',
           modelProviders: modelProvidersResult.ok ? modelProvidersResult.data?.providers?.length : 'failed',
           workflowTemplates: workflowTemplatesResult.ok ? workflowTemplatesResult.data?.length : 'failed',
+          roles: rolesResult.ok ? rolesResult.data?.length : 'failed',
         });
       } catch (error) {
         console.error('[WorkbenchProvider] Failed to load data from API:', error);

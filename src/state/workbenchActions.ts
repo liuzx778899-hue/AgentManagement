@@ -57,6 +57,7 @@ export type WorkbenchAction =
   | { type: "SET_MEMORIES"; payload: MemoryItem[] }
   | { type: "SET_MODEL_PROVIDERS"; payload: { providers: ModelProvider[]; aiAssistantModel?: { providerId: string; modelName: string } | null } }
   | { type: "SET_WORKFLOW_TEMPLATES"; payload: WorkflowTemplate[] }
+  | { type: "SET_ROLES"; payload: AgentRole[] }
 
 // Action Creators
 export function updateGateStatus(gateId: string, status: GateStatus): WorkbenchAction {
@@ -215,4 +216,8 @@ export function setModelProviders(providers: ModelProvider[], aiAssistantModel?:
 
 export function setWorkflowTemplates(templates: WorkflowTemplate[]): WorkbenchAction {
   return { type: "SET_WORKFLOW_TEMPLATES", payload: templates };
+}
+
+export function setRoles(roles: AgentRole[]): WorkbenchAction {
+  return { type: "SET_ROLES", payload: roles };
 }

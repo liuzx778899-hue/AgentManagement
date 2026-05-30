@@ -1,6 +1,6 @@
 import { useContext, useEffect, useState } from 'react';
 import { ServiceContext } from '../context/ServiceContext';
-import { checkServerAvailable, runnerApi, projectApi, workflowApi, gitApi, memoryApi, settingsApi } from '../services/api';
+import { checkServerAvailable, runnerApi, projectApi, workflowApi, gitApi, memoryApi, settingsApi, aiApi } from '../services/api';
 import type { LocalEngineeringServices } from '../services/local';
 import type { RunnerProcess, LogEntry } from '../types/localEngineering';
 import type { RunnerKind } from '../domain/runner';
@@ -161,6 +161,20 @@ function createApiServices(): LocalEngineeringServices {
     saveModelProviders: async (data: { providers: any[]; aiAssistantModel?: any }) => {
       const result = await settingsApi.saveModelProviders(data);
       return result as { ok: boolean; error?: { code: string; message: string } };
+    },
+
+    // AI Assistant methods
+    getAiAssistantConfig: async () => {
+      const response = await fetch('/api/ai/assistant-config');
+      return response.json() as Promise<{ ok: boolean; data?: { systemPrompt: string }; error?: { code: string; message: string } }>;
+    },
+    saveAiAssistantConfig: async (data: { systemPrompt: string }) => {
+      const response = await fetch('/api/ai/assistant-config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      return response.json() as Promise<{ ok: boolean; error?: { code: string; message: string } }>;
     },
   };
 }

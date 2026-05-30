@@ -10,7 +10,7 @@ export { LlmAdapter } from './adapters/llmAdapter';
 export * from './useCases';
 
 // Repositories
-export { ProjectRepository, MemoryRepository, WorkflowRepository } from './repositories';
+export { ProjectRepository, MemoryRepository, WorkflowRepository, RoleRepository } from './repositories';
 
 // Security
 export {
@@ -32,7 +32,7 @@ import { GitAdapter } from './adapters/gitAdapter';
 import { FileStoreAdapter } from './adapters/fileStoreAdapter';
 import { ProcessRunnerAdapter } from './adapters/processRunnerAdapter';
 import { LlmAdapter } from './adapters/llmAdapter';
-import { ProjectRepository, MemoryRepository, WorkflowRepository } from './repositories';
+import { ProjectRepository, MemoryRepository, WorkflowRepository, RoleRepository } from './repositories';
 import type { AdapterConfig, RunnerProcess, LogEntry } from '../../types/localEngineering';
 import type { RunnerKind } from '../../domain/runner';
 import type { Project } from '../../domain/project';
@@ -50,6 +50,7 @@ export interface LocalEngineeringServices {
     project: ProjectRepository;
     memory: MemoryRepository;
     workflow: WorkflowRepository;
+    role: RoleRepository;
   };
 
   // Runner service methods
@@ -90,6 +91,10 @@ export interface LocalEngineeringServices {
   getSettings?: () => Promise<{ ok: boolean; data?: AppSettings; error?: { code: string; message: string } }>;
   saveSettings?: (settings: Partial<AppSettings>) => Promise<{ ok: boolean; data?: AppSettings; error?: { code: string; message: string } }>;
   saveModelProviders?: (data: { providers: any[]; aiAssistantModel?: any }) => Promise<{ ok: boolean; error?: { code: string; message: string } }>;
+
+  // AI Assistant service methods
+  getAiAssistantConfig?: () => Promise<{ ok: boolean; data?: { systemPrompt: string }; error?: { code: string; message: string } }>;
+  saveAiAssistantConfig?: (data: { systemPrompt: string }) => Promise<{ ok: boolean; error?: { code: string; message: string } }>;
 }
 
 /**
@@ -115,6 +120,7 @@ export function createLocalServices(config: Partial<AdapterConfig> = {}): LocalE
       project: new ProjectRepository(fileStore),
       memory: new MemoryRepository(fileStore),
       workflow: new WorkflowRepository(fileStore),
+      role: new RoleRepository(fileStore),
     },
   };
 }

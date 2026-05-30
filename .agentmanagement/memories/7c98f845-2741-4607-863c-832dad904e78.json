@@ -1,0 +1,13 @@
+{
+  "id": "7c98f845-2741-4607-863c-832dad904e78",
+  "kind": "technical",
+  "scope": "project",
+  "projectId": "ea984900-2640-47e4-9923-157c784b6a48",
+  "roleId": null,
+  "taskId": null,
+  "title": "技术栈选择",
+  "body": "前端：React 19 + Vite 6\n后端：Express 5\n测试：Vitest + Playwright\n类型：TypeScript 5.8",
+  "citation": [],
+  "createdAt": "2026-05-30T11:35:41.125Z",
+  "updatedAt": "2026-05-30T11:35:41.125Z"
+}

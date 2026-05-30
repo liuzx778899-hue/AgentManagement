@@ -6,6 +6,30 @@ import type { ModelProvider } from '../../domain/model';
 export const aiRouter = Router();
 
 const MODEL_PROVIDERS_PATH = '.agentmanagement/model-providers.json';
+const AI_ASSISTANT_CONFIG_PATH = '.agentmanagement/ai-assistant-config.json';
+
+/**
+ * 默认的系统提示词
+ */
+const DEFAULT_SYSTEM_PROMPT = `你是 AgentManagement 的智能工程助手。
+
+你的核心职责：
+- 帮助用户分析项目状态和进度
+- 建议下一步任务的优先级
+- 检查项目配置是否完整
+- 回答工程相关问题
+- 协助用户完成工作流程
+
+你的能力：
+- 可以查看项目列表、角色、工作流模板、记忆等数据
+- 可以帮助生成角色定义、项目文档、工作流模板
+- 可以检查配置完整性和潜在问题
+
+回答原则：
+- 简洁明了，直接回答问题
+- 提供具体可行的建议
+- 如果不确定，坦诚说明
+- 使用中文回答`;
 
 /**
  * POST /api/ai/chat
@@ -41,9 +65,12 @@ aiRouter.post('/chat', async (req: Request, res: Response, next: NextFunction) =
       return;
     }
 
-    // 读取模型配置
+    // 读取模型配置和助手配置
     let providerConfig: { apiKey?: string; baseUrl?: string; apiFormat?: string } = {};
-    let actualModel = modelId || 'claude-3-haiku';
+    let actualModel = modelId || 'glm-5';
+    let systemPrompt = DEFAULT_SYSTEM_PROMPT;
+
+    console.log('[AI Route] Request:', { providerId, modelName, modelId });
 
     // 如果指定了 providerId 和 modelName，从配置文件读取
     if (providerId && modelName) {
@@ -54,31 +81,42 @@ aiRouter.post('/chat', async (req: Request, res: Response, next: NextFunction) =
         const provider = providers.find(p => p.id === providerId);
 
         if (provider) {
-          // 设置动态配置
           providerConfig = {
             apiKey: provider.apiKey,
             baseUrl: provider.baseUrl,
             apiFormat: provider.apiFormat,
           };
           actualModel = modelName;
+          console.log('[AI Route] Found provider config:', {
+            id: provider.id,
+            name: provider.name,
+            apiFormat: provider.apiFormat,
+            baseUrl: provider.baseUrl,
+            hasApiKey: !!provider.apiKey,
+          });
         }
       }
     }
 
-    // 构建 system prompt
-    const systemPrompt = `你是 AgentManagement 的工程助手。
-${context ? `当前上下文：\n${context}` : ''}
+    // 读取助手自定义配置（包括系统提示词）
+    const assistantConfigResult = await services.fileStore.readJson(AI_ASSISTANT_CONFIG_PATH);
+    if (assistantConfigResult.ok && assistantConfigResult.data) {
+      const config = assistantConfigResult.data as { systemPrompt?: string };
+      if (config.systemPrompt && config.systemPrompt.trim()) {
+        systemPrompt = config.systemPrompt;
+        console.log('[AI Route] Using custom system prompt');
+      }
+    }
 
-你可以帮助用户：
-- 分析项目状态和进度
-- 建议下一步任务优先级
-- 检查项目配置
-- 回答工程相关问题`;
+    // 构建完整的 system prompt
+    const fullSystemPrompt = context
+      ? `${systemPrompt}\n\n当前上下文：\n${context}`
+      : systemPrompt;
 
     // 构建 LLM 调用配置
     const llmConfig: CompleteConfig = {
       messages: [
-        { role: 'system', content: systemPrompt },
+        { role: 'system', content: fullSystemPrompt },
         ...messages.map((m: { role: string; content: string }) => ({
           role: m.role as 'user' | 'assistant',
           content: m.content,
@@ -94,6 +132,13 @@ ${context ? `当前上下文：\n${context}` : ''}
 
     // 调用 LLM
     const result = await services.llm.complete(llmConfig);
+
+    console.log('[AI Route] LLM result:', {
+      ok: result.ok,
+      hasData: !!result.data,
+      contentLength: result.data?.content?.length,
+      error: result.error,
+    });
 
     if (!result.ok) {
       res.status(500).json({
@@ -113,6 +158,63 @@ ${context ? `当前上下文：\n${context}` : ''}
         model: result.data!.model,
         usage: result.data!.usage,
       },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * GET /api/ai/assistant-config
+ * 获取 AI 助手配置
+ */
+aiRouter.get('/assistant-config', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const services = getServices();
+    const result = await services.fileStore.readJson(AI_ASSISTANT_CONFIG_PATH);
+
+    if (!result.ok) {
+      res.json({
+        ok: true,
+        data: {
+          systemPrompt: DEFAULT_SYSTEM_PROMPT,
+        },
+      });
+      return;
+    }
+
+    res.json({
+      ok: true,
+      data: {
+        systemPrompt: (result.data as { systemPrompt?: string })?.systemPrompt || DEFAULT_SYSTEM_PROMPT,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * PUT /api/ai/assistant-config
+ * 保存 AI 助手配置
+ */
+aiRouter.put('/assistant-config', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { systemPrompt } = req.body;
+
+    const services = getServices();
+    const result = await services.fileStore.writeJson(AI_ASSISTANT_CONFIG_PATH, {
+      systemPrompt: systemPrompt || DEFAULT_SYSTEM_PROMPT,
+      updatedAt: new Date().toISOString(),
+    });
+
+    if (!result.ok) {
+      res.json(result);
+      return;
+    }
+
+    res.json({
+      ok: true,
     });
   } catch (err) {
     next(err);

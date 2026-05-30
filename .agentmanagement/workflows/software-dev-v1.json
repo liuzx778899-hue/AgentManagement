@@ -1,63 +1,112 @@
 {
   "id": "software-dev-v1",
   "name": "软件开发流程",
-  "description": "标准的软件开发流程，包含需求、设计、开发、测试、部署阶段",
+  "version": 1,
+  "status": "enabled",
   "steps": [
     {
-      "id": "req",
+      "id": "step-req",
+      "order": 0,
       "name": "需求分析",
-      "type": "manual",
+      "roleId": "role-pm",
+      "modelProviderId": "anthropic",
+      "modelName": "claude-3-haiku",
+      "inputs": [],
+      "outputs": [
+        "requirements.md"
+      ],
+      "gateMode": "manual",
+      "gateType": "manual",
+      "failureStrategy": "stop",
+      "projectOverride": false
+    },
+    {
+      "id": "step-design",
       "order": 1,
-      "config": {
-        "required": true
-      }
-    },
-    {
-      "id": "design",
       "name": "技术设计",
-      "type": "manual",
+      "roleId": "role-tech-lead",
+      "modelProviderId": "anthropic",
+      "modelName": "claude-3-sonnet",
+      "inputs": [
+        "requirements.md"
+      ],
+      "outputs": [
+        "design.md"
+      ],
+      "gateMode": "manual",
+      "gateType": "manual",
+      "failureStrategy": "stop",
+      "projectOverride": false
+    },
+    {
+      "id": "step-dev",
       "order": 2,
-      "config": {
-        "required": true
-      }
-    },
-    {
-      "id": "dev",
       "name": "开发实现",
-      "type": "agent",
+      "roleId": "role-dev",
+      "modelProviderId": "anthropic",
+      "modelName": "claude-3-sonnet",
+      "inputs": [
+        "design.md"
+      ],
+      "outputs": [
+        "src/"
+      ],
+      "gateMode": "auto",
+      "failureStrategy": "stop",
+      "projectOverride": false,
+      "runnerId": "runner-claude-code"
+    },
+    {
+      "id": "step-review",
       "order": 3,
-      "config": {
-        "autoRun": true
-      }
-    },
-    {
-      "id": "review",
       "name": "代码审查",
-      "type": "gate",
+      "roleId": "role-tech-lead",
+      "modelProviderId": "anthropic",
+      "modelName": "claude-3-sonnet",
+      "inputs": [
+        "src/"
+      ],
+      "outputs": [],
+      "gateMode": "manual",
+      "gateType": "manual",
+      "failureStrategy": "stop",
+      "projectOverride": false
+    },
+    {
+      "id": "step-test",
       "order": 4,
-      "config": {
-        "approver": "tech-lead"
-      }
-    },
-    {
-      "id": "test",
       "name": "自动化测试",
-      "type": "agent",
-      "order": 5,
-      "config": {
-        "autoRun": true
-      }
+      "roleId": "role-qa",
+      "modelProviderId": "anthropic",
+      "modelName": "claude-3-haiku",
+      "inputs": [
+        "src/"
+      ],
+      "outputs": [
+        "test-results/"
+      ],
+      "gateMode": "auto",
+      "failureStrategy": "stop",
+      "projectOverride": false,
+      "runnerId": "runner-claude-code"
     },
     {
-      "id": "deploy",
+      "id": "step-deploy",
+      "order": 5,
       "name": "部署发布",
-      "type": "manual",
-      "order": 6,
-      "config": {
-        "env": "staging"
-      }
+      "roleId": "role-devops",
+      "modelProviderId": "anthropic",
+      "modelName": "claude-3-haiku",
+      "inputs": [
+        "test-results/"
+      ],
+      "outputs": [],
+      "gateMode": "manual",
+      "gateType": "manual",
+      "failureStrategy": "stop",
+      "projectOverride": false
     }
   ],
-  "createdAt": "2026-05-30T11:09:02.377Z",
-  "updatedAt": "2026-05-30T11:09:02.377Z"
+  "createdAt": "2026-05-30T11:35:41.125Z",
+  "updatedAt": "2026-05-30T11:35:41.125Z"
 }

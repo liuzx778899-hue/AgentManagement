@@ -340,6 +340,9 @@ export function workbenchReducer(state: WorkbenchData, action: WorkbenchAction):
     case "SET_WORKFLOW_TEMPLATES":
       return { ...state, workflowTemplates: action.payload };
 
+    case "SET_ROLES":
+      return { ...state, roles: action.payload };
+
     case "REFRESH_GIT_STATUS_START":
       // 可以设置 loading 状态
       return state;

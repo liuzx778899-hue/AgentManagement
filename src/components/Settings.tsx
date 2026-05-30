@@ -12,6 +12,7 @@ import {
   ProjectPanel,
   ModelConfigPanel,
   CliRunnerPanel,
+  AiAssistantPanel,
   settingsTabs,
 } from "./settings/index";
 import type { SettingsTab } from "./settings/index";
@@ -192,6 +193,8 @@ export function Settings({ data }: SettingsProps) {
               agents={data.agents}
             />
           )}
+
+          {activeTab === "ai-assistant" && <AiAssistantPanel />}
 
           {activeTab === "cli-runners" && (
             <CliRunnerPanel

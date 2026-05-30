@@ -193,15 +193,29 @@ export class LlmAdapter extends BaseAdapter {
     const apiKey = config.apiKey!;
     const baseUrl = (config.baseUrl || 'https://api.anthropic.com/v1').replace(/\/$/, '');
 
+    // 判断是否是官方 Anthropic API
+    const isOfficialAnthropic = baseUrl.includes('api.anthropic.com');
+
+    // 对于第三方 API，可能需要不同的路径
+    let endpoint = `${baseUrl}/messages`;
+
+    console.log('[LlmAdapter] Calling Anthropic API:', { baseUrl, endpoint, model, isOfficialAnthropic });
+
     try {
-      const response = await fetch(`${baseUrl}/messages`, {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      };
+
+      // 只有官方 API 才需要这个 header
+      if (isOfficialAnthropic) {
+        headers['anthropic-dangerous-direct-browser-access'] = 'true';
+      }
+
+      const response = await fetch(endpoint, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true',
-        },
+        headers,
         body: JSON.stringify({
           model,
           max_tokens: maxTokens,
@@ -215,6 +229,14 @@ export class LlmAdapter extends BaseAdapter {
 
       if (!response.ok) {
         const errorText = await response.text();
+        console.error('[LlmAdapter] Anthropic API error:', response.status, errorText);
+
+        // 如果是 404，尝试 OpenAI 兼容格式（腾讯云等厂商可能使用 OpenAI 格式）
+        if (response.status === 404 && !isOfficialAnthropic) {
+          console.log('[LlmAdapter] Got 404, trying OpenAI-compatible format...');
+          return await this.callOpenAICompatible(messages, model, maxTokens, temperature, config);
+        }
+
         if (response.status === 401) {
           return this.err('PERMISSION_DENIED', 'API Key 无效');
         }
@@ -222,11 +244,25 @@ export class LlmAdapter extends BaseAdapter {
       }
 
       const data = await response.json();
-      const content = data.content?.[0]?.text || '';
+      console.log('[LlmAdapter] Anthropic response:', JSON.stringify(data, null, 2));
+
+      // 支持多种响应格式
+      let content = '';
+      if (data.content && Array.isArray(data.content)) {
+        content = data.content[0]?.text || '';
+      } else if (data.choices && Array.isArray(data.choices)) {
+        content = data.choices[0]?.message?.content || '';
+      } else if (typeof data.content === 'string') {
+        content = data.content;
+      } else if (data.response) {
+        content = data.response;
+      }
+
+      console.log('[LlmAdapter] Extracted content:', content.substring(0, 100));
 
       return this.ok({
         content,
-        model,
+        model: data.model || model,
         usage: {
           inputTokens: data.usage?.input_tokens || 0,
           outputTokens: data.usage?.output_tokens || 0,
@@ -235,12 +271,13 @@ export class LlmAdapter extends BaseAdapter {
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('[LlmAdapter] Network error:', errorMessage);
       return this.err('NETWORK_ERROR', `网络错误: ${errorMessage}`);
     }
   }
 
   /**
-   * 调用 OpenAI 兼容 API (OpenAI, DeepSeek, etc.)
+   * 调用 OpenAI 兼容 API (OpenAI, DeepSeek, Tencent Cloud, etc.)
    */
   private async callOpenAICompatible(
     messages: ChatMessage[],
@@ -250,7 +287,19 @@ export class LlmAdapter extends BaseAdapter {
     config: ProviderConfig
   ): Promise<LocalResult<CompleteResponse>> {
     const apiKey = config.apiKey!;
-    const baseUrl = (config.baseUrl || 'https://api.openai.com/v1').replace(/\/$/, '');
+    // 处理 baseUrl - 腾讯云等厂商可能需要不同的路径
+    let baseUrl = (config.baseUrl || 'https://api.openai.com/v1').replace(/\/$/, '');
+
+    // 如果 baseUrl 包含 /coding/anthropic 等非标准路径，修正为 /v1
+    if (baseUrl.includes('/coding/anthropic') || baseUrl.includes('/anthropic')) {
+      // 腾讯云混元大模型使用 /v1/chat/completions
+      baseUrl = baseUrl.replace(/\/coding\/anthropic$/, '').replace(/\/anthropic$/, '');
+      if (!baseUrl.endsWith('/v1')) {
+        baseUrl = `${baseUrl}/v1`;
+      }
+    }
+
+    console.log('[LlmAdapter] Calling OpenAI-compatible API:', { baseUrl, model });
 
     try {
       const response = await fetch(`${baseUrl}/chat/completions`, {
@@ -269,6 +318,7 @@ export class LlmAdapter extends BaseAdapter {
 
       if (!response.ok) {
         const errorText = await response.text();
+        console.error('[LlmAdapter] OpenAI-compatible API error:', response.status, errorText);
         if (response.status === 401) {
           return this.err('PERMISSION_DENIED', 'API Key 无效');
         }
@@ -276,6 +326,7 @@ export class LlmAdapter extends BaseAdapter {
       }
 
       const data = await response.json();
+      console.log('[LlmAdapter] OpenAI-compatible response:', JSON.stringify(data, null, 2));
       const content = data.choices?.[0]?.message?.content || '';
 
       return this.ok({
@@ -289,6 +340,7 @@ export class LlmAdapter extends BaseAdapter {
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('[LlmAdapter] Network error:', errorMessage);
       return this.err('NETWORK_ERROR', `网络错误: ${errorMessage}`);
     }
   }

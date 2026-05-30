@@ -1,0 +1,12 @@
+{
+  "id": "role-devops",
+  "name": "DevOps工程师",
+  "description": "负责部署和运维自动化",
+  "capabilities": [
+    "CI/CD",
+    "容器化",
+    "监控告警"
+  ],
+  "createdAt": "2026-05-30T11:35:41.125Z",
+  "updatedAt": "2026-05-30T11:35:41.125Z"
+}
