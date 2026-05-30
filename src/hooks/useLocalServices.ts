@@ -1,7 +1,6 @@
 import { useContext, useEffect, useState } from 'react';
 import { ServiceContext } from '../context/ServiceContext';
 import { checkServerAvailable, runnerApi, projectApi, workflowApi, gitApi, memoryApi, settingsApi } from '../services/api';
-import { createLocalServices } from '../services/local';
 import type { LocalEngineeringServices } from '../services/local';
 import type { RunnerProcess, LogEntry } from '../types/localEngineering';
 import type { RunnerKind } from '../domain/runner';
@@ -162,5 +161,8 @@ function createApiServices(): LocalEngineeringServices {
 }
 
 function createMockServices(): LocalEngineeringServices {
+  // Dynamic import to avoid bundling Node.js modules in browser build
+  // The services/local module contains Node.js imports that can't be bundled for browser
+  const { createLocalServices } = require('../services/local');
   return createLocalServices({ enableMock: true });
 }
