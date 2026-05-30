@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
+    "dev:server": "tsx src/server/index.ts",
+    "dev:full": "concurrently \"npm run dev:server\" \"npm run dev\"",
     "build": "tsc -b && vite build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -15,6 +17,9 @@
   },
   "dependencies": {
     "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^10.0.0",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
     "lucide-react": "^0.468.0",
     "pixelmatch": "^7.2.0",
     "pngjs": "^7.0.0",
@@ -29,9 +34,12 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.5.0",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
     "@types/node": "^25.9.1",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@types/supertest": "^7.2.0",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
     "@typescript-eslint/parser": "^8.0.0",
     "eslint": "^9.0.0",
@@ -39,6 +47,9 @@
     "eslint-plugin-react-hooks": "^5.0.0",
     "jsdom": "^26.1.0",
     "prettier": "^3.0.0",
+    "supertest": "^7.2.2",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.22.3",
     "typescript-eslint": "^8.59.3",
     "vitest": "^3.0.0"
   }
