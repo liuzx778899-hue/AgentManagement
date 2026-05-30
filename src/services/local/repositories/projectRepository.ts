@@ -1,6 +1,8 @@
 import type { FileStoreAdapter } from '../adapters/fileStoreAdapter';
 import type { LocalResult } from '../../../types/localEngineering';
 import type { Project } from '../../../domain/project';
+import { readdir, readFile } from 'fs/promises';
+import { join } from 'path';
 
 /**
  * 持久化项目配置结构
@@ -108,24 +110,40 @@ export class ProjectRepository {
    * 列出所有项目
    */
   async listAll(): Promise<LocalResult<PersistedProject[]>> {
-    // 在 mock 模式下，我们需要从存储中获取所有项目
-    // 实际实现中应该列出目录下的所有 JSON 文件
-    const result = await this.fileStore.readJson<PersistedProject[]>(
-      `${this.basePath}/projects/index.json`
-    );
+    const projects: PersistedProject[] = [];
 
-    if (!result.ok) {
-      // 如果索引文件不存在，返回空数组
+    try {
+      const projectsDir = join(process.cwd(), this.basePath, 'projects');
+      const files = await readdir(projectsDir);
+
+      for (const file of files) {
+        if (!file.endsWith('.json')) continue;
+
+        try {
+          const content = await readFile(join(projectsDir, file), 'utf-8');
+          const project = JSON.parse(content) as PersistedProject;
+
+          // Skip deleted projects
+          if ('deleted' in project && (project as any).deleted) continue;
+
+          projects.push(project);
+        } catch {
+          // Skip files that can't be read or parsed
+          continue;
+        }
+      }
+
+      return {
+        ok: true,
+        data: projects,
+      };
+    } catch {
+      // Directory doesn't exist or can't be read
       return {
         ok: true,
         data: [],
       };
     }
-
-    return {
-      ok: true,
-      data: result.data!.filter(p => !('deleted' in p)),
-    };
   }
 
   /**
