@@ -1,81 +1,91 @@
 # Handoff: Next Tasks
 
-## 2026-05-29 Phase 2 工程层启动计划
+## 2026-05-30 Phase 2 工程层完成 / Phase 3 UI 集成启动
 
 本节是后续协作的最新入口，优先级高于后面的历史任务和旧页面差距段落。
 
-启动结论：
+### Phase 2 完成状态 ✅
 
-- Phase 1 页面定稿基线已完成，可以进入 Phase 2 工程层开发。
+Phase 2 工程层后端基础设施已全部完成：
+
 - 当前稳定分支：`main`
 - 远程仓库：`https://github.com/liuzx778899-hue/AgentManagement.git`
-- 最新工程层蓝图：`docs/PHASE_2_BLUEPRINT.md`
-- 验证基线：`npm --cache .npm-cache run build` 通过，`npm --cache .npm-cache test` 通过（14 个测试文件、109 个测试）。
+- 验证基线：`npm --cache .npm-cache run build` 通过，`npm --cache .npm-cache test` 通过（192 个测试）
 
-Phase 2 核心目标：
+**已完成的后端模块：**
 
-- 从前端 fixtures / mock 行为升级到真实本地工程执行。
-- 打通真实 Git、worktree、CLI Runner、日志流、文件系统持久化和 AI/LLM 调用。
-- 保持 Phase 1 页面定稿样式，不再把视觉微调作为主线任务。
+| 模块 | 状态 | 文件 |
+|------|------|------|
+| GitAdapter | ✅ | `src/services/local/adapters/gitAdapter.ts` |
+| FileStoreAdapter | ✅ | `src/services/local/adapters/fileStoreAdapter.ts` |
+| ProcessRunnerAdapter | ✅ | `src/services/local/adapters/processRunnerAdapter.ts` |
+| GitHubAdapter | ✅ | `src/services/local/adapters/githubAdapter.ts` |
+| LlmAdapter | ✅ | `src/services/local/adapters/llmAdapter.ts` |
+| gitStatusUseCase | ✅ | `src/services/local/useCases/gitStatusUseCase.ts` |
+| worktreeUseCase | ✅ | `src/services/local/useCases/worktreeUseCase.ts` |
+| runnerUseCase | ✅ | `src/services/local/useCases/runnerUseCase.ts` |
+| workflowExecutionUseCase | ✅ | `src/services/local/useCases/workflowExecutionUseCase.ts` |
+| ProjectRepository | ✅ | `src/services/local/repositories/projectRepository.ts` |
+| MemoryRepository | ✅ | `src/services/local/repositories/memoryRepository.ts` |
+| WorkflowRepository | ✅ | `src/services/local/repositories/workflowRepository.ts` |
+| Security/Audit | ✅ | `src/services/local/security/index.ts` |
 
-Phase 2 技术选型：
+### Phase 3 UI 集成计划 🚀
 
-- 前端继续使用 `TypeScript + React + Vite`。
-- 本地工程层优先使用 `Node.js + TypeScript`，封装 Git、worktree、文件系统、CLI Runner 和配置读写。
-- 架构采用 `React UI -> UseCase / Service API -> Adapter -> 本地 workspace / CLI / GitHub / LLM`。
-- 主要设计模式：Adapter、UseCase/Application Service、Repository、Command、Event Log、State Machine、Strategy。
-- 数据先落到 `.agentmanagement/` 下的 JSON / JSONL / MD 文件，不引入数据库。
-- 详细定稿见 `docs/PHASE_2_BLUEPRINT.md` 的“Phase 2 技术选型定稿”。
+**目标：** 将前端 UI 与 Phase 2 后端完整对接，实现真实数据读写。
 
-Phase 2 开发硬约束：
+**详细计划：** `docs/superpowers/plans/2026-05-30-phase3-ui-integration.md`
 
-- 每个任务必须先有 GitHub Issue；分支使用 `issue-<number>-<short-slug>`，worktree 使用 `.worktrees/issue-<number>-<short-slug>`。
-- `main` 只保存稳定基线，不直接开发；commit 必须引用 Issue。
-- UI 组件不得直接执行 shell、读写文件、访问 GitHub 或调用 LLM；必须通过 UseCase 和 Adapter。
-- 本地工程能力放到 `src/services/local/`，共享类型放到 `src/types/`，fixtures/mock 集中管理。
-- 命名规范：组件 `PascalCase.tsx`，hooks `useXxx.ts`，测试 `*.spec.ts(x)`，用户文案中文，代码标识英文。
-- 新增代码必须通过 TypeScript 编译，不允许随意使用 `any`；外部输入必须校验。
-- 高风险操作必须二次确认；命令执行必须有白名单、timeout、cwd、退出码和日志脱敏。
-- 每个任务提交前至少跑 `npm --cache .npm-cache run build`；涉及状态/逻辑/adapter/useCase 必须跑 `npm --cache .npm-cache test`。
-- 详细规范见 `docs/PHASE_2_BLUEPRINT.md` 的“Phase 2 开发规范与代码约束”。
+**任务优先级：**
 
-Phase 2 多 Agent 协同硬约束：
+| 优先级 | 任务 | 功能点 | 状态 |
+|--------|------|--------|------|
+| P0-01 | CLI Runner 控制面板 | 启动/停止/日志流 | 待开发 |
+| P0-02 | 项目创建与导入 | 新建/导入持久化 | 待开发 |
+| P0-03 | 工作流执行控制 | 启动/暂停/恢复/取消 | 待开发 |
+| P1-01 | 设置持久化 | 保存到本地文件 | 待开发 |
+| P1-02 | 记忆管理 CRUD | 创建/更新/删除/搜索 | 待开发 |
+| P1-03 | Git 状态显示 | 实时分支/状态 | 待开发 |
+| P2-01 | AI 助手真实对话 | LLM API 对接 | 待开发 |
 
-- 一个 Issue 同一时间只允许一个主执行 Agent；需要并行时必须先拆子 Issue。
-- 每个 Agent 必须使用独立 worktree，禁止共用目录或在别人的 worktree 里修问题。
-- 开始前必须读取当前 Issue、Git 状态、`docs/HANDOFF_NEXT_TASKS.md` 和 `docs/PHASE_2_BLUEPRINT.md`。
-- 修改同一文件的任务默认不能并行；`AppShell`、`ProjectDetailPage`、`Workflow*`、`ProjectManagement*`、`src/styles/*.css` 和核心 docs 属于高冲突区。
-- 不允许按旧截图、旧 mockup 或旧聊天记忆回滚当前实现。
-- 交付必须说明改动文件、验证命令、残余风险和对其他 Agent 的影响。
-- 冲突处理只解决自己 Issue 相关部分，不删除无关改动。
-- 详细规范见 `docs/PHASE_2_BLUEPRINT.md` 的“Phase 2 多 Agent 协同规范”。
+**关键发现：**
 
-第一批开发 Issue 建议：
+Phase 2 完成的后端只提供了底层基础设施（Adapter/Repository），但**缺少面向用户操作的 UseCase**：
 
-| Issue | 名称 | 范围 | 验收 |
-|-------|------|------|------|
-| P2-01 | 本地工程服务骨架 | 建立 Git/文件系统/进程/配置 adapter，提供 mock fallback | 前端可通过统一接口调用本地能力，失败有错误态 |
-| P2-02 | 真实 Git 状态读取 | 读取 `git status`、branch、remote、log、worktree list | 项目管理/工作台能显示真实 Git 状态 |
-| P2-03 | Issue worktree 创建流程 | 基于 Issue 编号创建 branch + `.worktrees/issue-*` | 可创建、打开、清理独立 worktree |
+1. 项目管理核心功能 - 新建、导入、删除、更新项目（只有 Repository，无 UseCase）
+2. 数据加载聚合 - 加载项目完整数据需要封装
+3. 前端 UI 完全未对接 - 所有页面仍使用 fixtures mock 数据
+4. CLI Runner 无 UI 入口 - runnerUseCase 已实现但前端没有启动按钮
+5. 工作流执行无触发入口 - workflowExecutionUseCase 已实现但 UI 未集成
 
-后续里程碑：
+### Issue 工作流规范 ⚠️
 
-1. P2-04 CLI Runner 进程管理：启动/停止/监控 Codex CLI、Claude Code CLI、Cursor CLI 等。
-2. P2-05 Workflow 执行引擎 MVP：步骤、角色、Runner、Gate 串起来。
-3. P2-06 文件系统持久化：项目配置、记忆、Role MD、Project MD、Workflow MD 落盘。
-4. P2-07 GitHub 同步恢复：Issue/PR/CI 读取真实 GitHub 数据。
-5. P2-08 LLM/API 接入：模型配置真实验证，AI 助手调用真实模型。
-6. P2-09 安全与审计：命令白名单、超时、日志脱敏、高风险操作确认。
-7. P2-10 演示闭环：从 Issue 到 worktree、Runner、日志、记忆、PR 的端到端演示。
+**重要变更：** Issue 关闭必须经过 Owner review。
 
-协作规则：
+详见：`docs/superpowers/specs/2026-05-30-issue-workflow.md`
 
-- 每个 Phase 2 任务必须先有 Issue 编号；GitHub 插件/CLI 不可用时，可先在 GitHub 网页手动创建 Issue。
-- 每个 Issue 使用独立分支：`issue-<number>-<slug>`。
-- 每个 Issue 使用独立 worktree：`.worktrees/issue-<number>-<slug>`。
-- 不同 AI 工具不得共用同一个 worktree。
-- `main` 只保存稳定基线，不直接开发。
-- 每个任务提交前至少跑 `npm --cache .npm-cache run build`；涉及状态/逻辑必须跑 `npm --cache .npm-cache test`。
+核心规则：
+- 禁止开发者自行关闭 Issue
+- Issue 必须通过 PR merge 自动关闭
+- 所有 PR 需要 Owner (@liuzx8888) review 批准
+- 已创建 `.github/CODEOWNERS` 确保所有变更需 review
+
+### Phase 2 开发硬约束（继续适用）
+
+- 每个任务必须先有 GitHub Issue；分支使用 `issue-<number>-<short-slug>`
+- `main` 只保存稳定基线，不直接开发；commit 必须引用 Issue
+- UI 组件不得直接执行 shell、读写文件、访问 GitHub 或调用 LLM；必须通过 UseCase 和 Adapter
+- 本地工程能力放到 `src/services/local/`，共享类型放到 `src/types/`
+- 每个任务提交前至少跑 `npm --cache .npm-cache run build`
+- 涉及状态/逻辑/adapter/useCase 必须跑 `npm --cache .npm-cache test`
+
+### Phase 2 多 Agent 协同硬约束（继续适用）
+
+- 一个 Issue 同一时间只允许一个主执行 Agent；需要并行时必须先拆子 Issue
+- 每个 Agent 必须使用独立 worktree，禁止共用目录
+- 开始前必须读取当前 Issue、Git 状态、`docs/HANDOFF_NEXT_TASKS.md`
+- 交付必须说明改动文件、验证命令、残余风险和对其他 Agent 的影响
+- 冲突处理只解决自己 Issue 相关部分，不删除无关改动
 
 ## 2026-05-29 页面定稿基线 / Git 初始快照
 
