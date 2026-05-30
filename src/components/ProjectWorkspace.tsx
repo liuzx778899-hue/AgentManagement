@@ -27,6 +27,7 @@ import { PwMemoryPanel } from "./PwMemoryPanel";
 import { PwIssuesPanel, PwCiPanel, PwBranchPanel, PwCommitPanel } from "./PwGitPanels";
 import { PwProjectMdPanel } from "./PwProjectMdPanel";
 import { PwRunnerPanel } from "./PwRunnerPanel";
+import { PwWorkflowControl } from "./PwWorkflowControl";
 import type { RunnerProfile } from "../domain/runner";
 
 interface ProjectWorkspaceProps {
@@ -638,6 +639,13 @@ ${project.settings.riskSummary || "尚未评估"}`;
             projectId={projectId}
             projectPath={project.repoPath}
             runnerProfiles={data.runnerProfiles.filter((r) => r.enabled)}
+          />
+
+          {/* Workflow Execution Control */}
+          <PwWorkflowControl
+            projectId={projectId}
+            templates={data.workflowTemplates}
+            onRunChange={(runId) => console.log('Workflow run changed:', runId)}
           />
 
           {/* 4-Panel Grid: TODO + Stepper + Docs + Log */}
