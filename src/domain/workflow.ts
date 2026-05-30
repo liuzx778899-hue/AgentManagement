@@ -8,6 +8,17 @@ export interface WorkflowVersion {
   changedSteps?: string[];
 }
 
+export interface Workflow {
+  id: string;
+  name: string;
+  description?: string;
+  version: string;
+  status: 'active' | 'archived' | 'draft';
+  steps: WorkflowStep[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface WorkflowTemplate {
   id: string;
   name: string;
@@ -30,6 +41,7 @@ export interface WorkflowStep {
   inputs: string[];
   outputs: string[];
   gateMode: GateMode;
+  gateType?: 'manual' | 'auto';
   failureStrategy: FailureStrategy;
   stepMarkdown?: string;
   projectOverride: boolean;
