@@ -1,0 +1,25 @@
+{
+  "id": "6b5ec298-1de2-4f0b-b87a-a00e524e3679",
+  "name": "������Ŀ1",
+  "repoPath": "D:/work/test1",
+  "defaultBranch": "main",
+  "worktreeRoot": ".worktrees",
+  "scope": "personal",
+  "desktopIntegrationStatus": "deferred",
+  "permissions": {
+    "permissionLevel": "owner"
+  },
+  "settings": {
+    "installCommand": "npm install",
+    "testCommand": "npm test",
+    "buildCommand": "npm run build",
+    "previewCommand": "npm run preview",
+    "detectedStack": "",
+    "riskSummary": ""
+  },
+  "workflowTemplateId": "default",
+  "createdAt": "2026-05-30T08:02:47.185Z",
+  "updatedAt": "2026-05-30T08:02:47.185Z",
+  "version": "1.0",
+  "persistedAt": "2026-05-30T08:02:47.186Z"
+}

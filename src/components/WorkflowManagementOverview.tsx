@@ -16,21 +16,147 @@ import {
   X,
 } from "lucide-react";
 import type { WorkbenchData, WorkbenchView } from "../domain/workbench";
-import {
-  workflowManagementOverviewFixture,
-  filterWorkflowsByCategory,
-} from "../data/workflowManagementFixtures";
-import type {
-  WorkflowCategory,
-  WorkflowAsset,
-  CategoryStats,
-  HealthStatus,
-} from "../data/workflowManagementFixtures";
 
 interface WorkflowManagementOverviewProps {
   data: WorkbenchData;
   onNavigate?: (view: WorkbenchView) => void;
   onEnterWorkflowDesign?: (workflowId: string) => void;
+}
+
+// Workflow status types
+type WorkflowStatus = "enabled" | "draft" | "disabled" | "high-risk";
+
+// Health status types
+type HealthStatus = "healthy" | "warning" | "error" | "pending";
+
+// Workflow category types
+type WorkflowCategory = "all" | "dev" | "design" | "review" | "release";
+
+// Role coverage avatar
+interface RoleAvatar {
+  initials: string;
+  color: "green" | "purple" | "orange" | "blue" | "muted";
+}
+
+// Workflow step display
+interface WorkflowStepDisplay {
+  no: string;
+  name: string;
+}
+
+// Workflow asset card (computed from workflowTemplate)
+interface WorkflowAsset {
+  id: string;
+  name: string;
+  description: string;
+  status: WorkflowStatus;
+  version: string;
+  stepCount: number;
+  steps: WorkflowStepDisplay[];
+  roleCoverage: RoleAvatar[];
+  runnerCoverage: number;
+  capabilityAuth: string;
+  riskGap: string | null;
+  healthStatus: HealthStatus;
+  healthLabel: string;
+  maturity: number;
+  maturityLabel: string;
+  category: WorkflowCategory;
+  boundProjects: number;
+  lastUpdated: string;
+}
+
+// Category statistics
+interface CategoryStats {
+  id: WorkflowCategory;
+  name: string;
+  count: number;
+  description: string;
+  healthPercent: number;
+  status: HealthStatus;
+}
+
+// KPI stats
+interface WorkflowKPIs {
+  total: number;
+  enabled: number;
+  boundProjects: number;
+  pendingValidation: number;
+  highRisk: number;
+}
+
+// Capability authorization gap
+interface CapabilityGap {
+  workflowName: string;
+  missingCapability: string;
+  severity: "high" | "medium" | "low";
+}
+
+// Role binding gap
+interface RoleBindingGap {
+  workflowName: string;
+  missingRole: string;
+  status: "pending" | "unconfirmed";
+}
+
+// Recent change
+interface RecentChange {
+  workflowName: string;
+  description: string;
+  timestamp: string;
+}
+
+// AI recommendation
+interface AIRecommendation {
+  message: string;
+  priority: "high" | "medium" | "low";
+}
+
+// Health panel data
+interface HealthPanelData {
+  categories: CategoryStats[];
+  capabilityGaps: CapabilityGap[];
+  roleBindingGaps: RoleBindingGap[];
+  recentChanges: RecentChange[];
+  aiRecommendation: AIRecommendation;
+}
+
+// Helper function to filter workflows by category
+function filterWorkflowsByCategory(
+  workflows: WorkflowAsset[],
+  category: WorkflowCategory
+): WorkflowAsset[] {
+  if (category === "all") return workflows;
+  return workflows.filter((w) => w.category === category);
+}
+
+// Helper function to map workflow template to asset
+function workflowTemplateToAsset(template: WorkbenchData["workflowTemplates"][0]): WorkflowAsset {
+  const steps = template.steps || [];
+  return {
+    id: template.id,
+    name: template.name,
+    description: template.workflowMarkdown?.split("\n")[0] || "无描述",
+    status: template.status === "enabled" ? "enabled" : "draft",
+    version: `v${template.version || 1}`,
+    stepCount: steps.length,
+    steps: steps.slice(0, 5).map((s, i) => ({ no: `${i + 1}`.padStart(2, "0"), name: s.name })),
+    roleCoverage: steps
+      .map(s => s.roleId?.slice(0, 2) || "")
+      .filter(Boolean)
+      .slice(0, 5)
+      .map(initials => ({ initials, color: "blue" as const })),
+    runnerCoverage: steps.some(s => s.runnerId) ? 85 : 60,
+    capabilityAuth: steps.flatMap(s => s.inputs || []).slice(0, 3).join(", ") || "",
+    riskGap: null,
+    healthStatus: "healthy" as const,
+    healthLabel: "健康",
+    maturity: 75,
+    maturityLabel: "成熟度",
+    category: "dev" as const,
+    boundProjects: 0,
+    lastUpdated: template.updatedAt ? new Date(template.updatedAt).toLocaleDateString("zh-CN") : "未知",
+  };
 }
 
 // Status chip styling helper
@@ -115,8 +241,7 @@ function KpiIcon({ type }: { type: "total" | "enabled" | "bound" | "pending" | "
   }
 }
 
-export function WorkflowManagementOverview({ data: _data, onNavigate, onEnterWorkflowDesign }: WorkflowManagementOverviewProps) {
-  const overviewData = workflowManagementOverviewFixture;
+export function WorkflowManagementOverview({ data, onNavigate, onEnterWorkflowDesign }: WorkflowManagementOverviewProps) {
   const [activeCategory, setActiveCategory] = useState<WorkflowCategory>("all");
   const [validating, setValidating] = useState(false);
   const [deletedFlowIds, setDeletedFlowIds] = useState<string[]>([]);
@@ -127,6 +252,43 @@ export function WorkflowManagementOverview({ data: _data, onNavigate, onEnterWor
   const [statusOverrides, setStatusOverrides] = useState<Record<string, WorkflowAsset["status"]>>({});
   const importInputRef = useRef<HTMLInputElement | null>(null);
 
+  // Convert workflow templates to workflow assets
+  const workflowAssets = useMemo(() => {
+    return (data.workflowTemplates || []).map(workflowTemplateToAsset);
+  }, [data.workflowTemplates]);
+
+  // Compute KPIs from real data
+  const kpis = useMemo((): WorkflowKPIs => {
+    const total = workflowAssets.length;
+    const enabled = workflowAssets.filter(w => w.status === "enabled").length;
+    const highRisk = workflowAssets.filter(w => w.status === "high-risk").length;
+    const pendingValidation = workflowAssets.filter(w => w.status === "draft").length;
+    const boundProjects = workflowAssets.reduce((sum, w) => sum + w.boundProjects, 0);
+    return { total, enabled, boundProjects, pendingValidation, highRisk };
+  }, [workflowAssets]);
+
+  // Compute health panel data from real data
+  const healthPanel = useMemo((): HealthPanelData => {
+    const categories: CategoryStats[] = [
+      { id: "dev", name: "开发类", count: workflowAssets.filter(w => w.category === "dev").length, description: "需求、开发、修复、测试闭环", healthPercent: 75, status: "healthy" },
+      { id: "design", name: "设计类", count: workflowAssets.filter(w => w.category === "design").length, description: "方案、原型、视觉和交互评审", healthPercent: 65, status: "warning" },
+      { id: "review", name: "评审类", count: workflowAssets.filter(w => w.category === "review").length, description: "代码审查、产品验收、风险确认", healthPercent: 80, status: "healthy" },
+      { id: "release", name: "发布类", count: workflowAssets.filter(w => w.category === "release").length, description: "发布冻结、上线验收、回滚预案", healthPercent: 60, status: "warning" },
+    ];
+    const capabilityGaps: CapabilityGap[] = [];
+    const roleBindingGaps: RoleBindingGap[] = [];
+    const recentChanges: RecentChange[] = workflowAssets.slice(0, 2).map(w => ({
+      workflowName: w.name,
+      description: w.version,
+      timestamp: w.lastUpdated,
+    }));
+    const aiRecommendation: AIRecommendation = {
+      message: workflowAssets.length > 0 ? "当前流程状态良好，继续保持。" : "暂无流程，请创建第一个流程模板。",
+      priority: "medium",
+    };
+    return { categories, capabilityGaps, roleBindingGaps, recentChanges, aiRecommendation };
+  }, [workflowAssets]);
+
   const categoryTabs = useMemo(
     () => ALL_CATEGORIES.filter((category) => category.id === "all" || !deletedCategoryIds.includes(category.id)),
     [deletedCategoryIds]
@@ -134,13 +296,13 @@ export function WorkflowManagementOverview({ data: _data, onNavigate, onEnterWor
 
   const visibleWorkflows = useMemo(
     () =>
-      overviewData.workflows
+      workflowAssets
         .filter((flow) => !deletedFlowIds.includes(flow.id))
         .map((flow) => ({
           ...flow,
           status: statusOverrides[flow.id] ?? flow.status,
         })),
-    [overviewData.workflows, deletedFlowIds, statusOverrides]
+    [workflowAssets, deletedFlowIds, statusOverrides]
   );
 
   const filteredWorkflows = useMemo(
@@ -148,8 +310,6 @@ export function WorkflowManagementOverview({ data: _data, onNavigate, onEnterWor
     [visibleWorkflows, activeCategory]
   );
 
-  const kpis = overviewData.kpis;
-  const healthPanel = overviewData.healthPanel;
   const visibleHealthCategories = useMemo(
     () => healthPanel.categories.filter((category) => !deletedCategoryIds.includes(category.id)),
     [healthPanel.categories, deletedCategoryIds]
@@ -207,43 +367,8 @@ export function WorkflowManagementOverview({ data: _data, onNavigate, onEnterWor
     if (activeCategory === categoryId) setActiveCategory("all");
   };
 
-  // Loading state
-  if (overviewData.loading) {
-    return (
-      <div className="wmo-page">
-        <div className="wmo-loading">
-          <div className="wmo-loading-icon">
-            <Loader2 size={24} className="wmo-loading-spinner" />
-          </div>
-          <h2>加载流程资产数据...</h2>
-          <p>正在读取流程模板、分类和健康诊断数据</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Error state
-  if (overviewData.error) {
-    return (
-      <div className="wmo-page">
-        <div className="wmo-error">
-          <div className="wmo-error-icon">
-            <CircleAlert size={24} />
-          </div>
-          <h2>读取流程数据失败</h2>
-          <p>{overviewData.error}</p>
-          <div className="wmo-error-actions">
-            <button className="wmo-btn wmo-btn-primary" onClick={() => window.location.reload()}>
-              重新加载
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   // Empty state (no workflows at all)
-  if (overviewData.workflows.length === 0) {
+  if (workflowAssets.length === 0) {
     return (
       <div className="wmo-page">
         <div className="wmo-empty">
@@ -258,13 +383,13 @@ export function WorkflowManagementOverview({ data: _data, onNavigate, onEnterWor
             <span className="wmo-empty-highlight">导入</span>开始。
           </p>
           <div className="wmo-empty-actions">
-            <button className="wmo-btn">
+            <button className="wmo-btn" onClick={handleCreateWorkflow}>
               <Plus size={14} /> 新建常规流程
             </button>
-            <button className="wmo-btn wmo-btn-primary">
+            <button className="wmo-btn wmo-btn-primary" onClick={handleCreateAiWorkflow}>
               <Sparkles size={14} /> AI 生成流程
             </button>
-            <button className="wmo-btn">
+            <button className="wmo-btn" onClick={handleImportWorkflow}>
               <Download size={14} /> 导入流程
             </button>
           </div>

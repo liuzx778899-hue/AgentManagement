@@ -86,17 +86,69 @@ export function ProjectManagement({ data, onEnterProject, onEnterDetail, onEnter
     data.manualGates.filter(g => g.status === "waiting").slice(0, 1),
   [data.manualGates]);
 
-  const milestones = useMemo(() => [
-    { date: "05-20", text: "AgentManagement 完成 AI 流程设计对齐", tag: "今天", tagColor: "ok" as const },
-    { date: "05-21", text: "Stock Agent 工程层风险复核", tag: "明天", tagColor: "warn" as const },
-    { date: "05-23", text: "Docs Automation 计划确认", tag: "本周", tagColor: "" as const },
-  ], []);
+  // Calculate milestones from project data
+  const milestones = useMemo(() => {
+    // 如果没有项目数据，返回空数组
+    if (projects.length === 0) return [];
 
-  const recentActivities = useMemo(() => [
-    { status: "ok", text: "AI 流程设计 HTML 已更新", desc: "节点比例、右侧差异面板密度已同步", time: "15:02" },
-    { status: "warn", text: "项目管理概览需重设计", desc: "旧版只覆盖入口和卡片，缺少组合治理", time: "14:58" },
-    { status: "primary", text: "新增两个项目管理资产", desc: "概览图与 AI 建项图已拆分", time: "14:50" },
-  ], []);
+    // 基于项目的下一个检查点计算里程碑
+    const upcomingMilestones = projects
+      .filter(p => p.nextCheckpoint)
+      .slice(0, 3)
+      .map(p => {
+        const checkDate = p.lastCheckAt ? new Date(p.lastCheckAt) : new Date();
+        const tomorrow = new Date(checkDate);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        return {
+          date: checkDate.toLocaleDateString("zh-CN", { month: "2-digit", day: "2-digit" }).replace("/", "-"),
+          text: `${p.name} ${p.nextCheckpoint || "待定"}`,
+          tag: "待办",
+          tagColor: "" as const,
+        };
+      });
+
+    return upcomingMilestones;
+  }, [projects]);
+
+  // Calculate recent activities from task and gate data
+  const recentActivities = useMemo(() => {
+    // 如果没有任务和Gate数据，返回空数组
+    if (data.tasks.length === 0 && data.manualGates.length === 0) return [];
+
+    // 基于最近的Gate和任务生成活动
+    const activities: { status: "ok" | "warn" | "primary"; text: string; desc: string; time: string }[] = [];
+
+    // 添加最近的Gate状态变更
+    data.manualGates.slice(0, 2).forEach(gate => {
+      // 通过 taskId 找到对应的 task，再找到 project
+      const task = data.tasks.find(t => t.id === gate.taskId);
+      const project = task ? projects.find(p => p.id === task.projectId) : undefined;
+      if (project) {
+        activities.push({
+          status: gate.status === "waiting" ? "warn" : "ok",
+          text: `${project.name} Gate ${gate.status === "waiting" ? "待处理" : "已确认"}`,
+          desc: gate.summary || "",
+          time: gate.createdAt ? new Date(gate.createdAt).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" }) : "",
+        });
+      }
+    });
+
+    // 添加最近运行的任务
+    data.tasks.filter(t => t.status === "running").slice(0, 1).forEach(task => {
+      const project = projects.find(p => p.id === task.projectId);
+      if (project) {
+        activities.push({
+          status: "primary",
+          text: `${project.name} 任务运行中`,
+          desc: task.goal || "",
+          time: task.updatedAt ? new Date(task.updatedAt).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" }) : "",
+        });
+      }
+    });
+
+    return activities.slice(0, 3);
+  }, [data.tasks, data.manualGates, projects]);
 
   // Check all projects progress
   const handleCheckAllProgress = () => {
@@ -196,42 +248,56 @@ export function ProjectManagement({ data, onEnterProject, onEnterDetail, onEnter
 
       {/* ===== COMMANDER STRIP ===== */}
       <div className="pm-v2-commander">
-        <div className="pm-v2-commander-left">
-          <div className="pm-v2-commander-card">
-            <div className="pm-v2-commander-icon"><AlertTriangle size={18} /></div>
-            <div>
-              <h3>今日必须决策</h3>
-              <p>AgentManagement 流程草案是否应用，Stock Agent 是否先暂停工程层。</p>
+        {urgentGates.length > 0 || projects.length > 0 ? (
+          <>
+            <div className="pm-v2-commander-left">
+              <div className="pm-v2-commander-card">
+                <div className="pm-v2-commander-icon"><AlertTriangle size={18} /></div>
+                <div>
+                  <h3>今日必须决策</h3>
+                  <p>{urgentGates.length > 0 ? `${urgentGates.length} 个 Gate 等待确认` : "暂无待处理 Gate"}</p>
+                </div>
+                <div className="pm-v2-commander-metric">{urgentGates.length}<span>待拍板</span></div>
+              </div>
+              <div className="pm-v2-commander-card ok">
+                <div className="pm-v2-commander-icon"><Activity size={18} /></div>
+                <div>
+                  <h3>角色资源负载</h3>
+                  <p>{kpis.running > 0 ? `${kpis.running} 个任务运行中` : "暂无运行任务"}</p>
+                </div>
+                <div className="pm-v2-commander-metric">{kpis.running}<span>运行中</span></div>
+              </div>
+              <div className="pm-v2-commander-card">
+                <div className="pm-v2-commander-icon"><Clock size={18} /></div>
+                <div>
+                  <h3>项目状态</h3>
+                  <p>{kpis.total > 0 ? `${kpis.total} 个项目，健康度 ${kpis.healthPct}%` : "暂无项目"}</p>
+                </div>
+                <div className="pm-v2-commander-metric">{kpis.healthPct}%<span>健康度</span></div>
+              </div>
             </div>
-            <div className="pm-v2-commander-metric">{urgentGates.length}<span>待拍板</span></div>
-          </div>
-          <div className="pm-v2-commander-card ok">
-            <div className="pm-v2-commander-icon"><Activity size={18} /></div>
-            <div>
-              <h3>角色资源负载</h3>
-              <p>前端工程师 82%，测试工程师 46%，暂无单角色严重过载。</p>
+            <div className="pm-v2-commander-right">
+              <div className="pm-v2-commander-card ai">
+                <div className="pm-v2-commander-icon"><Sparkles size={18} /></div>
+                <div>
+                  <h3>AI 建议下一步</h3>
+                  <p>{kpis.waitingConfirm > 0 ? `有 ${kpis.waitingConfirm} 个 Gate 待处理` : "暂无待处理事项"}</p>
+                </div>
+                <button className="pm-v2-btn">查看</button>
+              </div>
             </div>
-            <div className="pm-v2-commander-metric">82%<span>最高负载</span></div>
-          </div>
-          <div className="pm-v2-commander-card">
-            <div className="pm-v2-commander-icon"><Clock size={18} /></div>
-            <div>
-              <h3>计划偏差</h3>
-              <p>Stock Agent 落后 2 天；Docs Automation 需求确认不足。</p>
+          </>
+        ) : (
+          <div className="pm-v2-commander-left">
+            <div className="pm-v2-commander-card">
+              <div className="pm-v2-commander-icon"><Heart size={18} /></div>
+              <div>
+                <h3>欢迎使用项目管理</h3>
+                <p>新建或导入项目开始管理你的项目组合。</p>
+              </div>
             </div>
-            <div className="pm-v2-commander-metric">-2d<span>最大偏差</span></div>
           </div>
-        </div>
-        <div className="pm-v2-commander-right">
-          <div className="pm-v2-commander-card ai">
-            <div className="pm-v2-commander-icon"><Sparkles size={18} /></div>
-            <div>
-              <h3>AI 建议下一步</h3>
-              <p>先处理 2 个 Gate，再启动全量进度 Check，避免计划状态误判。</p>
-            </div>
-            <button className="pm-v2-btn">查看</button>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* ===== WORKSPACE ===== */}
@@ -270,64 +336,145 @@ export function ProjectManagement({ data, onEnterProject, onEnterDetail, onEnter
           {/* AI 项目管家 */}
           <section className="pm-v2-panel pm-v2-ai-steward">
             <div className="pm-v2-panel-head"><div><h2>AI 项目管家</h2><p>根据协同文件和工作台状态生成管理建议</p></div><button className="pm-v2-btn pm-v2-btn-ok">同步</button></div>
-            <div className="pm-v2-attention-list">
-              <div className="pm-v2-attention">
-                <span className="pm-v2-pill pm-v2-pill-danger">高</span>
-                <div><h3>Stock Agent 测试覆盖不足</h3><p>最近同步发现高风险，建议先补测试再进入工程层。</p></div>
-                <span className="pm-v2-badge">需确认</span>
+            {kpis.highRisk > 0 || kpis.waitingConfirm > 0 ? (
+              <div className="pm-v2-attention-list">
+                {kpis.highRisk > 0 && (
+                  <div className="pm-v2-attention">
+                    <span className="pm-v2-pill pm-v2-pill-danger">高</span>
+                    <div><h3>{kpis.highRisk} 个项目需要关注</h3><p>存在高风险项目，建议优先处理。</p></div>
+                    <span className="pm-v2-badge">需确认</span>
+                  </div>
+                )}
+                {kpis.waitingConfirm > 0 && (
+                  <div className="pm-v2-attention">
+                    <span className="pm-v2-pill pm-v2-pill-warn">中</span>
+                    <div><h3>{kpis.waitingConfirm} 个 Gate 待处理</h3><p>有任务在 Gate 阶段等待确认。</p></div>
+                    <span className="pm-v2-badge">Gate</span>
+                  </div>
+                )}
               </div>
-              <div className="pm-v2-attention">
-                <span className="pm-v2-pill pm-v2-pill-warn">中</span>
-                <div><h3>AgentManagement Gate 待处理</h3><p>前端页面已成型，需确认流程草案是否应用。</p></div>
-                <span className="pm-v2-badge">Gate</span>
+            ) : (
+              <div className="pm-v2-attention-list">
+                <div className="pm-v2-attention">
+                  <span className="pm-v2-pill pm-v2-pill-ok">好</span>
+                  <div><h3>项目状态良好</h3><p>{projects.length > 0 ? "所有项目运行正常，暂无需要特别关注的事项。" : "暂无项目，新建或导入项目开始管理。"}</p></div>
+                </div>
               </div>
-            </div>
+            )}
           </section>
 
           {/* 风险与阶段分布 */}
           <section className="pm-v2-panel pm-v2-risk-panel">
             <div className="pm-v2-panel-head"><div><h2>风险与阶段分布</h2><p>跨项目健康、阶段和风险热力图</p></div></div>
-            <div className="pm-v2-risk-body">
-              <div className="pm-v2-chart">
-                <h3>阶段分布</h3>
-                <div className="pm-v2-bars">
-                  <div className="pm-v2-bar-row"><span>Phase 1</span><div className="pm-v2-bar"><span style={{ width: "50%" }} /></div><b>4</b></div>
-                  <div className="pm-v2-bar-row"><span>Phase 2</span><div className="pm-v2-bar"><span style={{ width: "25%", background: "var(--cyan)" }} /></div><b>2</b></div>
-                  <div className="pm-v2-bar-row"><span>规划中</span><div className="pm-v2-bar"><span style={{ width: "25%", background: "var(--warn)" }} /></div><b>2</b></div>
+            {projects.length > 0 ? (
+              <>
+                <div className="pm-v2-risk-body">
+                  <div className="pm-v2-chart">
+                    <h3>阶段分布</h3>
+                    {projects.length > 0 ? (
+                      <div className="pm-v2-bars">
+                        {/* 计算实际阶段分布 */}
+                        {(() => {
+                          const phaseCounts: Record<string, number> = {};
+                          projects.forEach(p => {
+                            const phase = p.phase || "规划中";
+                            phaseCounts[phase] = (phaseCounts[phase] || 0) + 1;
+                          });
+                          const total = projects.length;
+                          return Object.entries(phaseCounts).slice(0, 3).map(([phase, count]) => (
+                            <div key={phase} className="pm-v2-bar-row">
+                              <span>{phase}</span>
+                              <div className="pm-v2-bar"><span style={{ width: `${(count / total) * 100}%` }} /></div>
+                              <b>{count}</b>
+                            </div>
+                          ));
+                        })()}
+                      </div>
+                    ) : (
+                      <div className="pm-v2-bars">
+                        <div className="pm-v2-bar-row"><span>暂无数据</span></div>
+                      </div>
+                    )}
+                  </div>
+                  <div className="pm-v2-chart">
+                    <h3>风险热力</h3>
+                    {projects.length > 0 ? (
+                      <div className="pm-v2-heatmap">
+                        {/* 计算实际风险分布 */}
+                        {(() => {
+                          const lowRisk = projects.filter(p => p.riskLevel === "low").length;
+                          const mediumRisk = projects.filter(p => p.riskLevel === "medium").length;
+                          const highRisk = projects.filter(p => p.riskLevel === "high" || p.riskLevel === "critical").length;
+                          const noRisk = projects.length - lowRisk - mediumRisk - highRisk;
+                          return [
+                            <div key="low" className="pm-v2-heat low">{lowRisk}</div>,
+                            <div key="mid" className="pm-v2-heat mid">{mediumRisk}</div>,
+                            <div key="high" className="pm-v2-heat high">{highRisk}</div>,
+                            <div key="none1" className="pm-v2-heat">{noRisk}</div>,
+                            <div key="none2" className="pm-v2-heat">0</div>,
+                            <div key="none3" className="pm-v2-heat">0</div>,
+                            <div key="none4" className="pm-v2-heat">0</div>,
+                            <div key="none5" className="pm-v2-heat">0</div>,
+                            <div key="none6" className="pm-v2-heat">0</div>,
+                          ];
+                        })()}
+                      </div>
+                    ) : (
+                      <div className="pm-v2-heatmap">
+                        <div className="pm-v2-heat">0</div><div className="pm-v2-heat">0</div><div className="pm-v2-heat">0</div>
+                        <div className="pm-v2-heat">0</div><div className="pm-v2-heat">0</div><div className="pm-v2-heat">0</div>
+                        <div className="pm-v2-heat">0</div><div className="pm-v2-heat">0</div><div className="pm-v2-heat">0</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                {milestones.length > 0 && (
+                  <div className="pm-v2-milestone-list">
+                    {milestones.map((m, i) => (
+                      <div key={i} className="pm-v2-milestone">
+                        <time>{m.date}</time>
+                        <strong>{m.text}</strong>
+                        <span className={`pm-v2-milestone-tag${m.tagColor ? ` ${m.tagColor}` : ""}`}>{m.tag}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="pm-v2-risk-body">
+                <div className="pm-v2-chart">
+                  <h3>阶段分布</h3>
+                  <div className="pm-v2-empty">暂无项目数据</div>
+                </div>
+                <div className="pm-v2-chart">
+                  <h3>风险热力</h3>
+                  <div className="pm-v2-empty">暂无项目数据</div>
                 </div>
               </div>
-              <div className="pm-v2-chart">
-                <h3>风险热力</h3>
-                <div className="pm-v2-heatmap">
-                  <div className="pm-v2-heat low">3</div><div className="pm-v2-heat mid">2</div><div className="pm-v2-heat high">1</div>
-                  <div className="pm-v2-heat low">1</div><div className="pm-v2-heat mid">1</div><div className="pm-v2-heat">0</div>
-                  <div className="pm-v2-heat">0</div><div className="pm-v2-heat">0</div><div className="pm-v2-heat">0</div>
-                </div>
-              </div>
-            </div>
-            <div className="pm-v2-milestone-list">
-              {milestones.map((m, i) => (
-                <div key={i} className="pm-v2-milestone">
-                  <time>{m.date}</time>
-                  <strong>{m.text}</strong>
-                  <span className={`pm-v2-milestone-tag${m.tagColor ? ` ${m.tagColor}` : ""}`}>{m.tag}</span>
-                </div>
-              ))}
-            </div>
+            )}
           </section>
 
           {/* 最近变更 */}
           <section className="pm-v2-panel pm-v2-activity-panel">
             <div className="pm-v2-panel-head"><div><h2>最近变更</h2><p>来自 Check、协同文件和工作台快照</p></div></div>
-            <div className="pm-v2-activity-list">
-              {recentActivities.map((a, i) => (
-                <div key={i} className="pm-v2-activity">
-                  <span className={`pm-v2-dot ${a.status}`} />
-                  <div><strong>{a.text}</strong>{a.desc}</div>
-                  <time>{a.time}</time>
+            {recentActivities.length > 0 ? (
+              <div className="pm-v2-activity-list">
+                {recentActivities.map((a, i) => (
+                  <div key={i} className="pm-v2-activity">
+                    <span className={`pm-v2-dot ${a.status}`} />
+                    <div><strong>{a.text}</strong>{a.desc}</div>
+                    <time>{a.time}</time>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="pm-v2-activity-list">
+                <div className="pm-v2-activity">
+                  <span className="pm-v2-dot" />
+                  <div><strong>暂无最近变更</strong>项目数据更新后这里会显示最近的活动。</div>
                 </div>
-              ))}
-            </div>
+              </div>
+            )}
           </section>
         </aside>
       </div>

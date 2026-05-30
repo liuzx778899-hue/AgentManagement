@@ -1,0 +1,25 @@
+{
+  "id": "8e76fd00-1a2a-4553-b761-bdf09257ba10",
+  "name": "Test Project",
+  "repoPath": "D:/work/vibecode/test-project",
+  "defaultBranch": "main",
+  "worktreeRoot": ".worktrees",
+  "scope": "personal",
+  "desktopIntegrationStatus": "deferred",
+  "permissions": {
+    "permissionLevel": "owner"
+  },
+  "settings": {
+    "installCommand": "npm install",
+    "testCommand": "npm test",
+    "buildCommand": "npm run build",
+    "previewCommand": "npm run preview",
+    "detectedStack": "",
+    "riskSummary": ""
+  },
+  "workflowTemplateId": "default",
+  "createdAt": "2026-05-30T07:03:02.543Z",
+  "updatedAt": "2026-05-30T07:03:02.543Z",
+  "version": "1.0",
+  "persistedAt": "2026-05-30T07:03:02.543Z"
+}

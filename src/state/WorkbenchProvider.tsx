@@ -53,8 +53,39 @@ import {
   setProjects as setProjectsAction,
   setMemories as setMemoriesAction,
 } from "./workbenchActions";
-import { workbenchData as initialData } from "../data/fixtures";
 import { projectApi, memoryApi, settingsApi, checkServerAvailable } from "../services/api";
+
+// Empty initial data - loads everything from API
+const emptyData: WorkbenchData = {
+  activeProjectId: "",
+  activeView: "project-management",
+
+  projects: [],
+  tasks: [],
+  workflowTemplates: [],
+  roles: [],
+  modelProviders: [],
+  agentRuns: [],
+  manualGates: [],
+  engineeringFeedback: null,
+  memories: [],
+  capabilityPacks: [],
+  mcpServers: [],
+  skills: [],
+  plugins: [],
+  agents: [],
+  imAdapters: [],
+  projectImBindings: [],
+  gitCredentials: [],
+  gitStatuses: [],
+  repoIssues: [],
+  repoPullRequests: [],
+  ciPipelines: [],
+  repoCommits: [],
+  gitBranches: [],
+  runnerProfiles: [],
+  defaultRunner: undefined,
+};
 
 // State Context
 interface WorkbenchState {
@@ -109,7 +140,7 @@ interface WorkbenchProviderProps {
 
 export function WorkbenchProvider({ children }: WorkbenchProviderProps) {
   const [initialLoadDone, setInitialLoadDone] = useState(false);
-  const [data, dispatch] = useReducer(workbenchReducer, initialData);
+  const [data, dispatch] = useReducer(workbenchReducer, emptyData);
   const isMounted = useRef(true);
 
   // 从 API 加载初始数据
@@ -129,7 +160,7 @@ export function WorkbenchProvider({ children }: WorkbenchProviderProps) {
       if (!isMounted.current) return;
 
       if (!available) {
-        console.log('[WorkbenchProvider] API server not available, using fixture data');
+        console.log('[WorkbenchProvider] API server not available, using empty data');
         if (isMounted.current) {
           setInitialLoadDone(true);
         }
