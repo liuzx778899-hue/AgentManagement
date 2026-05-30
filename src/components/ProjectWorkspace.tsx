@@ -26,6 +26,8 @@ import { PwProgressDashboard } from "./PwProgressDashboard";
 import { PwMemoryPanel } from "./PwMemoryPanel";
 import { PwIssuesPanel, PwCiPanel, PwBranchPanel, PwCommitPanel } from "./PwGitPanels";
 import { PwProjectMdPanel } from "./PwProjectMdPanel";
+import { PwRunnerPanel } from "./PwRunnerPanel";
+import type { RunnerProfile } from "../domain/runner";
 
 interface ProjectWorkspaceProps {
   data: WorkbenchData;
@@ -630,6 +632,13 @@ ${project.settings.riskSummary || "尚未评估"}`;
               </div>
             </div>
           )}
+
+          {/* CLI Runner Panel */}
+          <PwRunnerPanel
+            projectId={projectId}
+            projectPath={project.repoPath}
+            runnerProfiles={data.runnerProfiles.filter((r) => r.enabled)}
+          />
 
           {/* 4-Panel Grid: TODO + Stepper + Docs + Log */}
           <div className="pw-panels-grid">
