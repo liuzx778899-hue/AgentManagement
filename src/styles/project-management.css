@@ -351,6 +351,51 @@
   font-size: 12px;
 }
 
+/* Git status row */
+.pm-v2-pc-git-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  background: rgba(28, 36, 49, 0.72);
+  font-size: 11px;
+}
+.pm-v2-pc-git-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+}
+.pm-v2-pc-git-loading .spin {
+  animation: pc-spin 1.5s linear infinite;
+}
+.pm-v2-pc-git-branch {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #a8c8e8;
+  font-weight: 720;
+}
+.pm-v2-pc-git-branch svg {
+  color: var(--primary);
+}
+.pm-v2-pc-git-none {
+  color: var(--faint);
+  font-size: 10px;
+}
+.pm-v2-pc-git-row .pm-v2-pill.ok {
+  border-color: #1f694b;
+  color: #56e39f;
+  background: rgba(28, 90, 65, 0.22);
+}
+.pm-v2-pc-git-row .pm-v2-pill.warn {
+  border-color: #77571e;
+  color: #e8b650;
+  background: rgba(86, 62, 22, 0.22);
+}
+
 .pm-v2-pc-meta-grid {
   display: grid;
   grid-template-columns: repeat(6, auto);

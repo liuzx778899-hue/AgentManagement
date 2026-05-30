@@ -13,9 +13,13 @@ import {
   Clock,
   GitCompare,
   Loader2,
+  GitBranch,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import type { Project, WorkbenchData, ManualGate } from "../domain/workbench";
 import { useLocalServices } from "../hooks/useLocalServices";
+import { gitApi, type GitStatus } from "../services/api";
 
 interface ProjectCardProps {
   project: Project;
@@ -82,6 +86,8 @@ export function ProjectCard({ project, data, onClick, onGateClick, onDelete, onE
   const [deleteInput, setDeleteInput] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [gitStatus, setGitStatus] = useState<GitStatus | null>(null);
+  const [gitLoading, setGitLoading] = useState(false);
 
   const projectTasks = useMemo(
     () => data.tasks.filter((t) => t.projectId === project.id),
@@ -120,6 +126,37 @@ export function ProjectCard({ project, data, onClick, onGateClick, onDelete, onE
     document.addEventListener("keydown", handleDeleteEsc);
     return () => document.removeEventListener("keydown", handleDeleteEsc);
   }, [showDeleteConfirm, handleDeleteEsc]);
+
+  // Fetch Git status
+  useEffect(() => {
+    if (!project.repoPath) return;
+
+    let isMounted = true;
+
+    const fetchGitStatus = async () => {
+      setGitLoading(true);
+      try {
+        const result = await gitApi.getStatus(project.repoPath);
+        if (isMounted && result.ok && result.data) {
+          setGitStatus(result.data);
+        }
+      } catch {
+        // Silently handle errors - not all projects may have Git
+      } finally {
+        if (isMounted) {
+          setGitLoading(false);
+        }
+      }
+    };
+
+    fetchGitStatus();
+    // Refresh every 60 seconds
+    const interval = setInterval(fetchGitStatus, 60000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [project.repoPath]);
 
   const handleWorkbenchClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -220,6 +257,39 @@ export function ProjectCard({ project, data, onClick, onGateClick, onDelete, onE
           <label><FlagTriangleRight size={12} />下一验收点</label>
           <strong>{project.nextCheckpoint || "待定"}</strong>
         </div>
+      </div>
+
+      {/* Git status row */}
+      <div className="pm-v2-pc-git-row">
+        {gitLoading ? (
+          <span className="pm-v2-pc-git-loading"><Loader2 size={12} className="spin" /> 加载中...</span>
+        ) : gitStatus ? (
+          <>
+            <span className="pm-v2-pc-git-branch">
+              <GitBranch size={12} />
+              <span>{gitStatus.branch}</span>
+            </span>
+            {gitStatus.ahead > 0 && (
+              <span className="pm-v2-pill ok"><ArrowUp size={10} />{gitStatus.ahead}</span>
+            )}
+            {gitStatus.behind > 0 && (
+              <span className="pm-v2-pill warn"><ArrowDown size={10} />{gitStatus.behind}</span>
+            )}
+            {gitStatus.isClean ? (
+              <span className="pm-v2-pill ok">Clean</span>
+            ) : (
+              <span className="pm-v2-pill warn">
+                {gitStatus.staged > 0 && `${gitStatus.staged} staged`}
+                {gitStatus.staged > 0 && gitStatus.unstaged > 0 && " "}
+                {gitStatus.unstaged > 0 && `${gitStatus.unstaged} changed`}
+                {gitStatus.staged + gitStatus.unstaged > 0 && gitStatus.untracked > 0 && " "}
+                {gitStatus.untracked > 0 && `${gitStatus.untracked} untracked`}
+              </span>
+            )}
+          </>
+        ) : (
+          <span className="pm-v2-pc-git-none">无 Git 信息</span>
+        )}
       </div>
 
       {/* Meta grid */}
