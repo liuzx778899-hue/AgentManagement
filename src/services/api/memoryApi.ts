@@ -22,8 +22,12 @@ export interface UpdateMemoryInput {
 }
 
 export const memoryApi = {
-  list: (projectId: string) =>
-    apiCall<Memory[]>('GET', `/memory?projectId=${projectId}`),
+  list: (projectId?: string) => {
+    const query = projectId
+      ? `projectId=${projectId}`
+      : '';
+    return apiCall<Memory[]>('GET', `/memory${query ? '?' + query : ''}`);
+  },
 
   create: (input: CreateMemoryInput) =>
     apiCall<Memory>('POST', '/memory', input),

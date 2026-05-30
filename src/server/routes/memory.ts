@@ -15,15 +15,13 @@ memoryRouter.get('/', async (req: Request, res: Response, next: NextFunction) =>
     const { projectId } = req.query;
     const services = getServices();
 
-    if (projectId && typeof projectId === 'string') {
+    if (projectId && typeof projectId === 'string' && projectId !== 'all') {
       const result = await services.repositories.memory.listByProject(projectId);
       res.json(result);
     } else {
-      // Return empty array if no projectId specified
-      res.json({
-        ok: true,
-        data: [],
-      });
+      // Return all memories if no projectId specified or projectId is 'all'
+      const result = await services.repositories.memory.listAll();
+      res.json(result);
     }
   } catch (err) {
     next(err);

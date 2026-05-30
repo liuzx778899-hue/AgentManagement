@@ -15,24 +15,42 @@ export interface ApiResponse<T> {
 }
 
 let serverAvailable: boolean | null = null;
+let abortController: AbortController | null = null;
 
 export async function checkServerAvailable(): Promise<boolean> {
   if (serverAvailable !== null) return serverAvailable;
 
+  // Cancel any previous pending request
+  if (abortController) {
+    abortController.abort();
+  }
+  abortController = new AbortController();
+
+  // Create timeout that can be cancelled
+  const timeoutId = setTimeout(() => {
+    abortController?.abort();
+  }, 2000);
+
   try {
     const response = await fetch('http://localhost:3001/api/health', {
       method: 'GET',
-      signal: AbortSignal.timeout(2000),
+      signal: abortController.signal,
     });
+    clearTimeout(timeoutId);
     serverAvailable = response.ok;
     return serverAvailable;
   } catch {
+    clearTimeout(timeoutId);
     serverAvailable = false;
     return false;
   }
 }
 
 export function resetServerAvailability(): void {
+  if (abortController) {
+    abortController.abort();
+    abortController = null;
+  }
   serverAvailable = null;
 }
 

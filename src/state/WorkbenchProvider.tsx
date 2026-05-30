@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, useReducer, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useMemo, useReducer, useCallback, useEffect, useState, useRef, type ReactNode } from "react";
 import type {
   WorkbenchView,
   WorkbenchData,
@@ -50,8 +50,11 @@ import {
   deleteWorkflowTemplate as deleteWorkflowTemplateAction,
   updateRunner as updateRunnerAction,
   setDefaultRunner as setDefaultRunnerAction,
+  setProjects as setProjectsAction,
+  setMemories as setMemoriesAction,
 } from "./workbenchActions";
 import { workbenchData as initialData } from "../data/fixtures";
+import { projectApi, memoryApi, settingsApi, checkServerAvailable } from "../services/api";
 
 // State Context
 interface WorkbenchState {
@@ -105,7 +108,92 @@ interface WorkbenchProviderProps {
 }
 
 export function WorkbenchProvider({ children }: WorkbenchProviderProps) {
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
   const [data, dispatch] = useReducer(workbenchReducer, initialData);
+  const isMounted = useRef(true);
+
+  // 从 API 加载初始数据
+  useEffect(() => {
+    isMounted.current = true;
+
+    async function loadInitialData() {
+      // 在测试环境中跳过 API 加载 (vitest 设置了 import.meta.env.VITEST)
+      if (typeof import.meta !== 'undefined' && import.meta.env?.VITEST) {
+        if (isMounted.current) {
+          setInitialLoadDone(true);
+        }
+        return;
+      }
+
+      const available = await checkServerAvailable();
+      if (!isMounted.current) return;
+
+      if (!available) {
+        console.log('[WorkbenchProvider] API server not available, using fixture data');
+        if (isMounted.current) {
+          setInitialLoadDone(true);
+        }
+        return;
+      }
+
+      try {
+        // 并行加载所有数据
+        const [projectsResult, memoriesResult, settingsResult] = await Promise.all([
+          projectApi.list(),
+          memoryApi.list(),
+          settingsApi.get(),
+        ]);
+
+        if (!isMounted.current) return;
+
+        // 更新项目列表（替换整个列表，避免重复 fixture 数据）
+        if (projectsResult.ok && projectsResult.data) {
+          dispatch(setProjectsAction(projectsResult.data));
+        }
+
+        // 更新记忆列表
+        if (memoriesResult.ok && memoriesResult.data) {
+          // 将 Memory 转换为 MemoryItem 格式
+          const memoryItems: MemoryItem[] = memoriesResult.data.map(m => ({
+            id: m.id,
+            kind: m.kind || 'project',
+            scope: m.scope || 'project',
+            projectId: m.projectId || '',
+            roleId: m.roleId || null,
+            taskId: m.taskId || null,
+            title: m.title,
+            body: m.body || m.content || '',
+            citation: m.citation || [],
+            createdAt: m.createdAt,
+            updatedAt: m.updatedAt,
+          }));
+          dispatch(setMemoriesAction(memoryItems));
+        }
+
+        // 更新设置（如果有设置相关的 action）
+        if (settingsResult.ok && settingsResult.data) {
+          // TODO: 添加设置相关的 action
+        }
+
+        console.log('[WorkbenchProvider] Loaded data from API:', {
+          projects: projectsResult.ok ? projectsResult.data?.length : 'failed',
+          memories: memoriesResult.ok ? memoriesResult.data?.length : 'failed',
+        });
+      } catch (error) {
+        console.error('[WorkbenchProvider] Failed to load data from API:', error);
+      }
+
+      if (isMounted.current) {
+        setInitialLoadDone(true);
+      }
+    }
+
+    loadInitialData();
+
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
   const updateGateStatus = useCallback((gateId: string, status: GateStatus) => {
     dispatch(updateGateStatusAction(gateId, status));

@@ -324,6 +324,12 @@ export function workbenchReducer(state: WorkbenchData, action: WorkbenchAction):
     case "SET_DEFAULT_RUNNER":
       return { ...state, defaultRunner: action.runnerId };
 
+    case "SET_PROJECTS":
+      return { ...state, projects: action.payload };
+
+    case "SET_MEMORIES":
+      return { ...state, memories: action.payload };
+
     case "REFRESH_GIT_STATUS_START":
       // 可以设置 loading 状态
       return state;

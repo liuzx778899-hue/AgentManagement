@@ -14,6 +14,7 @@ import type {
   GitStatus,
 } from "../domain/workbench";
 import type { RunnerProfile } from "../domain/runner";
+import type { Memory } from "../domain/memory";
 
 // Action Types
 export type WorkbenchAction =
@@ -51,7 +52,9 @@ export type WorkbenchAction =
   | { type: "UPDATE_RUNNER"; runnerId: string; updates: Partial<RunnerProfile> }
   | { type: "SET_DEFAULT_RUNNER"; runnerId: string | undefined }
   | { type: "REFRESH_GIT_STATUS_START"; payload: { projectId: string } }
-  | { type: "UPDATE_GIT_STATUS"; payload: { projectId: string; status: Partial<GitStatus> } };
+  | { type: "UPDATE_GIT_STATUS"; payload: { projectId: string; status: Partial<GitStatus> } }
+  | { type: "SET_PROJECTS"; payload: Project[] }
+  | { type: "SET_MEMORIES"; payload: MemoryItem[] };
 
 // Action Creators
 export function updateGateStatus(gateId: string, status: GateStatus): WorkbenchAction {
@@ -193,4 +196,13 @@ export function refreshGitStatusStart(projectId: string): WorkbenchAction {
 
 export function updateGitStatusAction(projectId: string, status: Partial<GitStatus>): WorkbenchAction {
   return { type: "UPDATE_GIT_STATUS", payload: { projectId, status } };
+}
+
+// Data Loading Actions
+export function setProjects(projects: Project[]): WorkbenchAction {
+  return { type: "SET_PROJECTS", payload: projects };
+}
+
+export function setMemories(memories: MemoryItem[]): WorkbenchAction {
+  return { type: "SET_MEMORIES", payload: memories };
 }

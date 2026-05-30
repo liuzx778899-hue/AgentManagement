@@ -26,6 +26,7 @@ describe('Memory Router', () => {
     mockMemoryRepository = {
       listByProject: vi.fn(),
       listByRole: vi.fn(),
+      listAll: vi.fn(),
       save: vi.fn(),
       update: vi.fn(),
       delete: vi.fn(),
@@ -105,7 +106,7 @@ describe('Memory Router', () => {
     });
 
     it('should return all memories when no projectId', async () => {
-      mockMemoryRepository.listByProject.mockResolvedValueOnce({
+      mockMemoryRepository.listAll.mockResolvedValueOnce({
         ok: true,
         data: [],
       });
@@ -119,6 +120,8 @@ describe('Memory Router', () => {
         ok: true,
         data: [],
       });
+
+      expect(mockMemoryRepository.listAll).toHaveBeenCalled();
     });
   });
 

@@ -197,4 +197,25 @@ export class MemoryRepository {
       status: 'expired' as Memory['status'],
     });
   }
+
+  /**
+   * 列出所有记忆
+   */
+  async listAll(): Promise<LocalResult<PersistedMemory[]>> {
+    const result = await this.fileStore.readJson<PersistedMemory[]>(
+      `${this.basePath}/memory/index.json`
+    );
+
+    if (!result.ok) {
+      return {
+        ok: true,
+        data: [],
+      };
+    }
+
+    return {
+      ok: true,
+      data: result.data!.filter(m => !('deleted' in m)),
+    };
+  }
 }
