@@ -1,10 +1,21 @@
 import { Router } from 'express';
+import { runnerRouter } from './runner';
+import { projectsRouter } from './projects';
+import { workflowRouter } from './workflow';
+import { gitRouter } from './git';
+import { memoryRouter } from './memory';
+import { settingsRouter } from './settings';
 
 export async function createRouter(): Promise<Router> {
   const router = Router();
 
-  // Routes will be added in Phase 3.2
-  // For now, just return empty router
+  // Mount all route handlers
+  router.use('/runner', runnerRouter);
+  router.use('/projects', projectsRouter);
+  router.use('/workflow', workflowRouter);
+  router.use('/git', gitRouter);
+  router.use('/memory', memoryRouter);
+  router.use('/settings', settingsRouter);
 
   return router;
 }
