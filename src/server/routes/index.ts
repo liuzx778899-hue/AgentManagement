@@ -5,6 +5,7 @@ import { workflowRouter } from './workflow';
 import { gitRouter } from './git';
 import { memoryRouter } from './memory';
 import { settingsRouter } from './settings';
+import { aiRouter } from './ai';
 
 export function createRouter(): Router {
   const router = Router();
@@ -16,6 +17,7 @@ export function createRouter(): Router {
   router.use('/git', gitRouter);
   router.use('/memory', memoryRouter);
   router.use('/settings', settingsRouter);
+  router.use('/ai', aiRouter);
 
   return router;
 }

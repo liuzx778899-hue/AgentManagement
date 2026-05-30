@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Sparkles, Send, Zap } from "lucide-react";
+import { Sparkles, Send, Zap, Loader2 } from "lucide-react";
 import type { WorkbenchView, WorkbenchData } from "../domain/workbench";
 import { useWorkbenchState } from "../state";
+import { aiApi, checkServerAvailable, type ChatMessage as ApiChatMessage } from "../services/api";
 
 interface AiChatPanelProps {
   view: WorkbenchView;
@@ -119,7 +120,14 @@ export function AiChatPanel({ view, data, onNavigate, contextMode }: AiChatPanel
     },
   ]);
   const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [serverAvailable, setServerAvailable] = useState<boolean | null>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
+
+  // Check server availability on mount
+  useEffect(() => {
+    checkServerAvailable().then(setServerAvailable);
+  }, []);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -318,16 +326,56 @@ export function AiChatPanel({ view, data, onNavigate, contextMode }: AiChatPanel
     [data]
   );
 
-  const handleSend = useCallback(() => {
+  const handleSend = useCallback(async () => {
     const trimmed = input.trim();
-    if (!trimmed) return;
+    if (!trimmed || loading) return;
 
     const userMsg: ChatMessage = { id: nextMsgId(), role: "user", text: trimmed };
-    const assistantMsg = generateResponse(trimmed);
-
-    setMessages((prev) => [...prev, userMsg, assistantMsg]);
+    setMessages((prev) => [...prev, userMsg]);
     setInput("");
-  }, [input, generateResponse]);
+    setLoading(true);
+
+    // Build context for API
+    const contextInfo = `当前页面: ${viewLabel(view)}
+项目数量: ${data.projects.length}
+角色数量: ${data.roles.length}
+任务数量: ${data.tasks.length}`;
+
+    try {
+      // Try real API call first
+      if (serverAvailable) {
+        const apiMessages: ApiChatMessage[] = messages
+          .slice(-10) // Keep last 10 messages for context
+          .map((m) => ({ role: m.role, content: m.text }));
+
+        apiMessages.push({ role: "user", content: trimmed });
+
+        const result = await aiApi.chat(apiMessages, contextInfo);
+
+        if (result.ok && result.data) {
+          const assistantMsg: ChatMessage = {
+            id: nextMsgId(),
+            role: "assistant",
+            text: result.data.content,
+          };
+          setMessages((prev) => [...prev, assistantMsg]);
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Fallback to local mock response
+      const assistantMsg = generateResponse(trimmed);
+      setMessages((prev) => [...prev, assistantMsg]);
+    } catch (error) {
+      console.error("AI chat error:", error);
+      // Fallback to local mock response on error
+      const assistantMsg = generateResponse(trimmed);
+      setMessages((prev) => [...prev, assistantMsg]);
+    } finally {
+      setLoading(false);
+    }
+  }, [input, loading, serverAvailable, messages, view, data, generateResponse]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -480,16 +528,14 @@ export function AiChatPanel({ view, data, onNavigate, contextMode }: AiChatPanel
       </div>
 
       {/* Context-aware quick suggestion chips */}
-      {suggestions.length > 0 && (
+      {suggestions.length > 0 && !loading && (
         <div className="ai-chat-suggestions">
           {suggestions.map((s) => (
             <button
               key={s}
               className="ai-chat-suggestion-chip"
               onClick={() => {
-                const userMsg: ChatMessage = { id: nextMsgId(), role: "user", text: s };
-                const assistantMsg = generateResponse(s);
-                setMessages((prev) => [...prev, userMsg, assistantMsg]);
+                setInput(s);
               }}
               type="button"
             >
@@ -502,13 +548,19 @@ export function AiChatPanel({ view, data, onNavigate, contextMode }: AiChatPanel
 
       <div className="ai-chat-input">
         <input
-          placeholder="输入问题..."
+          placeholder={loading ? "等待回复..." : "输入问题..."}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
+          disabled={loading}
         />
-        <button className="ai-chat-send" onClick={handleSend} aria-label="发送" disabled={!input.trim()}>
-          <Send size={16} />
+        <button
+          className="ai-chat-send"
+          onClick={handleSend}
+          aria-label="发送"
+          disabled={!input.trim() || loading}
+        >
+          {loading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
         </button>
       </div>
     </div>

@@ -8,3 +8,4 @@ export { workflowApi } from './workflowApi';
 export { gitApi, type GitStatus } from './gitApi';
 export { memoryApi, type CreateMemoryInput, type UpdateMemoryInput } from './memoryApi';
 export { settingsApi } from './settingsApi';
+export { aiApi, type ChatMessage, type ChatResponse } from './aiApi';

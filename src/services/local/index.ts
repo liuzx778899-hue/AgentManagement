@@ -31,6 +31,7 @@ export {
 import { GitAdapter } from './adapters/gitAdapter';
 import { FileStoreAdapter } from './adapters/fileStoreAdapter';
 import { ProcessRunnerAdapter } from './adapters/processRunnerAdapter';
+import { LlmAdapter } from './adapters/llmAdapter';
 import { ProjectRepository, MemoryRepository, WorkflowRepository } from './repositories';
 import type { AdapterConfig, RunnerProcess, LogEntry } from '../../types/localEngineering';
 import type { RunnerKind } from '../../domain/runner';
@@ -44,6 +45,7 @@ export interface LocalEngineeringServices {
   git: GitAdapter;
   fileStore: FileStoreAdapter;
   processRunner: ProcessRunnerAdapter;
+  llm: LlmAdapter;
   repositories: {
     project: ProjectRepository;
     memory: MemoryRepository;
@@ -107,6 +109,7 @@ export function createLocalServices(config: Partial<AdapterConfig> = {}): LocalE
     git: new GitAdapter(finalConfig),
     fileStore,
     processRunner: new ProcessRunnerAdapter(finalConfig),
+    llm: new LlmAdapter(finalConfig),
     repositories: {
       project: new ProjectRepository(fileStore),
       memory: new MemoryRepository(fileStore),

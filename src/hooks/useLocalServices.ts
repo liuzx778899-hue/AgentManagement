@@ -40,6 +40,7 @@ function createApiServices(): LocalEngineeringServices {
     git: {} as any,
     fileStore: {} as any,
     processRunner: {} as any,
+    llm: {} as any,
     repositories: {} as any,
 
     // Runner methods
@@ -178,6 +179,7 @@ function createMockServices(): LocalEngineeringServices {
     git: {} as any,
     fileStore: {} as any,
     processRunner: {} as any,
+    llm: {} as any,
     repositories: {} as any,
   };
 }

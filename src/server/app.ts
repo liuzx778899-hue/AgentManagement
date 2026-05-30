@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import { createRouter } from './routes';
+import { getServices } from './services/serviceFactory';
 import { errorHandler } from './middleware/errorHandler';
 
 export function createApp() {
@@ -17,6 +18,85 @@ export function createApp() {
   // Health check endpoint
   app.get('/api/health', (_req, res) => {
     res.json({ ok: true, status: 'healthy' });
+  });
+
+  // AI Chat endpoint - defined directly
+  app.post('/api/ai/chat', async (req, res, next) => {
+    try {
+      const { messages, modelId, context } = req.body;
+
+      // 验证请求
+      if (!Array.isArray(messages) || messages.length === 0) {
+        res.status(400).json({
+          ok: false,
+          error: {
+            code: 'INVALID_INPUT',
+            message: 'messages 必须是非空数组',
+          },
+        });
+        return;
+      }
+
+      const services = getServices();
+
+      // 检查 LLM 服务是否可用
+      if (!services.llm) {
+        res.status(503).json({
+          ok: false,
+          error: {
+            code: 'SERVICE_UNAVAILABLE',
+            message: 'LLM 服务不可用',
+          },
+        });
+        return;
+      }
+
+      // 构建 system prompt
+      const systemPrompt = `你是 AgentManagement 的工程助手。
+${context ? `当前上下文：\n${context}` : ''}
+
+你可以帮助用户：
+- 分析项目状态和进度
+- 建议下一步任务优先级
+- 检查项目配置
+- 回答工程相关问题`;
+
+      // 调用 LLM
+      const result = await services.llm.complete({
+        messages: [
+          { role: 'system', content: systemPrompt },
+          ...messages.map((m: { role: string; content: string }) => ({
+            role: m.role as 'user' | 'assistant',
+            content: m.content,
+          })),
+        ],
+        model: modelId || 'claude-3-haiku',
+        temperature: 0.7,
+        maxTokens: 2000,
+      });
+
+      if (!result.ok) {
+        res.status(500).json({
+          ok: false,
+          error: {
+            code: 'LLM_ERROR',
+            message: result.error?.message || 'LLM 调用失败',
+          },
+        });
+        return;
+      }
+
+      res.json({
+        ok: true,
+        data: {
+          content: result.data!.content,
+          model: result.data!.model,
+          usage: result.data!.usage,
+        },
+      });
+    } catch (err) {
+      next(err);
+    }
   });
 
   // API routes

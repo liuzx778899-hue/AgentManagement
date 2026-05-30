@@ -188,6 +188,10 @@
   font-size: 12.5px;
 }
 .ai-chat-input input:focus { border-color: var(--primary); outline: none; }
+.ai-chat-input input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 .ai-chat-send {
   width: 34px;
   height: 34px;
@@ -200,6 +204,11 @@
   place-items: center;
 }
 .ai-chat-send:hover { border-color: var(--primary); color: var(--primary); }
+.ai-chat-send:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.ai-chat-send:hover:disabled { border-color: var(--line); color: var(--muted); }
 
 /* AI Assistant Section in Settings */
 .ai-assistant-section {
@@ -286,6 +295,20 @@
 }
 .ai-chat-action-btn {
   margin-top: 6px;
+}
+
+/* Spin animation for loading */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
 }
 
 /* ==============================
