@@ -501,7 +501,7 @@ ${rolesContext}
               <div className="awd-draft-title">
                 <span>流程草案</span><span className="awd-mini-tag">v1.4 · 草案</span>
               </div>
-              <div className="awd-canvas-zoom-ctrl" style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
                 <button className="awd-zoom-btn" title="缩小" onClick={() => setCanvasScale(s => Math.max(ZOOM_MIN, s - ZOOM_STEP))} style={{ background: 'none', border: '1px solid #34465e', color: '#8b949e', borderRadius: 3, width: 22, height: 22, cursor: 'pointer', fontSize: 14 }}>−</button>
                 <span style={{ fontSize: 11, color: '#8b949e', padding: '0 4px', minWidth: 36, textAlign: 'center' }}>{Math.round(canvasScale * 100)}%</span>
                 <button className="awd-zoom-btn" title="放大" onClick={() => setCanvasScale(s => Math.min(ZOOM_MAX, s + ZOOM_STEP))} style={{ background: 'none', border: '1px solid #34465e', color: '#8b949e', borderRadius: 3, width: 22, height: 22, cursor: 'pointer', fontSize: 14 }}>+</button>
