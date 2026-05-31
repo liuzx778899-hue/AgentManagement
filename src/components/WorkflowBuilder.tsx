@@ -78,35 +78,27 @@ function AiWorkflowDesignInline({
   const ZOOM_STEP = 0.1;
   const ZOOM_MIN = 0.3;
   const ZOOM_MAX = 2;
-  const [canvasOffset, setCanvasOffset] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
-  const dragInfoRef = useRef({ startX: 0, startY: 0, hasMoved: false });
   const canvasRef = useRef<HTMLDivElement | null>(null);
+  const aiDragRef = useRef({ dragging: false, startX: 0, startY: 0, moved: false });
 
-  // 画布拖拽平移（通过 transform translate 实现）
+  // 画布拖拽平移（通过 scroll 实现）
   const handleCanvasMouseDown = (e: React.MouseEvent) => {
-    dragInfoRef.current = { startX: e.clientX, startY: e.clientY, hasMoved: false };
+    aiDragRef.current = { dragging: true, startX: e.clientX, startY: e.clientY, moved: false };
   };
   const handleCanvasMouseMove = (e: React.MouseEvent) => {
-    const info = dragInfoRef.current;
-    if (info.startX === 0 && info.startY === 0 && !info.hasMoved) return;
+    const info = aiDragRef.current;
+    if (!info.dragging || !canvasRef.current) return;
     const dx = e.clientX - info.startX;
     const dy = e.clientY - info.startY;
-    // 移动超过 4px 才算拖拽（区分 click）
-    if (!info.hasMoved && Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
-    if (!info.hasMoved) {
-      info.hasMoved = true;
-      setIsDragging(true);
-    }
-    setCanvasOffset(prev => ({ x: prev.x + dx, y: prev.y + dy }));
+    if (!info.moved && Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
+    info.moved = true;
+    canvasRef.current.scrollLeft -= dx;
+    canvasRef.current.scrollTop -= dy;
     info.startX = e.clientX;
     info.startY = e.clientY;
   };
   const handleCanvasMouseUp = () => {
-    if (dragInfoRef.current.hasMoved) {
-      setIsDragging(false);
-    }
-    dragInfoRef.current = { startX: 0, startY: 0, hasMoved: false };
+    aiDragRef.current.dragging = false;
   };
   const handleWheel = (e: React.WheelEvent) => {
     if (e.ctrlKey || e.metaKey) {
@@ -115,7 +107,7 @@ function AiWorkflowDesignInline({
       setCanvasScale(s => Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, +(s + delta).toFixed(1))));
     }
   };
-  const resetCanvasView = () => { setCanvasScale(1); setCanvasOffset({ x: 0, y: 0 }); };
+  const resetCanvasView = () => { setCanvasScale(1); if (canvasRef.current) { canvasRef.current.scrollLeft = 0; canvasRef.current.scrollTop = 0; } };
 
   // 材料通知
   const [materialNotice, setMaterialNotice] = useState("");
@@ -1087,17 +1079,17 @@ ${runnersContext}
             </div>
             {/* 画布区域 */}
             <div
-              className={`awd-canvas${isDragging ? " dragging" : ""}`}
+              className="awd-canvas"
               ref={canvasRef}
-              style={{ position: 'relative', cursor: isDragging ? 'grabbing' : 'grab' }}
+              style={{ cursor: 'grab' }}
               onMouseDown={handleCanvasMouseDown}
               onMouseMove={handleCanvasMouseMove}
               onMouseUp={handleCanvasMouseUp}
               onMouseLeave={handleCanvasMouseUp}
               onWheel={handleWheel}
             >
-              {/* 节点内容区 */}
-              <div className="awd-canvas-transform" style={{ transform: `translate(${canvasOffset.x}px, ${canvasOffset.y}px) scale(${canvasScale})`, transformOrigin: 'center center', transition: isDragging ? 'none' : 'transform 0.1s ease', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0, padding: '24px', minWidth: 'fit-content', minHeight: '100%' }}>
+              {/* 节点内容区，用 CSS zoom 做缩放（zoom 会改变布局大小，scroll 能正确工作） */}
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 0, padding: '24px 40px', minWidth: 'fit-content', zoom: canvasScale }}>
                 {draftSteps.length === 0 ? (
                   <div className="awd-empty-canvas">
                     <div className="awd-empty-icon">📋</div>
