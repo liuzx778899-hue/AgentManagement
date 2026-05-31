@@ -53,7 +53,7 @@ function AppContent() {
   const [detailProjectId, setDetailProjectId] = useState<string | null>(null);
   const [activeWorkbenchProjectId, setActiveWorkbenchProjectId] = useState<string | undefined>(undefined);
   const [selectedWorkflowTemplateId, setSelectedWorkflowTemplateId] = useState<string | undefined>(undefined);
-  const { data } = useWorkbenchState();
+  const { data, deleteWorkflowTemplate } = useWorkbenchState();
   const fallbackProjectId = data.projects[0]?.id;
   const resolvedDetailProjectId = detailProjectId ?? fallbackProjectId;
 
@@ -110,6 +110,7 @@ function AppContent() {
             data={data}
             onNavigate={setView}
             onEnterWorkflowDesign={enterWorkflowDesign}
+            onDeleteTemplate={deleteWorkflowTemplate}
           />
         )}
         {view === "workflows" && (

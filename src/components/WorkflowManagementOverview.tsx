@@ -16,12 +16,12 @@ import {
   X,
 } from "lucide-react";
 import type { WorkbenchData, WorkbenchView } from "../domain/workbench";
-import { workflowApi } from "../services/api/workflowApi";
 
 interface WorkflowManagementOverviewProps {
   data: WorkbenchData;
   onNavigate?: (view: WorkbenchView) => void;
   onEnterWorkflowDesign?: (workflowId: string) => void;
+  onDeleteTemplate?: (templateId: string) => void;
 }
 
 // Workflow status types
@@ -256,10 +256,10 @@ function KpiIcon({ type }: { type: "total" | "enabled" | "bound" | "pending" | "
   }
 }
 
-export function WorkflowManagementOverview({ data, onNavigate, onEnterWorkflowDesign }: WorkflowManagementOverviewProps) {
+export function WorkflowManagementOverview({ data, onNavigate, onEnterWorkflowDesign, onDeleteTemplate }: WorkflowManagementOverviewProps) {
   const [activeCategory, setActiveCategory] = useState<WorkflowCategory>("all");
   const [validating, setValidating] = useState(false);
-  const [deletedFlowIds, setDeletedFlowIds] = useState<string[]>([]);
+
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [categoryDraft, setCategoryDraft] = useState("");
   const [customCategories, setCustomCategories] = useState<string[]>([]);
@@ -279,13 +279,11 @@ export function WorkflowManagementOverview({ data, onNavigate, onEnterWorkflowDe
 
   const visibleWorkflows = useMemo(
     () =>
-      workflowAssets
-        .filter((flow) => !deletedFlowIds.includes(flow.id))
-        .map((flow) => ({
-          ...flow,
-          status: statusOverrides[flow.id] ?? flow.status,
-        })),
-    [workflowAssets, deletedFlowIds, statusOverrides]
+      workflowAssets.map((flow) => ({
+        ...flow,
+        status: statusOverrides[flow.id] ?? flow.status,
+      })),
+    [workflowAssets, statusOverrides]
   );
 
   // Compute KPIs from visibleWorkflows (includes statusOverrides)
@@ -342,10 +340,7 @@ export function WorkflowManagementOverview({ data, onNavigate, onEnterWorkflowDe
   };
 
   const handleDeleteFlow = (workflowId: string) => {
-    setDeletedFlowIds((ids) => (ids.includes(workflowId) ? ids : [...ids, workflowId]));
-    workflowApi.deleteTemplate(workflowId).catch(err => {
-      console.error('[WorkflowManagementOverview] Failed to delete template:', err);
-    });
+    onDeleteTemplate?.(workflowId);
   };
 
   const handleToggleFlowStatus = (workflowId: string, currentStatus: WorkflowAsset["status"]) => {
