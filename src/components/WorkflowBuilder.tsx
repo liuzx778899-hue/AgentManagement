@@ -1533,13 +1533,13 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
   const ZOOM_MAX = 2;
   const [isDragging, setIsDragging] = useState(false);
   const manualCanvasRef = useRef<HTMLDivElement | null>(null);
-  const manualDragRef = useRef({ startX: 0, startY: 0, moved: false });
+  const manualDragRef = useRef({ dragging: false, startX: 0, startY: 0, moved: false });
   const handleCanvasMouseDown = (e: React.MouseEvent) => {
-    manualDragRef.current = { startX: e.clientX, startY: e.clientY, moved: false };
+    manualDragRef.current = { dragging: true, startX: e.clientX, startY: e.clientY, moved: false };
   };
   const handleCanvasMouseMove = (e: React.MouseEvent) => {
     const info = manualDragRef.current;
-    if (!manualCanvasRef.current) return;
+    if (!info.dragging || !manualCanvasRef.current) return;
     const dx = e.clientX - info.startX;
     const dy = e.clientY - info.startY;
     if (!info.moved && Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
@@ -1554,13 +1554,13 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
   };
   const handleCanvasMouseUp = () => {
     if (manualDragRef.current.moved) setIsDragging(false);
-    manualDragRef.current = { startX: 0, startY: 0, moved: false };
+    manualDragRef.current.dragging = false;
   };
   // 监听 window mouseup 确保鼠标离开画布后也能停止拖拽
   useEffect(() => {
     const onUp = () => {
       if (manualDragRef.current.moved) setIsDragging(false);
-      manualDragRef.current = { startX: 0, startY: 0, moved: false };
+      manualDragRef.current.dragging = false;
     };
     window.addEventListener('mouseup', onUp);
     return () => window.removeEventListener('mouseup', onUp);
