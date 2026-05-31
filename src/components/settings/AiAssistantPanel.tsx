@@ -28,6 +28,7 @@ export function AiAssistantPanel() {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [configLoaded, setConfigLoaded] = useState(false);
 
   // AI Assistant model config state
   const [aiProviderId, setAiProviderId] = useState<string>(
@@ -40,47 +41,52 @@ export function AiAssistantPanel() {
   const [modelSaving, setModelSaving] = useState(false);
   const [modelSaved, setModelSaved] = useState(false);
 
-  const loadConfig = useCallback(async () => {
-    console.log('[AiAssistantPanel] loadConfig called, services.getAiAssistantConfig:', !!services.getAiAssistantConfig);
-
-    if (!services.getAiAssistantConfig) {
-      console.log('[AiAssistantPanel] getAiAssistantConfig not available, using defaults');
-      setLoading(false);
-      return;
-    }
-
-    try {
-      console.log('[AiAssistantPanel] Loading config...');
-      const result = await services.getAiAssistantConfig();
-      console.log('[AiAssistantPanel] Config loaded:', result);
-
-      if (result.ok && result.data) {
-        // 只有当返回的值为空时才使用默认值
-        const loadedPrompt = result.data.systemPrompt;
-        if (loadedPrompt && loadedPrompt.trim()) {
-          setSystemPrompt(loadedPrompt);
-        }
-      }
-    } catch (err) {
-      console.error('[AiAssistantPanel] Failed to load config:', err);
-      // Keep default prompt on error
-    } finally {
-      setLoading(false);
-      console.log('[AiAssistantPanel] Loading complete');
-    }
-  }, [services]);
-
+  // Load config once on mount
   useEffect(() => {
+    if (configLoaded) return;
+
+    const loadConfig = async () => {
+      console.log('[AiAssistantPanel] loadConfig called, services.getAiAssistantConfig:', !!services.getAiAssistantConfig);
+
+      if (!services.getAiAssistantConfig) {
+        console.log('[AiAssistantPanel] getAiAssistantConfig not available, using defaults');
+        setLoading(false);
+        setConfigLoaded(true);
+        return;
+      }
+
+      try {
+        console.log('[AiAssistantPanel] Loading config...');
+        const result = await services.getAiAssistantConfig();
+        console.log('[AiAssistantPanel] Config loaded:', result);
+
+        if (result.ok && result.data) {
+          const loadedPrompt = result.data.systemPrompt;
+          if (loadedPrompt && loadedPrompt.trim()) {
+            console.log('[AiAssistantPanel] Setting system prompt from config');
+            setSystemPrompt(loadedPrompt);
+          }
+        }
+      } catch (err) {
+        console.error('[AiAssistantPanel] Failed to load config:', err);
+      } finally {
+        setLoading(false);
+        setConfigLoaded(true);
+        console.log('[AiAssistantPanel] Loading complete');
+      }
+    };
+
     // Load immediately, with a fallback timeout
     const timeoutId = setTimeout(() => {
       console.log('[AiAssistantPanel] Timeout reached, forcing loading false');
       setLoading(false);
+      setConfigLoaded(true);
     }, 3000);
 
     loadConfig().finally(() => {
       clearTimeout(timeoutId);
     });
-  }, [loadConfig]);
+  }, [services.getAiAssistantConfig, configLoaded]);
 
   const handleSave = async () => {
     if (!services.saveAiAssistantConfig) {
