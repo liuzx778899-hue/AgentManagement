@@ -746,13 +746,17 @@ function WorkflowCard({
       <div className="wmo-flow-top">
         <div>
           <h3>
-            {flow.status === "draft" && (
+            {(flow.status === "draft" || (validationIssues && validationIssues.length > 0)) && (
               <CircleAlert size={14} style={{ color: "var(--warning, #e0a030)", verticalAlign: "middle", marginRight: 6 }} />
             )}
             {flow.name}
           </h3>
           <div className="wmo-chips">
-            <span className={statusChipClass(flow.status)}>{statusLabel}</span>
+            {validationIssues && validationIssues.length > 0 ? (
+              <span className="wmo-chip warn">待校验 · {validationIssues.length} 个问题</span>
+            ) : (
+              <span className={statusChipClass(flow.status)}>{statusLabel}</span>
+            )}
             <span className="wmo-chip">{flow.version}</span>
             <span className="wmo-chip">{flow.stepCount} 步骤</span>
             <select
@@ -769,12 +773,6 @@ function WorkflowCard({
           </div>
         </div>
         <span className={healthChipClass(flow.healthStatus)}>{flow.healthLabel}</span>
-        {validationIssues && validationIssues.length > 0 && (
-          <span className="wmo-chip warn" style={{ marginLeft: 4 }}>
-            <CircleAlert size={10} style={{ verticalAlign: "middle", marginRight: 2 }} />
-            {validationIssues.length} 个问题
-          </span>
-        )}
       </div>
 
       {/* Description */}
@@ -921,28 +919,6 @@ function WorkflowCard({
                   确认删除
                 </button>
               )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Validation result popup */}
-      {validationIssues && validationIssues.length > 0 && (
-        <div className="pm-v2-pc-confirm-overlay" onClick={(e) => e.stopPropagation()}>
-          <div className="pm-v2-pc-confirm-box" onClick={(e) => e.stopPropagation()}>
-            <div className="pm-v2-pc-confirm-header">
-              <CircleAlert size={16} color="var(--warning, #e0a030)" />
-              <span>校验问题</span>
-              <button className="pm-v2-btn" onClick={(e) => { e.stopPropagation(); onEnterDesigner(flow.id); }} type="button">
-                去修复
-              </button>
-            </div>
-            <div className="pm-v2-pc-confirm-body">
-              <ul style={{ margin: 0, paddingLeft: 20, color: "var(--text-secondary)" }}>
-                {validationIssues.map((issue, i) => (
-                  <li key={i}>{issue}</li>
-                ))}
-              </ul>
             </div>
           </div>
         </div>
