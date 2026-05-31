@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, Check, ChevronDown, List, Paperclip, Plus, Send, Sparkles, Trash2 } from "lucide-react";
-import type { WorkbenchData, WorkflowStep, WorkflowTemplate } from "../domain/workbench";
+import { ArrowLeft, ArrowRight, Check, ChevronDown, GitBranch, History, List, Paperclip, Plus, Send, Sparkles, Trash2 } from "lucide-react";
+import type { FailureStrategy, WorkbenchData, WorkflowStep, WorkflowTemplate } from "../domain/workbench";
 import { useWorkbenchState } from "../state";
 import { StepEditModal } from "./StepEditModal";
 
@@ -29,22 +29,79 @@ function AiWorkflowDesignInline({
   setMaterials: React.Dispatch<React.SetStateAction<{ name: string; ext: string }[]>>;
   draftSteps: WorkflowStep[];
   setDraftSteps: React.Dispatch<React.SetStateAction<WorkflowStep[]>>;
-  onApply: (steps: WorkflowStep[]) => void;
+  onApply: (name: string, steps: WorkflowStep[], roles: { id: string; name: string; description: string; responsibilities?: string[]; deliverables?: string[]; roleMarkdown?: string }[]) => void;
   onDiscard: () => void;
 }) {
   const [materialsExpanded, setMaterialsExpanded] = useState(true);
   const [composerText, setComposerText] = useState("");
   const [draftGenerated, setDraftGenerated] = useState(false);
   const [selectedDraftIndex, setSelectedDraftIndex] = useState(0);
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [saveName, setSaveName] = useState("");
+  const [draftTitle, setDraftTitle] = useState("");
+
+  // 版本管理
+  const [draftVersions, setDraftVersions] = useState<{
+    version: number;
+    label: "draft" | "changed";
+    savedAt: string;
+    steps: WorkflowStep[];
+    roles: typeof draftRoles;
+  }[]>([]);
+  const [showVersionPanel, setShowVersionPanel] = useState(false);
+
+  const saveVersion = () => {
+    setDraftVersions(prev => [...prev, {
+      version: prev.length + 1,
+      label: prev.length === 0 ? "draft" as const : "changed" as const,
+      savedAt: new Date().toISOString(),
+      steps: JSON.parse(JSON.stringify(draftSteps)),
+      roles: JSON.parse(JSON.stringify(draftRoles)),
+    }]);
+  };
+
+  const rollbackVersion = (v: typeof draftVersions[number]) => {
+    setDraftSteps(JSON.parse(JSON.stringify(v.steps)));
+    setDraftRoles(JSON.parse(JSON.stringify(v.roles)));
+    setShowVersionPanel(false);
+  };
   const [editingDraftStepId, setEditingDraftStepId] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const materialInputRef = useRef<HTMLInputElement | null>(null);
+
+  // 流程专属角色（由 AI 生成，不属于全局角色池）
+  const [draftRoles, setDraftRoles] = useState<{ id: string; name: string; description: string; responsibilities?: string[]; deliverables?: string[]; roleMarkdown?: string }[]>([]);
+  const [viewingRole, setViewingRole] = useState<{ id: string; name: string; description: string; responsibilities?: string[]; deliverables?: string[]; roleMarkdown?: string } | null>(null);
 
   // 画布缩放
   const [canvasScale, setCanvasScale] = useState(1);
   const ZOOM_STEP = 0.1;
   const ZOOM_MIN = 0.3;
   const ZOOM_MAX = 2;
+  const [canvasOffset, setCanvasOffset] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const canvasRef = useRef<HTMLDivElement | null>(null);
+
+  // 画布拖拽平移（通过 transform translate 实现）
+  const handleCanvasMouseDown = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest('.awd-node-v2, .awd-node-v2-delete')) return;
+    setIsDragging(true);
+    setDragStart({ x: e.clientX - canvasOffset.x, y: e.clientY - canvasOffset.y });
+  };
+  const handleCanvasMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging) return;
+    setCanvasOffset({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
+  };
+  const handleCanvasMouseUp = () => setIsDragging(false);
+  const handleWheel = (e: React.WheelEvent) => {
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
+      setCanvasScale(s => Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, +(s + delta).toFixed(1))));
+    }
+  };
+  const resetCanvasView = () => { setCanvasScale(1); setCanvasOffset({ x: 0, y: 0 }); };
 
   // 材料通知
   const [materialNotice, setMaterialNotice] = useState("");
@@ -52,36 +109,72 @@ function AiWorkflowDesignInline({
   // 差异对比
   const [diffItems, setDiffItems] = useState<{ type: "add" | "mod" | "same"; title: string; desc: string }[]>([]);
 
-  // 检查清单
-  const [checklistItems, setChecklistItems] = useState([
-    { label: "步骤完整性检查", done: false },
-    { label: "角色绑定检查", done: false },
-    { label: "模型配置检查", done: false },
-    { label: "Gate 配置检查", done: false },
-    { label: "验收标准确认", done: false },
-  ]);
+  // 自动化校验（基于 draftSteps/draftRoles 计算）
+  const validationResults = useMemo(() => {
+    if (!draftGenerated || draftSteps.length === 0) return null;
+    const results: { label: string; done: boolean; issues: string[] }[] = [];
+
+    // 1. 步骤完整性检查
+    const stepIssues: string[] = [];
+    if (draftSteps.length < 2) stepIssues.push("至少需要 2 个步骤");
+    draftSteps.forEach((s, i) => { if (!s.name?.trim()) stepIssues.push(`步骤 ${i + 1} 缺少名称`); });
+    results.push({ label: "步骤完整性检查", done: stepIssues.length === 0, issues: stepIssues });
+
+    // 2. 角色绑定检查
+    const roleIssues: string[] = [];
+    const roleIds = new Set(draftRoles.map(r => r.id));
+    draftSteps.forEach((s, i) => {
+      if (!s.roleId) { roleIssues.push(`步骤 ${i + 1}「${s.name}」未绑定角色`); }
+      else if (!roleIds.has(s.roleId)) { roleIssues.push(`步骤 ${i + 1}「${s.name}」的角色不存在`); }
+    });
+    results.push({ label: "角色绑定检查", done: roleIssues.length === 0, issues: roleIssues });
+
+    // 3. 模型配置检查
+    const modelIssues: string[] = [];
+    draftSteps.forEach((s, i) => {
+      if (!s.modelProviderId || !s.modelName) modelIssues.push(`步骤 ${i + 1}「${s.name}」未配置模型`);
+    });
+    results.push({ label: "模型配置检查", done: modelIssues.length === 0, issues: modelIssues });
+
+    // 4. Gate 配置检查
+    const gateIssues: string[] = [];
+    draftSteps.forEach((s, i) => {
+      if (!['auto', 'manual'].includes(s.gateMode)) gateIssues.push(`步骤 ${i + 1}「${s.name}」的 Gate 配置无效`);
+    });
+    results.push({ label: "Gate 配置检查", done: gateIssues.length === 0, issues: gateIssues });
+
+    // 5. Runner 配置检查
+    const runnerIssues: string[] = [];
+    draftSteps.forEach((s, i) => {
+      if (!s.runnerId) runnerIssues.push(`步骤 ${i + 1}「${s.name}」未配置 Runner`);
+    });
+    results.push({ label: "Runner 配置检查", done: runnerIssues.length === 0, issues: runnerIssues });
+
+    return results;
+  }, [draftSteps, draftRoles, draftGenerated]);
+
+  const allChecksDone = validationResults ? validationResults.every(r => r.done) : false;
+  const [draftWorkflowMarkdown, setDraftWorkflowMarkdown] = useState("# AI 生成流程草案");
   const draftTemplate = useMemo<WorkflowTemplate>(() => ({
     id: "ai-draft-template",
     name: "AI 生成流程草案",
     version: 1,
     status: "draft",
     steps: draftSteps,
-    workflowMarkdown: "# AI 生成流程草案",
+    workflowMarkdown: draftWorkflowMarkdown,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-  }), [draftSteps]);
+  }), [draftSteps, draftWorkflowMarkdown]);
 
   const editingDraftStep = editingDraftStepId ? draftSteps.find((step) => step.id === editingDraftStepId) : null;
 
-  // 从 roleId 提取角色名
+  // 从 roleId 提取角色名（优先查找流程专属角色，再查找全局角色池）
   const getRoleName = (roleId: string) => {
     if (!roleId) return "未绑定角色";
-    if (roleId.startsWith("role-ai-draft-")) {
-      return roleId.replace("role-ai-draft-", "");
-    }
-    // 尝试从角色池查找
-    const role = data.roles.find(r => r.id === roleId);
-    return role?.name ?? "未绑定角色";
+    const draftRole = draftRoles.find(r => r.id === roleId);
+    if (draftRole) return draftRole.name;
+    const globalRole = data.roles.find(r => r.id === roleId);
+    return globalRole?.name ?? "未绑定角色";
   };
 
   const getRunnerName = (runnerId?: string) => data.runnerProfiles.find((runner) => runner.id === runnerId)?.displayName ?? "未绑定 Runner";
@@ -142,9 +235,19 @@ function AiWorkflowDesignInline({
       const { aiAssistantModel } = configResult.data || {};
 
       // 构建上下文
+      const projectNames = data.projects.length > 0 ? data.projects.map(p => p.name).join(", ") : "暂无项目";
       const materialsContext = materials.length > 0
         ? `上下文文件: ${materials.map(m => `${m.name}.${m.ext}`).join(", ")}`
         : "";
+      const rolesHint = data.roles.length > 0
+        ? `系统中已定义的全局角色（仅供参考，你可以建议任意角色）: ${data.roles.map(r => r.name).join(", ")}`
+        : "";
+      const workflowContext = [
+        `当前项目: ${projectNames}`,
+        materialsContext,
+        rolesHint,
+        `当前已有 ${draftSteps.length} 个草案步骤`,
+      ].filter(Boolean).join("\n");
 
       // 构建聊天历史（AI 有上下文记忆）
       const historyMessages = chatMessages.map(msg => ({
@@ -152,13 +255,30 @@ function AiWorkflowDesignInline({
         content: msg.text,
       }));
 
-      // 调用 AI
+      // 调用 AI，使用专用的流程设计助手提示词
+      const workflowDesignPrompt = `你是 AI 流程设计助手，帮助用户设计软件开发工作流程。
+
+你的核心职责：
+1. 引导用户讨论项目目标、技术选型、角色分工
+2. 根据讨论内容建议合适的工作流步骤和角色
+3. 回答用户关于流程设计的问题
+
+回答要求：
+- 重点关注：流程步骤拆分、角色定义（按实际需要细分，如前端开发/后端开发分开）、模型选择建议
+- 如果用户提到角色细分（如前端后端分开、功能测试集成测试分开），明确认可并在建议中体现
+- 给出具体的步骤建议时，说明每个步骤的角色、输入和输出
+- 中文回答，简洁直接`;
+
       const response = await fetch("/api/ai/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: [...historyMessages, { role: "user", content: text }],
-          context: materialsContext,
+          messages: [
+            { role: "system", content: workflowDesignPrompt },
+            ...historyMessages,
+            { role: "user", content: text },
+          ],
+          context: workflowContext,
           providerId: aiAssistantModel?.providerId,
           modelName: aiAssistantModel?.modelName,
         }),
@@ -214,9 +334,7 @@ function AiWorkflowDesignInline({
         ? `上下文文件: ${materials.map(m => `${m.name}.${m.ext}`).join(", ")}`
         : "";
 
-      const rolesContext = data.roles.length > 0
-        ? `已定义角色: ${data.roles.map(r => r.name).join(", ")}`
-        : "";
+      const rolesContext = ""; // 角色由 AI 根据讨论内容自行定义，不再使用预定义角色池
 
       // 构建聊天历史
       const historyMessages = chatMessages.map(msg => ({
@@ -224,25 +342,74 @@ function AiWorkflowDesignInline({
         content: msg.text,
       }));
 
+      // 构建可用模型列表
+      const enabledProviders = data.modelProviders.filter(p => p.enabled);
+      const modelsContext = enabledProviders.length > 0
+        ? `可用模型 Provider（modelProvider 和 model 字段从中选取）：
+${enabledProviders.map(p => `- ${p.name} (${p.id}): ${p.models.map(m => m.name).join(", ")} (默认: ${p.defaultModel})`).join("\n")}`
+        : "";
+
+      // 构建可用 Runner 列表
+      const enabledRunners = (data.runnerProfiles ?? []).filter((r: { enabled: boolean }) => r.enabled);
+      const runnersContext = enabledRunners.length > 0
+        ? `可用 Runner（runner 字段从中选取）：
+${enabledRunners.map((r: { displayName: string; id: string }) => `- ${r.displayName} (${r.id})`).join("\n")}`
+        : "";
+
       // 生成指令：要求 JSON 格式输出
       const generateInstruction = `基于以上讨论内容，提炼并生成工作流程草案。
 
 ${projectContext}
 ${materialsContext}
-${rolesContext}
 
-请严格按照以下 JSON 格式输出，不要输出其他任何内容：
+${modelsContext}
+
+${runnersContext}
+
+你的回复必须且只能是一个合法的 JSON 对象（不要包含注释、尾部逗号、未转义的换行符），用 \`\`\`json 和 \`\`\` 包裹。结构如下：
 \`\`\`json
 {
+  "title": "流程草案标题",
+  "summary": "一句话概括该流程的目标",
+  "roles": [
+    {
+      "id": "role-1",
+      "name": "角色名称",
+      "description": "角色职责描述",
+      "responsibilities": ["职责1", "职责2"],
+      "deliverables": ["输出物1"],
+      "roleMarkdown": "# 角色名称\\n\\n## 职责\\n- 职责1\\n\\n## 输出物\\n- 输出物1"
+    }
+  ],
   "steps": [
-    {"name": "步骤名称", "role": "角色名", "model": "模型名", "gate": "auto"}
+    {
+      "name": "步骤名称",
+      "roleId": "role-1",
+      "modelProvider": "provider-id",
+      "model": "model-name",
+      "runner": "runner-id",
+      "gate": "auto",
+      "inputs": ["输入项1"],
+      "outputs": ["输出项1"],
+      "failureStrategy": "stop"
+    }
   ]
 }
 \`\`\`
 
-要求：
-- 从讨论中提炼实际讨论过的步骤和角色
-- gate 只能是 "auto" 或 "manual"
+字段约束：
+- **roles**: 根据讨论内容提炼该流程专属的角色，角色完全由讨论内容决定，不依赖任何预定义角色
+  - 每个角色有唯一 id（"role-1"、"role-2"...）、name、description、responsibilities（职责列表）、deliverables（输出物列表）、roleMarkdown（角色行为提示词，Markdown 格式，用 \\n 表示换行）
+  - roleMarkdown 必须填写，内容应包含角色定位、核心职责、输入输出边界、验收标准等，作为该角色的系统提示词使用
+  - 例如讨论了"前端开发"和"后端开发"，就应分别定义"前端开发专家"和"后端开发专家"两个角色，不要合并为"开发工程师"
+  - 同一人可承担多个角色
+- **steps**: 步骤数组，按执行顺序排列
+  - **roleId**: 引用 roles 中的 id
+  - **modelProvider/model/runner**: 从上面列出的可用资源中选取
+  - **gate**: "auto" 或 "manual"
+  - **failureStrategy**: "stop"、"retry"、"skip" 或 "fallback"
+- 所有字符串值必须在一行内，用 \\n 表示换行，不要包含真实的换行符
+- 数组和对象最后一个元素后面不要加逗号（禁止尾部逗号）
 - 不要编造未讨论的内容`;
 
       // 调用 AI 生成
@@ -262,76 +429,435 @@ ${rolesContext}
         const content = result.data.content;
 
         // 尝试 JSON 解析
-        let steps: { name: string; role: string; model: string; gate: string }[] = [];
+        interface DraftRole {
+          id: string;
+          name: string;
+          description: string;
+          responsibilities?: string[];
+          deliverables?: string[];
+          roleMarkdown?: string;
+        }
+        interface DraftStep {
+          name: string;
+          roleId?: string;
+          role?: string; // fallback 旧格式
+          model?: string;
+          modelProvider?: string;
+          runner?: string;
+          gate?: string;
+          inputs?: string[];
+          outputs?: string[];
+          failureStrategy?: string;
+          stepMarkdown?: string;
+        }
+        interface DraftResult {
+          title?: string;
+          summary?: string;
+          workflowMarkdown?: string;
+          roles?: DraftRole[];
+          steps: DraftStep[];
+        }
+        let draftResult: DraftResult | null = null;
+        let steps: DraftStep[] = [];
+        let parsedRoles: DraftRole[] = [];
 
-        const jsonMatch = content.match(/```json\s*([\s\S]*?)```/) ||
-                          content.match(/\{[\s\S]*"steps"[\s\S]*\}/);
-        if (jsonMatch) {
-          try {
-            const jsonStr = jsonMatch[1] || jsonMatch[0];
-            const parsed = JSON.parse(jsonStr);
-            if (Array.isArray(parsed.steps)) {
-              steps = parsed.steps;
+        // 修复 JSON 中字符串值内的非法字符（裸换行、未转义引号、缺失逗号等）
+        const repairJson = (raw: string): string => {
+          // 第一步：逐字符处理，修复字符串内的非法字符
+          let step1 = '';
+          let inStr = false;
+          let esc = false;
+          for (let i = 0; i < raw.length; i++) {
+            const ch = raw[i];
+            if (esc) { step1 += ch; esc = false; continue; }
+            if (ch === '\\' && inStr) { step1 += ch; esc = true; continue; }
+            if (ch === '"') { inStr = !inStr; step1 += ch; continue; }
+            if (inStr) {
+              if (ch === '\n') { step1 += '\\n'; continue; }
+              if (ch === '\r') { continue; }
+              if (ch === '\t') { step1 += '\\t'; continue; }
             }
-          } catch (e) {
-            console.warn('[GenerateDraft] JSON parse failed, trying fallback', e);
+            step1 += ch;
+          }
+
+          // 第二步：逐字符扫描，构建修复后的 JSON
+          let result = '';
+          let inString = false;
+          let escape = false;
+          // 用栈跟踪上下文：当前是否在 object key 位置（{ 或 , 之后期望 key）
+          let expectKey = false;
+          for (let i = 0; i < step1.length; i++) {
+            const ch = step1[i];
+
+            if (escape) { result += ch; escape = false; continue; }
+            if (ch === '\\' && inString) { result += ch; escape = true; continue; }
+            if (ch === '"') {
+              inString = !inString;
+              result += ch;
+              continue;
+            }
+            if (inString) { result += ch; continue; }
+
+            // ---- 非字符串区域 ----
+            // 跳过空白
+            if (ch === ' ' || ch === '\n' || ch === '\r' || ch === '\t') { result += ch; continue; }
+
+            // 遇到 { 或 [ 重置上下文
+            if (ch === '{') { expectKey = true; result += ch; continue; }
+            if (ch === '[') { expectKey = false; result += ch; continue; }
+
+            // 遇到 , 根据上下文判断期望什么
+            if (ch === ',') {
+              // 看前一个非空白字符是否已经是 , 或 { 或 [ （多余逗号）
+              let prevCh = '';
+              for (let j = result.length - 1; j >= 0; j--) {
+                if (result[j] !== ' ' && result[j] !== '\n' && result[j] !== '\r' && result[j] !== '\t') {
+                  prevCh = result[j]; break;
+                }
+              }
+              if (prevCh === ',' || prevCh === '{' || prevCh === '[') {
+                // 多余逗号，跳过
+                continue;
+              }
+              expectKey = false; // comma 后面可能是 key 也可能是 value，先不判断
+              result += ch;
+              continue;
+            }
+
+            // 遇到 } 或 ] — 移除前面的尾部逗号
+            if (ch === '}' || ch === ']') {
+              let j = result.length - 1;
+              while (j >= 0 && (result[j] === ' ' || result[j] === '\n' || result[j] === '\r' || result[j] === '\t')) j--;
+              if (j >= 0 && result[j] === ',') {
+                // 移除逗号和空白
+                while (j >= 0 && (result[j] === ' ' || result[j] === '\n' || result[j] === '\r' || result[j] === '\t' || result[j] === ',')) j--;
+                result = result.substring(0, j + 1);
+              }
+              result += ch;
+              continue;
+            }
+
+            // 遇到 : 标记接下来是 value
+            if (ch === ':') { expectKey = false; result += ch; continue; }
+
+            // 遇到值字符（" { [ 数字 true/false/null）— 检查是否需要补逗号
+            if (ch === '"' || ch === '{' || ch === '[' || ch === '-' || (ch >= '0' && ch <= '9') || ch === 't' || ch === 'f' || ch === 'n') {
+              // 找前一个非空白字符
+              let prevCh = '';
+              for (let j = result.length - 1; j >= 0; j--) {
+                if (result[j] !== ' ' && result[j] !== '\n' && result[j] !== '\r' && result[j] !== '\t') {
+                  prevCh = result[j]; break;
+                }
+              }
+              // 值结束符后面直接跟值，需要补逗号
+              const valueEndChars = ['"', ']', '}', 'e', 'l', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+              if (valueEndChars.includes(prevCh)) {
+                result += ',';
+              }
+              result += ch;
+              continue;
+            }
+
+            result += ch;
+          }
+          return result;
+        };
+
+        // 尝试提取并解析 JSON
+        const extractJson = (text: string): object | null => {
+          const candidates: string[] = [];
+          // 1. code block
+          const codeBlockMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+          if (codeBlockMatch) candidates.push(codeBlockMatch[1]);
+          // 2. raw { ... }
+          const start = text.indexOf('{');
+          const end = text.lastIndexOf('}');
+          if (start !== -1 && end > start) {
+            candidates.push(text.substring(start, end + 1));
+          }
+
+          // 3. 截断修复：如果 JSON 不完整（AI 输出被截断），尝试找到最后一个完整的 step 并闭合
+          const truncationRepair = (raw: string): string | null => {
+            // 找到 steps 数组的起始位置
+            const stepsMatch = raw.match(/"steps"\s*:\s*\[/);
+            if (!stepsMatch) return null;
+            const stepsStart = raw.indexOf(stepsMatch[0]) + stepsMatch[0].length;
+
+            // 从 steps 数组内开始，逐个找完整的 step 对象
+            // 一个完整的 step 以 { 开始，以 } 结束，且内部没有未闭合的括号
+            const steps: string[] = [];
+            let pos = stepsStart;
+            let depth = 0;
+            let stepStart = -1;
+
+            while (pos < raw.length) {
+              const ch = raw[pos];
+              if (ch === '"') {
+                // 跳过字符串
+                pos++;
+                while (pos < raw.length) {
+                  if (raw[pos] === '\\') { pos += 2; continue; }
+                  if (raw[pos] === '"') break;
+                  pos++;
+                }
+                pos++;
+                continue;
+              }
+              if (ch === '{') {
+                if (depth === 0) stepStart = pos;
+                depth++;
+              } else if (ch === '}') {
+                depth--;
+                if (depth === 0 && stepStart >= 0) {
+                  steps.push(raw.substring(stepStart, pos + 1));
+                  stepStart = -1;
+                }
+              }
+              pos++;
+            }
+
+            if (steps.length === 0) return null;
+
+            // 重新构建 JSON：用找到的完整 steps 闭合
+            const prefix = raw.substring(0, stepsStart);
+            const stepsJson = steps.join(',');
+            // 闭合 steps 数组和外层对象（可能还有 roles 数组等）
+            let closing = ']';
+
+            // 检查 roles 是否完整
+            const rolesMatch = raw.match(/"roles"\s*:\s*\[/);
+            if (rolesMatch) {
+              const rolesStart = raw.indexOf(rolesMatch[0]) + rolesMatch[0].length;
+              // 在 steps 之前找到 roles 的内容
+              if (rolesStart < stepsStart) {
+                // roles 在 steps 前面，检查 roles 是否有完整的闭合
+                const rolesSection = raw.substring(rolesStart, stepsStart);
+                if (!rolesSection.includes(']')) {
+                  // roles 未闭合，需要补上
+                  // 找完整的 role 对象
+                  const roleSteps: string[] = [];
+                  let rpos = rolesStart;
+                  let rdepth = 0;
+                  let rstepStart = -1;
+                  while (rpos < stepsStart) {
+                    const rch = raw[rpos];
+                    if (rch === '"') {
+                      rpos++;
+                      while (rpos < stepsStart) {
+                        if (raw[rpos] === '\\') { rpos += 2; continue; }
+                        if (raw[rpos] === '"') break;
+                        rpos++;
+                      }
+                      rpos++;
+                      continue;
+                    }
+                    if (rch === '{') {
+                      if (rdepth === 0) rstepStart = rpos;
+                      rdepth++;
+                    } else if (rch === '}') {
+                      rdepth--;
+                      if (rdepth === 0 && rstepStart >= 0) {
+                        roleSteps.push(raw.substring(rstepStart, rpos + 1));
+                        rstepStart = -1;
+                      }
+                    }
+                    rpos++;
+                  }
+                  if (roleSteps.length > 0) {
+                    // 重建到 roles 部分之前
+                    const rolesPrefixEnd = raw.indexOf(rolesMatch[0]);
+                    const newPrefix = raw.substring(0, rolesPrefixEnd) + rolesMatch[0] + roleSteps.join(',') + '],\n  "steps": [';
+                    return newPrefix + stepsJson + closing + '\n}';
+                  }
+                }
+              }
+            }
+
+            return prefix + stepsJson + closing + '\n}';
+          };
+
+          for (const raw of candidates) {
+            // 尝试多种修复策略，任一成功即返回
+            const tryParse = (json: string): object | null => {
+              try {
+                const parsed = JSON.parse(json);
+                if (parsed && typeof parsed === 'object' && Array.isArray(parsed.steps)) return parsed;
+              } catch (_) {}
+              return null;
+            };
+
+            // 1. 直接解析
+            let result = tryParse(raw);
+            if (result) return result;
+
+            // 2. repairJson 修复
+            result = tryParse(repairJson(raw));
+            if (result) { console.log('[GenerateDraft] JSON repaired (step 2)'); return result; }
+
+            // 3. 暴力正则修复
+            try {
+              let fixed = raw;
+              fixed = fixed.replace(/"(?:[^"\\]|\\.)*"/g, (m) => m.replace(/\n/g, '\\n').replace(/\r/g, '').replace(/\t/g, '\\t'));
+              fixed = fixed.replace(/,\s*([\]}])/g, '$1');
+              fixed = fixed.replace(/(["\d\]])\s*\n\s*(["{\[])/g, '$1,\n$2');
+              fixed = fixed.replace(/([{,])\s*,/g, '$1');
+              result = tryParse(fixed);
+              if (result) { console.log('[GenerateDraft] JSON repaired (step 3)'); return result; }
+            } catch (_) {}
+
+            // 4. 截断修复 — AI 输出被截断时，找到最后一个完整 step 并闭合 JSON
+            const truncated = truncationRepair(raw);
+            if (truncated) {
+              result = tryParse(truncated);
+              if (result) { console.log('[GenerateDraft] JSON repaired (truncation repair)'); return result; }
+              // 截断修复后再走 repairJson
+              result = tryParse(repairJson(truncated));
+              if (result) { console.log('[GenerateDraft] JSON repaired (truncation + repair)'); return result; }
+            }
+
+            console.warn('[GenerateDraft] All repair strategies failed');
+          }
+          return null;
+        };
+
+        const parsed = extractJson(content);
+        if (parsed) {
+          draftResult = parsed as DraftResult;
+          steps = (parsed as DraftResult).steps || [];
+          if (Array.isArray((parsed as DraftResult).roles)) {
+            parsedRoles = (parsed as DraftResult).roles!;
           }
         }
 
-        // Fallback: 旧的 | 分隔符解析
-        if (steps.length === 0) {
-          const lines = content.split("\n").filter((line: string) => line.trim());
-          lines.forEach((line: string) => {
-            const parts = line.split("|").map((p: string) => p.trim());
-            if (parts.length >= 1 && parts[0]) {
-              steps.push({
-                name: parts[0].replace(/^\d+[\.\、\s]*/, "").trim(),
-                role: parts[1] || "待分配",
-                model: parts[2] || "默认模型",
-                gate: parts[3] || "auto",
+        // 如果没有解析到 roles，从 steps 中的 role/roleId 字段自动构建
+        if (parsedRoles.length === 0) {
+          const roleMap = new Map<string, DraftRole>();
+          let roleCounter = 0;
+          steps.forEach(step => {
+            const roleName = step.role || step.roleId || "待分配";
+            if (!roleMap.has(roleName)) {
+              roleCounter++;
+              roleMap.set(roleName, {
+                id: `role-${roleCounter}`,
+                name: roleName,
+                description: `${roleName}相关职责`,
               });
             }
           });
+          parsedRoles = Array.from(roleMap.values());
         }
+
+        // 构建 roleMap 用于查找，并为每个角色生成 roleMarkdown
+        const roleLookup = new Map(parsedRoles.map(r => {
+          // 确保 roleMarkdown 始终有内容
+          if (!r.roleMarkdown) {
+            const parts = [
+              `# ${r.name}`,
+              "",
+              `**描述：** ${r.description}`,
+            ];
+            if (r.responsibilities && r.responsibilities.length > 0) {
+              parts.push("", "## 核心职责", ...r.responsibilities.map(item => `- ${item}`));
+            }
+            if (r.deliverables && r.deliverables.length > 0) {
+              parts.push("", "## 输出物", ...r.deliverables.map(item => `- ${item}`));
+            }
+            r.roleMarkdown = parts.join("\n");
+          }
+          return [r.id, r] as const;
+        }));
 
         // 构建 draftSteps
         const newSteps: WorkflowStep[] = [];
         const newDiffs: { type: "add" | "mod" | "same"; title: string; desc: string }[] = [];
+        const defaultProvider = data.modelProviders.find(p => p.enabled) ?? data.modelProviders[0];
+        const defaultRunnerId = (data.runnerProfiles ?? []).find((r: { enabled: boolean }) => r.enabled)?.id ?? "";
+        const validFailureStrategies = ["stop", "retry", "skip", "fallback"] as const;
 
         steps.forEach((step, index) => {
+          // 过滤掉无效步骤（JSON 片段、空名称、过长名称等）
+          if (!step.name || typeof step.name !== 'string') return;
+          const trimmedName = step.name.trim();
+          if (trimmedName.length < 2 || trimmedName.length > 50) return;
+          // 过滤掉看起来像 JSON 片段的名称
+          if (trimmedName.startsWith('"') || trimmedName.startsWith('{') || trimmedName.startsWith('[') ||
+              trimmedName.includes('```') || trimmedName.includes('undefined')) return;
           if (!step.name) return;
-          const provider = data.modelProviders.find(p => p.enabled) ?? data.modelProviders[0];
+          // 解析 provider
+          const provider = step.modelProvider
+            ? data.modelProviders.find(p => p.id === step.modelProvider) ?? defaultProvider
+            : defaultProvider;
+          const modelLabel = step.model || provider?.defaultModel || "默认模型";
+
+          // 解析 roleId：优先用 AI 返回的 roleId，否则用 role 名匹配
+          let roleId = step.roleId || "";
+          if (!roleId && step.role) {
+            const matched = parsedRoles.find(r => r.name === step.role);
+            roleId = matched ? matched.id : `role-${index + 1}`;
+          }
+          if (!roleId) roleId = `role-${index + 1}`;
+
+          // 解析角色名
+          const roleName = roleLookup.get(roleId)?.name || step.role || "待分配";
+
+          // 解析 failureStrategy
+          const strategy = validFailureStrategies.includes(step.failureStrategy as any)
+            ? (step.failureStrategy as FailureStrategy) : "stop";
+
+          // 生成 stepMarkdown
+          const defaultMarkdown = step.stepMarkdown || [
+            `# ${step.name}`,
+            "",
+            `**执行角色：** ${roleName}`,
+            `**模型：** ${provider?.name ?? "默认"} / ${modelLabel}`,
+            "",
+            "## 输入",
+            ...(step.inputs || (index === 0 ? ["项目目标", "协同资料"] : [`步骤 ${index} 输出`])).map(i => `- ${i}`),
+            "",
+            "## 输出",
+            ...(step.outputs || [`${step.name}结果`]).map(o => `- ${o}`),
+            "",
+            "## 失败策略",
+            strategy === "stop" ? "停止流程" : strategy === "retry" ? "重试当前步骤" : strategy === "skip" ? "跳过步骤" : "回退到前一步",
+          ].join("\n");
 
           newSteps.push({
             id: `ai-draft-step-${index + 1}`,
             order: index + 1,
             name: step.name,
-            roleId: `role-ai-draft-${step.role}`,
+            roleId,
             modelProviderId: provider?.id ?? "",
-            modelName: step.model || "默认模型",
-            inputs: index === 0 ? ["项目目标", "协同资料"] : [`步骤 ${index} 输出`],
-            outputs: [`${step.name}结果`],
+            modelName: modelLabel,
+            inputs: step.inputs || (index === 0 ? ["项目目标", "协同资料"] : [`步骤 ${index} 输出`]),
+            outputs: step.outputs || [`${step.name}结果`],
             gateMode: step.gate === "manual" ? "manual" : "auto",
-            failureStrategy: "stop",
+            failureStrategy: strategy,
+            stepMarkdown: defaultMarkdown,
             projectOverride: false,
+            runnerId: step.runner || defaultRunnerId,
           });
 
           newDiffs.push({
             type: "add",
             title: step.name,
-            desc: `角色: ${step.role}, Gate: ${step.gate}`,
+            desc: `角色: ${roleName}, 模型: ${modelLabel}, Gate: ${step.gate || "auto"}`,
           });
         });
 
         if (newSteps.length > 0) {
           setDraftSteps(newSteps);
+          setDraftRoles(parsedRoles);
           setDiffItems(newDiffs);
           setDraftGenerated(true);
+          setDraftTitle(draftResult?.title || "");
 
-          setChecklistItems(prev => prev.map((item, i) => ({
-            ...item,
-            done: i < 2,
-          })));
+          // 生成 workflowMarkdown
+          const title = draftResult?.title || "AI 生成流程草案";
+          const summary = draftResult?.summary || "";
+          const rolesSection = parsedRoles.length > 0
+            ? "\n\n## 角色分工\n" + parsedRoles.map(r => `- **${r.name}**: ${r.description}`).join("\n")
+            : "";
+          setDraftWorkflowMarkdown(`# ${title}\n\n${summary}${rolesSection}`);
         }
       }
     } catch (error) {
@@ -355,9 +881,6 @@ ${rolesContext}
     mod: diffItems.filter(d => d.type === "mod").length,
     same: diffItems.filter(d => d.type === "same").length,
   };
-
-  // 检查是否所有清单项都完成
-  const allChecksDone = checklistItems.every(item => item.done);
 
   return (
     <div className="awd-inline-content">
@@ -475,15 +998,24 @@ ${rolesContext}
               <p>{draftGenerated ? "基于上下文资料生成的流程草案，已识别关键步骤和角色分配。" : "点击「生成草案」开始分析..."}</p>
             </div>
             <div className="awd-insight-card">
-              <div className="awd-insight-title">♙ 角色建议 <span className="awd-insight-badge">{draftGenerated ? "已分析" : "待分析"}</span></div>
+              <div className="awd-insight-title">♙ 角色建议 <span className="awd-insight-badge">{draftGenerated && draftRoles.length > 0 ? `${draftRoles.length} 个角色` : "待分析"}</span></div>
               <div className="awd-insight-roles">
-                {draftGenerated && draftSteps.length > 0 ? (
-                  draftSteps.map((step, i) => (
-                    <div key={i} className="awd-role-row">
-                      <span className="awd-role-dot" style={{background: ["#4268d9","#7257cc","#2f9b68","#d17e34","#4d78e5"][i % 5]}}>
-                        {getRoleName(step.roleId)[0] || "未"}
-                      </span>
-                      {getRoleName(step.roleId)}
+                {draftGenerated && draftRoles.length > 0 ? (
+                  draftRoles.map((role, i) => (
+                    <div
+                      key={role.id}
+                      className="awd-role-row"
+                      style={{ cursor: "pointer", padding: "4px 6px", borderRadius: 4, transition: "background 0.15s" }}
+                      onClick={() => setViewingRole(role)}
+                      onMouseEnter={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.05)"}
+                      onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <span className="awd-role-dot" style={{background: ["#4268d9","#7257cc","#2f9b68","#d17e34","#4d78e5","#9b4dca","#d94f4f"][i % 7]}}>
+                          {role.name[0] || "未"}
+                        </span>
+                        <strong style={{ color: "#dce7f4", fontSize: 12 }}>{role.name}</strong>
+                      </div>
                     </div>
                   ))
                 ) : (
@@ -515,67 +1047,114 @@ ${rolesContext}
             </div>
           </div>
           <div className="awd-canvas-card">
-            <div className="awd-canvas-head">
-              <div className="awd-draft-title">
-                <span>流程草案</span>
-                {draftGenerated && <span className="awd-mini-tag">草案</span>}
-              </div>
-            </div>
-            <div className="awd-canvas">
-              {draftSteps.length === 0 ? (
-                <div className="awd-empty-canvas">
-                  <div className="awd-empty-icon">📋</div>
-                  <p>{draftGenerated ? "草案已生成，暂无步骤" : "点击「生成草案」开始"}</p>
-                  {!draftGenerated && <p className="awd-empty-hint">AI 将根据上下文自动生成流程步骤</p>}
+            {/* 固定顶部工具栏 */}
+            <div className="awd-canvas-toolbar-fixed">
+              <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div className="awd-canvas-toolbar-group">
+                  <button className="awd-zoom-btn" title="缩小" onClick={() => setCanvasScale(s => Math.max(ZOOM_MIN, s - ZOOM_STEP))}>−</button>
+                  <span className="awd-zoom-pct">{Math.round(canvasScale * 100)}%</span>
+                  <button className="awd-zoom-btn" title="放大" onClick={() => setCanvasScale(s => Math.min(ZOOM_MAX, s + ZOOM_STEP))}>+</button>
+                  <button className="awd-zoom-btn" title="重置视图" onClick={resetCanvasView}>⊞</button>
                 </div>
-              ) : (
-                draftSteps.map((step, i) => {
-                  const stateClass = i === 0 ? "active" : "idle";
-                  const roleName = getRoleName(step.roleId);
-                  return (
-                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 0 }}>
-                      <div
-                        id={`awd-node-${i}`}
-                        className={`awd-node-v2 ${stateClass}`}
-                        onClick={() => setSelectedDraftIndex(i)}
-                        onDoubleClick={() => setEditingDraftStepId(step.id)}
-                        title="双击编辑步骤"
-                      >
-                        <div className="awd-node-v2-hd">
-                          <span className="awd-node-v2-no">{String(i + 1).padStart(2, "0")}</span>
-                          <span className="awd-node-v2-name">{step.name}</span>
-                        </div>
-                        <div className="awd-node-v2-body">
-                          <div className="awd-node-v2-row">
-                            <div className={`awd-node-v2-avatar ${stateClass}`}>{roleName[0] ?? "未"}</div>
-                            <div>
-                              <div className="awd-node-v2-label">角色</div>
-                              <div className="awd-node-v2-val">{roleName}</div>
-                            </div>
-                          </div>
-                          <div className="awd-node-v2-row">
-                            <span className={`awd-node-v2-dot ${stateClass}`} />
-                            <div>
-                              <div className="awd-node-v2-label">模型</div>
-                              <div className="awd-node-v2-val">{step.modelName || "—"}</div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      {i < draftSteps.length - 1 && <span className="awd-node-arrow"><ArrowRight size={16} /></span>}
-                    </div>
-                  );
-                })
-              )}
-            </div>
-            <div className="awd-canvas-footer">
-              <div className="awd-legend">
-                <span><span className="awd-legend-dot done" />已完成</span>
-                <span><span className="awd-legend-dot active" />运行中</span>
-                <span><span className="awd-legend-dot wait" />等待 Gate</span>
-                <span><span className="awd-legend-dot idle" />待开始</span>
+                <div className="awd-toolbar-sep" />
+                <button className="awd-toolbar-action-btn" title="新增步骤" onClick={() => {
+                  const newStep: WorkflowStep = { id: `step-new-${Date.now()}`, order: draftSteps.length + 1, name: '新步骤', roleId: '', modelProviderId: '', modelName: '', inputs: [], outputs: [], gateMode: 'auto', failureStrategy: 'retry', stepMarkdown: '', projectOverride: false };
+                  setDraftSteps(prev => [...prev, newStep]);
+                }}>
+                  <Plus size={13} /> 新增步骤
+                </button>
+                <button className="awd-toolbar-action-btn" title="对齐">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 6h16M4 12h16M4 18h7"/></svg> 对齐
+                </button>
+                <button className="awd-toolbar-action-btn" title="版本管理" onClick={() => { saveVersion(); setShowVersionPanel(!showVersionPanel); }}>
+                  <History size={13} /> 版本管理
+                </button>
               </div>
-              <span>{draftSteps.length} 个步骤</span>
+            </div>
+            {/* 画布区域 */}
+            <div
+              className={`awd-canvas${isDragging ? " dragging" : ""}`}
+              ref={canvasRef}
+              style={{ position: 'relative', cursor: isDragging ? 'grabbing' : 'grab' }}
+              onMouseDown={handleCanvasMouseDown}
+              onMouseMove={handleCanvasMouseMove}
+              onMouseUp={handleCanvasMouseUp}
+              onMouseLeave={handleCanvasMouseUp}
+              onWheel={handleWheel}
+            >
+              {/* 节点内容区 */}
+              <div className="awd-canvas-transform" style={{ transform: `translate(${canvasOffset.x}px, ${canvasOffset.y}px) scale(${canvasScale})`, transformOrigin: 'center center', transition: isDragging ? 'none' : 'transform 0.1s ease', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0, padding: '24px', minWidth: 'fit-content', minHeight: '100%' }}>
+                {draftSteps.length === 0 ? (
+                  <div className="awd-empty-canvas">
+                    <div className="awd-empty-icon">📋</div>
+                    <p>{draftGenerated ? "草案已生成，暂无步骤" : "点击「生成草案」开始"}</p>
+                    {!draftGenerated && <p className="awd-empty-hint">AI 将根据上下文自动生成流程步骤</p>}
+                  </div>
+                ) : (
+                  draftSteps.map((step, i) => {
+                    const stateClass = i === 0 ? "active" : "idle";
+                    const roleName = getRoleName(step.roleId);
+                    return (
+                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 0, flexShrink: 0 }}>
+                        <div
+                          id={`awd-node-${i}`}
+                          className={`awd-node-v2 ${stateClass}${i === selectedDraftIndex ? ' selected' : ''}`}
+                          onClick={() => setSelectedDraftIndex(i)}
+                          onDoubleClick={() => setEditingDraftStepId(step.id)}
+                          title="双击编辑步骤"
+                        >
+                          <button className="awd-node-v2-delete" title="删除此步骤" onClick={(e) => {
+                            e.stopPropagation();
+                            setDraftSteps(prev => prev.filter((_, idx) => idx !== i));
+                            setSelectedDraftIndex(prev => Math.max(0, Math.min(prev, draftSteps.length - 2)));
+                          }}>
+                            <Trash2 size={11} />
+                          </button>
+                          <div className="awd-node-v2-hd">
+                            <span className="awd-node-v2-no">{String(i + 1).padStart(2, "0")}</span>
+                            <span className="awd-node-v2-name">{step.name}</span>
+                          </div>
+                          <div className="awd-node-v2-body">
+                            <div className="awd-node-v2-row">
+                              <div className={`awd-node-v2-avatar ${stateClass}`}>{roleName[0] ?? "未"}</div>
+                              <div>
+                                <div className="awd-node-v2-label">角色</div>
+                                <div className="awd-node-v2-val">{roleName}</div>
+                              </div>
+                            </div>
+                            <div className="awd-node-v2-row">
+                              <span className={`awd-node-v2-dot ${stateClass}`} />
+                              <div>
+                                <div className="awd-node-v2-label">模型</div>
+                                <div className="awd-node-v2-val">{step.modelName || "—"}</div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        {i < draftSteps.length - 1 && <span className="awd-node-arrow" style={{ flexShrink: 0 }}><ArrowRight size={16} /></span>}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+              {/* 右下角缩略图 */}
+              <div className="awd-minimap">
+                <div style={{ display: 'flex', gap: 3, alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                  {draftSteps.map((_, i) => (
+                    <div key={i} style={{ width: 16, height: 12, background: i === 0 ? '#4268d9' : '#21262d', borderRadius: 2, border: i === selectedDraftIndex ? '1px solid #58a6ff' : '1px solid #30363d' }} />
+                  ))}
+                </div>
+              </div>
+              {/* 底部状态栏 */}
+              <div className="awd-canvas-statusbar">
+                <div className="awd-legend">
+                  <span><span className="awd-legend-dot done" />已完成</span>
+                  <span><span className="awd-legend-dot active" />运行中</span>
+                  <span><span className="awd-legend-dot wait" />等待 Gate</span>
+                  <span><span className="awd-legend-dot idle" />待开始</span>
+                </div>
+                <span>{draftSteps.length} 个步骤</span>
+              </div>
             </div>
           </div>
         </section>
@@ -611,36 +1190,134 @@ ${rolesContext}
             )}
           </div>
           <div className="awd-checklist">
-            <h3>应用前确认</h3>
-            {checklistItems.map((item, i) => (
-              <div
-                key={i}
-                className="awd-check-row"
-                onClick={() => setChecklistItems(prev => prev.map((c, idx) => idx === i ? { ...c, done: !c.done } : c))}
-                style={{ cursor: "pointer" }}
-              >
-                <div className={`awd-check-box${item.done ? " done" : ""}`}>
-                  {item.done && <Check size={10} />}
+            <h3>流程校验</h3>
+            {validationResults ? (
+              validationResults.map((item, i) => (
+                <div key={i}>
+                  <div className="awd-check-row" style={{ cursor: "default" }}>
+                    <div className={`awd-check-box${item.done ? " done" : ""}`} style={item.done ? {} : { borderColor: "#f3ad3f", background: "rgba(243,173,63,0.12)" }}>
+                      {item.done ? <Check size={10} /> : <span style={{ fontSize: 10, color: "#f3ad3f" }}>✗</span>}
+                    </div>
+                    <span style={{ color: item.done ? "#c1cddd" : "#f3ad3f" }}>{item.label}</span>
+                  </div>
+                  {item.issues.length > 0 && (
+                    <div style={{ paddingLeft: 22, paddingBottom: 4 }}>
+                      {item.issues.map((issue, j) => (
+                        <div key={j} style={{ fontSize: 10, color: "#8d9bb0", lineHeight: 1.4 }}>· {issue}</div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <span>{item.label}</span>
-              </div>
-            ))}
+              ))
+            ) : (
+              <p className="awd-empty-hint">生成草案后自动校验</p>
+            )}
           </div>
+          {showVersionPanel && (
+            <div className="awd-checklist" style={{ borderTop: "1px solid #1e3a5f" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <h3 style={{ margin: 0 }}>版本历史</h3>
+                <button
+                  className="awd-btn awd-btn-apply"
+                  style={{ fontSize: 10, padding: "2px 8px", height: 22 }}
+                  onClick={() => saveVersion()}
+                >
+                  <Plus size={10} /> 保存快照
+                </button>
+              </div>
+              {draftVersions.length === 0 ? (
+                <p className="awd-empty-hint">暂无保存的版本</p>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 4, maxHeight: 180, overflowY: "auto" }}>
+                  {[...draftVersions].reverse().map((v, i) => {
+                    const isCurrent = i === 0;
+                    return (
+                      <div
+                        key={v.version}
+                        style={{
+                          display: "flex", alignItems: "center", gap: 8, padding: "6px 8px",
+                          borderRadius: 6, border: isCurrent ? "1px solid #2d6a4f" : "1px solid #1e3a5f",
+                          background: isCurrent ? "rgba(45,106,79,0.12)" : "transparent",
+                        }}
+                      >
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <span style={{ fontSize: 11, color: "#c1cddd", fontWeight: 600 }}>v{v.version}</span>
+                            <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 4, background: v.label === "draft" ? "#1e3a5f" : "#2d5a3f", color: "#8fc" }}>
+                              {v.label}
+                            </span>
+                            {isCurrent && <span style={{ fontSize: 9, color: "#4caf50" }}>当前</span>}
+                          </div>
+                          <div style={{ fontSize: 9, color: "#6b7d95", marginTop: 2 }}>
+                            {v.steps.length} 步骤 · {v.roles.length} 角色 · {new Date(v.savedAt).toLocaleString("zh-CN")}
+                          </div>
+                        </div>
+                        {!isCurrent && (
+                          <button
+                            style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, border: "1px solid #f3ad3f", background: "transparent", color: "#f3ad3f", cursor: "pointer", whiteSpace: "nowrap" }}
+                            onClick={() => { if (confirm(`恢复到 v${v.version}？当前未保存的更改将丢失。`)) rollbackVersion(v); }}
+                          >
+                            恢复
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
           <div className="awd-diff-actions">
-            <button
-              className="awd-btn awd-btn-apply"
-              disabled={!draftGenerated || diffItems.length === 0 || !allChecksDone}
-              onClick={() => onApply(draftSteps)}
-            >
-              <Check size={14} /> 确认并应用
-            </button>
-            <button
-              className="awd-btn awd-btn-cancel"
-              disabled={!draftGenerated}
-              onClick={onDiscard}
-            >
-              放弃草案
-            </button>
+            {showSaveDialog ? (
+              <div style={{ display: "flex", gap: 6, width: "100%", alignItems: "center" }}>
+                <input
+                  type="text"
+                  value={saveName}
+                  onChange={(e) => setSaveName(e.target.value)}
+                  placeholder="输入流程名称..."
+                  style={{ flex: 1, height: 36, padding: "0 10px", border: "1px solid #315992", borderRadius: 6, background: "#0b141f", color: "#dce7f4", fontSize: 12, outline: "none", fontFamily: "inherit" }}
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && saveName.trim()) {
+                      onApply(saveName.trim(), draftSteps, draftRoles);
+                    }
+                  }}
+                />
+                <button
+                  className="awd-btn awd-btn-apply"
+                  disabled={!saveName.trim()}
+                  onClick={() => onApply(saveName.trim(), draftSteps, draftRoles)}
+                >
+                  <Check size={14} /> 保存
+                </button>
+                <button
+                  className="awd-btn awd-btn-cancel"
+                  onClick={() => setShowSaveDialog(false)}
+                >
+                  取消
+                </button>
+              </div>
+            ) : (
+              <>
+                <button
+                  className="awd-btn awd-btn-apply"
+                  disabled={!draftGenerated || diffItems.length === 0 || !allChecksDone}
+                  onClick={() => {
+                    setSaveName(draftTitle || `流程草案 ${new Date().toLocaleDateString("zh-CN")}`);
+                    setShowSaveDialog(true);
+                  }}
+                >
+                  <Check size={14} /> 确认并应用
+                </button>
+                <button
+                  className="awd-btn awd-btn-cancel"
+                  disabled={!draftGenerated}
+                  onClick={onDiscard}
+                >
+                  放弃草案
+                </button>
+              </>
+            )}
           </div>
         </section>
       </div>
@@ -649,7 +1326,7 @@ ${rolesContext}
           step={editingDraftStep}
           template={draftTemplate}
           data={data}
-          availableRoles={data.roles}
+          flowRoles={draftRoles}
           onSave={(updates) => {
             setDraftSteps((steps) => steps.map((step) => step.id === editingDraftStep.id ? { ...step, ...updates } : step));
             setEditingDraftStepId(null);
@@ -661,6 +1338,99 @@ ${rolesContext}
           }}
           onClose={() => setEditingDraftStepId(null)}
         />
+      )}
+
+      {/* 角色详情弹窗 */}
+      {viewingRole && (
+        <div
+          className="wf-role-modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setViewingRole(null)}
+        >
+          <div
+            className="wf-role-modal"
+            style={{ maxWidth: 480 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="wf-role-modal-header">
+              <div>
+                <h2 id="wf-role-modal-title" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span className="awd-role-dot" style={{
+                    background: ["#4268d9","#7257cc","#2f9b68","#d17e34","#4d78e5","#9b4dca","#d94f4f"][draftRoles.findIndex(r => r.id === viewingRole.id) % 7],
+                    width: 24,
+                    height: 24,
+                    fontSize: 12
+                  }}>
+                    {viewingRole.name[0] || "未"}
+                  </span>
+                  {viewingRole.name}
+                </h2>
+                <p style={{ color: "#8d9bb0", marginTop: 4 }}>{viewingRole.description}</p>
+              </div>
+              <button
+                className="wf-modal-close"
+                onClick={() => setViewingRole(null)}
+                style={{ background: "none", border: "none", color: "#8d9bb0", cursor: "pointer", fontSize: 18 }}
+              >
+                ✕
+              </button>
+            </div>
+            <div className="wf-role-modal-body" style={{ padding: 16 }}>
+              {viewingRole.responsibilities && viewingRole.responsibilities.length > 0 && (
+                <div style={{ marginBottom: 12 }}>
+                  <h3 style={{ fontSize: 12, color: "#c1cddd", marginBottom: 6 }}>职责范围</h3>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                    {viewingRole.responsibilities.map((r, i) => (
+                      <span key={i} style={{
+                        fontSize: 11,
+                        padding: "3px 8px",
+                        border: "1px solid #2d6a4f",
+                        borderRadius: 4,
+                        color: "#8fc",
+                        background: "rgba(45,106,79,0.12)"
+                      }}>{r}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {viewingRole.deliverables && viewingRole.deliverables.length > 0 && (
+                <div style={{ marginBottom: 12 }}>
+                  <h3 style={{ fontSize: 12, color: "#c1cddd", marginBottom: 6 }}>交付物</h3>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                    {viewingRole.deliverables.map((d, i) => (
+                      <span key={i} style={{
+                        fontSize: 11,
+                        padding: "3px 8px",
+                        border: "1px solid #315992",
+                        borderRadius: 4,
+                        color: "#dce7f4",
+                        background: "rgba(49,89,146,0.12)"
+                      }}>{d}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {viewingRole.roleMarkdown && (
+                <div style={{ marginTop: 12 }}>
+                  <h3 style={{ fontSize: 12, color: "#c1cddd", marginBottom: 6 }}>详细定义</h3>
+                  <div style={{
+                    fontSize: 11,
+                    lineHeight: 1.6,
+                    color: "#8d9bb0",
+                    whiteSpace: "pre-wrap",
+                    background: "rgba(17,26,37,0.62)",
+                    padding: 10,
+                    borderRadius: 6,
+                    border: "1px solid #1e3a5f"
+                  }}>
+                    {viewingRole.roleMarkdown}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -676,6 +1446,7 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
     addWorkflowStep,
     updateWorkflowStep,
     deleteWorkflowStep,
+    addRolesBatch,
   } = useWorkbenchState();
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>(initialTemplateId ?? data.workflowTemplates[0]?.id ?? "");
   const [selectedStepIndex, setSelectedStepIndex] = useState<number | null>(null);
@@ -684,6 +1455,7 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
   const [roleDraft, setRoleDraft] = useState({ name: "", description: "", roleMarkdown: "" });
   const [pendingTemplateName, setPendingTemplateName] = useState<string | null>(null);
   const [pendingRoleName, setPendingRoleName] = useState<string | null>(null);
+  const [renamingTemplateId, setRenamingTemplateId] = useState<string | null>(null);
   const [templateRoleIds, setTemplateRoleIds] = useState<Record<string, string[]>>({});
   const closeStepInspector = () => setSelectedStepIndex(null);
   const selectedTemplate = useMemo(
@@ -705,6 +1477,65 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
   const [aiChatMessages, setAiChatMessages] = useState<{ id: number; author: string; text: string; isUser: boolean; time: string }[]>([]);
   const [aiMaterials, setAiMaterials] = useState<{ name: string; ext: string }[]>([]);
   const [aiDraftSteps, setAiDraftSteps] = useState<WorkflowStep[]>([]);
+
+  // 版本管理（常规模式）
+  const [templateVersions, setTemplateVersions] = useState<{
+    version: number;
+    label: string;
+    savedAt: string;
+    templateId: string;
+    steps: WorkflowStep[];
+    templateName: string;
+  }[]>([]);
+  const [showTemplateVersionPanel, setShowTemplateVersionPanel] = useState(false);
+
+  const saveTemplateVersion = () => {
+    if (!selectedTemplate) return;
+    setTemplateVersions(prev => [...prev, {
+      version: prev.filter(v => v.templateId === selectedTemplate.id).length + 1,
+      label: `v${(prev.filter(v => v.templateId === selectedTemplate.id).length + 1)}`,
+      savedAt: new Date().toISOString(),
+      templateId: selectedTemplate.id,
+      steps: JSON.parse(JSON.stringify(sortedSteps)),
+      templateName: selectedTemplate.name,
+    }]);
+  };
+
+  const rollbackTemplateVersion = (v: typeof templateVersions[number]) => {
+    if (!selectedTemplate) return;
+    // 恢复步骤到快照状态
+    v.steps.forEach((step, i) => {
+      updateWorkflowStep(selectedTemplate.id, step.id, { ...step, order: i + 1 });
+    });
+    setShowTemplateVersionPanel(false);
+  };
+
+  // 画布缩放和平移
+  const [canvasScale, setCanvasScale] = useState(1);
+  const ZOOM_STEP = 0.1;
+  const ZOOM_MIN = 0.3;
+  const ZOOM_MAX = 2;
+  const [canvasOffset, setCanvasOffset] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const handleCanvasMouseDown = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest('.wf-v2-node, .wf-v2-insert-step, .wf-v2-node-delete')) return;
+    setIsDragging(true);
+    setDragStart({ x: e.clientX - canvasOffset.x, y: e.clientY - canvasOffset.y });
+  };
+  const handleCanvasMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging) return;
+    setCanvasOffset({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
+  };
+  const handleCanvasMouseUp = () => setIsDragging(false);
+  const handleWheel = (e: React.WheelEvent) => {
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
+      setCanvasScale(s => Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, +(s + delta).toFixed(1))));
+    }
+  };
+  const resetCanvasView = () => { setCanvasScale(1); setCanvasOffset({ x: 0, y: 0 }); };
 
   // Sync mode to URL search params (for refresh persistence)
   useEffect(() => {
@@ -841,8 +1672,9 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
 
   const handleDeleteTemplate = (templateId: string) => {
     const template = data.workflowTemplates.find((item) => item.id === templateId);
-    const current = template?.status ?? (data.workflowTemplates[0]?.id === templateId ? "enabled" : "draft");
-    if (current === "enabled") return;
+    if (!template) return;
+    const current = template.status ?? (data.workflowTemplates[0]?.id === templateId ? "enabled" : "draft");
+    if (current === "enabled" && !confirm(`「${template.name}」是正式流程，确认删除？`)) return;
     const nextTemplate = data.workflowTemplates.find((item) => item.id !== templateId);
     if (selectedTemplateId === templateId) {
       setSelectedTemplateId(nextTemplate?.id ?? "");
@@ -917,11 +1749,26 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
             </div>
           </nav>
           <span className="wf-v2-version-badge">
-            <span className="wf-v2-version-dot" /> v1.3 · 草稿有变更
+            <span className="wf-v2-version-dot" /> {selectedTemplate ? `v${selectedTemplate.version} · ${templateStatusText}` : "v1.0"}
+            {templateVersions.filter(v => v.templateId === selectedTemplateId).length > 0 && ` · ${templateVersions.filter(v => v.templateId === selectedTemplateId).length} 个快照`}
           </span>
         </div>
         <div className="wf-v2-topbar-right">
-          {selectedTemplate && (
+          {selectedTemplate && templateStatus === "draft" && (
+            <button
+              className="wf-v2-btn wf-v2-btn-start"
+              type="button"
+              onClick={() => {
+                if (confirm(`确认将「${selectedTemplate.name}」发布为正式流程？`)) {
+                  updateWorkflowTemplate?.(selectedTemplate.id, { status: "enabled" });
+                }
+              }}
+              title="将草稿流程发布为正式流程"
+            >
+              <Check size={14} /> 发布为正式
+            </button>
+          )}
+          {selectedTemplate && templateStatus !== "draft" && (
             <button
               className={`wf-v2-btn ${templateEnabled ? "wf-v2-btn-stop" : "wf-v2-btn-start"}`}
               type="button"
@@ -938,8 +1785,27 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
               返回流程管理
             </button>
           )}
-          <button className="wf-v2-btn">✓ 校验流程</button>
-          <button className="wf-v2-btn wf-v2-btn-primary" disabled={mode === "manual" && templateEnabled}>保存流程</button>
+          <button className="wf-v2-btn" onClick={() => {
+            if (!selectedTemplate || mode === "ai") return;
+            const issues: string[] = [];
+            if (sortedSteps.length === 0) issues.push("流程没有任何步骤");
+            sortedSteps.forEach((s, i) => {
+              if (!s.name?.trim()) issues.push(`步骤 ${i + 1} 缺少名称`);
+              if (!s.roleId) issues.push(`步骤 ${i + 1}「${s.name}」未绑定角色`);
+              if (!s.modelProviderId || !s.modelName) issues.push(`步骤 ${i + 1}「${s.name}」未配置模型`);
+              if (!s.runnerId) issues.push(`步骤 ${i + 1}「${s.name}」未配置 Runner`);
+            });
+            if (issues.length === 0) alert(`✓ 校验通过\n「${selectedTemplate.name}」共 ${sortedSteps.length} 个步骤，全部校验通过。`);
+            else alert(`⚠ 校验发现 ${issues.length} 个问题：\n\n${issues.join('\n')}`);
+          }}>✓ 校验流程</button>
+          <button className="wf-v2-btn wf-v2-btn-primary" disabled={mode === "manual" && templateEnabled} onClick={() => {
+            if (!selectedTemplate) return;
+            updateWorkflowTemplate?.(selectedTemplate.id, {
+              steps: sortedSteps,
+              updatedAt: new Date().toISOString(),
+            });
+            alert(`已保存「${selectedTemplate.name}」`);
+          }}>保存流程</button>
           <button className="wf-v2-btn-icon">⋮</button>
         </div>
       </header>
@@ -951,9 +1817,11 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
           <p className="wf-v2-subtitle">{mode === "manual" ? "手动维护成熟流程模板，绑定角色、执行器、模型和能力授权" : "AI 解析需求，生成草案及建议"}</p>
         </div>
         <div className="wf-v2-version-info">
-          <span>当前版本 v1.3</span>
+          <span>当前版本 {selectedTemplate ? `v${selectedTemplate.version}` : "—"}</span>
           {selectedTemplate && mode === "manual" && <span className={`wf-v2-status-badge ${templateStatusColor}`}>{templateStatusText}</span>}
-          <span><span className="wf-v2-status-dot orange" /> 草稿有变更</span>
+          {templateVersions.filter(v => v.templateId === selectedTemplateId).length > 0 && (
+            <span><span className="wf-v2-status-dot" style={{ background: "#4caf50" }} /> {templateVersions.filter(v => v.templateId === selectedTemplateId).length} 个版本快照</span>
+          )}
         </div>
       </div>
 
@@ -993,7 +1861,44 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
                   tabIndex={0}
                 >
                   <div className="wf-v2-template-card-header">
-                    <span>{t.name}</span>
+                    {renamingTemplateId === t.id ? (
+                      <input
+                        type="text"
+                        defaultValue={t.name}
+                        autoFocus
+                        style={{ flex: 1, height: 22, padding: "0 4px", border: "1px solid #5b82ff", borderRadius: 4, background: "#0b141f", color: "#dce7f4", fontSize: 12, outline: "none", fontFamily: "inherit" }}
+                        onClick={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            const newName = (e.target as HTMLInputElement).value.trim();
+                            if (newName && t.id !== "blank-template") {
+                              updateWorkflowTemplate?.(t.id, { name: newName });
+                            }
+                            setRenamingTemplateId(null);
+                          }
+                          if (e.key === "Escape") setRenamingTemplateId(null);
+                        }}
+                        onBlur={(e) => {
+                          const newName = e.target.value.trim();
+                          if (newName && t.id !== "blank-template" && newName !== t.name) {
+                            updateWorkflowTemplate?.(t.id, { name: newName });
+                          }
+                          setRenamingTemplateId(null);
+                        }}
+                      />
+                    ) : (
+                      <span
+                        onDoubleClick={(e) => {
+                          if (t.dashed) return;
+                          e.stopPropagation();
+                          setRenamingTemplateId(t.id);
+                        }}
+                        title="双击修改名称"
+                        style={{ cursor: t.dashed ? "default" : "text" }}
+                      >
+                        {t.name}
+                      </span>
+                    )}
                     <div className="wf-v2-template-card-actions">
                       {!t.dashed && (
                         <>
@@ -1011,7 +1916,7 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
                             }}
                             title="删除流程模板"
                             aria-label={`删除流程模板 ${t.name}`}
-                            disabled={t.status !== "草稿"}
+                            disabled={false}
                             type="button"
                           >
                             <Trash2 size={12} />
@@ -1089,8 +1994,8 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
                 <p>拖拽步骤卡片进行排序，点击节点进行配置</p>
               </div>
               <div className="wf-v2-canvas-toolbar-actions">
-                <div className="awd-canvas-zoom-ctrl" style={{ position: "static" }}>
-                  <button className="awd-zoom-btn" title="缩小" onClick={() => setCanvasScale(s => Math.max(ZOOM_MIN, s - ZOOM_STEP))}>−</button><span className="awd-zoom-pct">{Math.round(canvasScale * 100)}%</span><button className="awd-zoom-btn" title="放大" onClick={() => setCanvasScale(s => Math.min(ZOOM_MAX, s + ZOOM_STEP))}>+</button><button className="awd-zoom-btn" title="适应画布" onClick={() => setCanvasScale(1)}>⊞</button>
+                <div className="awd-canvas-zoom-ctrl" style={{ position: "relative", top: "auto", right: "auto" }}>
+                  <button className="awd-zoom-btn" title="缩小" onClick={() => setCanvasScale(s => Math.max(ZOOM_MIN, s - ZOOM_STEP))}>−</button><span className="awd-zoom-pct">{Math.round(canvasScale * 100)}%</span><button className="awd-zoom-btn" title="放大" onClick={() => setCanvasScale(s => Math.min(ZOOM_MAX, s + ZOOM_STEP))}>+</button><button className="awd-zoom-btn" title="重置视图" onClick={resetCanvasView}>⊞</button>
                   <span className="awd-toolbar-sep" />
                   <button
                     className="awd-zoom-btn"
@@ -1102,14 +2007,21 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
                     <Plus size={12} /> 新增步骤
                   </button>
                   <button className="awd-zoom-btn" style={{width:"auto",padding:"0 8px",gap:4}}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 6h16M4 12h16M4 18h7"/></svg>对齐</button>
-                  <button className="awd-zoom-btn" style={{width:"auto",padding:"0 8px",gap:4}}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>版本管理</button>
+                  <button className="awd-zoom-btn" style={{width:"auto",padding:"0 8px",gap:4}} onClick={() => setShowTemplateVersionPanel(!showTemplateVersionPanel)} title="版本管理"><History size={13} /> 版本管理</button>
                 </div>
               </div>
             </div>
-            <div className="wf-v2-canvas-area">
+            <div
+              className={`wf-v2-canvas-area${isDragging ? " dragging" : ""}`}
+              onMouseDown={handleCanvasMouseDown}
+              onMouseMove={handleCanvasMouseMove}
+              onMouseUp={handleCanvasMouseUp}
+              onMouseLeave={handleCanvasMouseUp}
+              onWheel={handleWheel}
+            >
                 {selectedTemplate ? (
                   <>
-                    <div className="wf-v2-node-track" style={{ transform: `scale(${canvasScale})`, transformOrigin: 'top left' }}>
+                    <div className="wf-v2-node-track" style={{ transform: `translate(${canvasOffset.x}px, ${canvasOffset.y}px) scale(${canvasScale})`, transformOrigin: 'top left', transition: isDragging ? 'none' : 'transform 0.1s ease' }}>
                       {sortedSteps.map((step, i) => {
                         const role = data.roles.find(r => r.id === step.roleId) ?? null;
                         const runnerProfile = data.runnerProfiles?.find(r => r.id === step.runnerId) ?? null;
@@ -1202,7 +2114,61 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
       </div>
       )}
 
-      {/* ===== AI MODE: AI Workflow Design Panels ===== */}
+      {/* ===== VERSION PANEL (Manual Mode) ===== */}
+      {mode === "manual" && showTemplateVersionPanel && selectedTemplate && (
+        <div style={{
+          position: "fixed", right: 16, bottom: 60, width: 320,
+          background: "#0d1b2a", border: "1px solid #1e3a5f", borderRadius: 10,
+          boxShadow: "0 8px 32px rgba(0,0,0,0.5)", zIndex: 100, overflow: "hidden",
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", borderBottom: "1px solid #1e3a5f" }}>
+            <h3 style={{ margin: 0, fontSize: 13, color: "#c1cddd" }}>版本历史 · {selectedTemplate.name}</h3>
+            <div style={{ display: "flex", gap: 6 }}>
+              <button
+                style={{ fontSize: 10, padding: "3px 8px", borderRadius: 4, border: "1px solid #2d6a4f", background: "transparent", color: "#8fc", cursor: "pointer" }}
+                onClick={saveTemplateVersion}
+              >
+                <Plus size={10} /> 保存快照
+              </button>
+              <button style={{ background: "none", border: "none", color: "#8d9bb0", cursor: "pointer", fontSize: 14 }} onClick={() => setShowTemplateVersionPanel(false)}>✕</button>
+            </div>
+          </div>
+          <div style={{ maxHeight: 280, overflowY: "auto", padding: 8 }}>
+            {templateVersions.filter(v => v.templateId === selectedTemplate.id).length === 0 ? (
+              <p style={{ fontSize: 11, color: "#6b7d95", textAlign: "center", padding: 20 }}>暂无保存的版本，点击「保存快照」创建</p>
+            ) : (
+              [...templateVersions.filter(v => v.templateId === selectedTemplate.id)].reverse().map((v, i) => {
+                const isCurrent = i === 0;
+                return (
+                  <div key={v.version} style={{
+                    display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", marginBottom: 4,
+                    borderRadius: 6, border: isCurrent ? "1px solid #2d6a4f" : "1px solid #1e3a5f",
+                    background: isCurrent ? "rgba(45,106,79,0.12)" : "transparent",
+                  }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <span style={{ fontSize: 12, color: "#c1cddd", fontWeight: 600 }}>{v.label}</span>
+                        {isCurrent && <span style={{ fontSize: 9, color: "#4caf50" }}>当前</span>}
+                      </div>
+                      <div style={{ fontSize: 10, color: "#6b7d95", marginTop: 2 }}>
+                        {v.steps.length} 步骤 · {new Date(v.savedAt).toLocaleString("zh-CN")}
+                      </div>
+                    </div>
+                    {!isCurrent && (
+                      <button
+                        style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, border: "1px solid #f3ad3f", background: "transparent", color: "#f3ad3f", cursor: "pointer", whiteSpace: "nowrap" }}
+                        onClick={() => { if (confirm(`恢复到 ${v.label}？当前未保存的更改将丢失。`)) rollbackTemplateVersion(v); }}
+                      >
+                        恢复
+                      </button>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
       {mode === "ai" && (
         <AiWorkflowDesignInline
           data={data}
@@ -1212,16 +2178,39 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
           setMaterials={setAiMaterials}
           draftSteps={aiDraftSteps}
           setDraftSteps={setAiDraftSteps}
-          onApply={(steps) => {
-            // 将草案步骤写入一个新的流程模板
-            const templateName = `AI 生成流程 ${data.workflowTemplates.length + 1}`;
-            addWorkflowTemplate({
-              name: templateName,
+          onApply={async (name, steps, roles) => {
+            // 先保存角色到全局角色池
+            if (roles.length > 0 && addRolesBatch) {
+              const savedRoles = await addRolesBatch(roles.map(r => ({
+                id: r.id,
+                projectId: null,
+                name: r.name,
+                description: r.description,
+                roleMarkdown: r.roleMarkdown || '',
+                isBuiltIn: false,
+                defaultCapabilities: [],
+              })));
+              console.log('[WorkflowBuilder] Roles saved to global pool:', savedRoles?.length || 0);
+            }
+            // 再保存模板
+            const saved = await addWorkflowTemplate({
+              name,
               version: 1,
               status: "draft",
               steps: steps.map((s, i) => ({ ...s, order: i + 1 })),
-              workflowMarkdown: `# ${templateName}\n\n由 AI 流程设计生成。`,
+              workflowMarkdown: `# ${name}\n\n由 AI 流程设计生成。`,
+              roles: roles.map(r => ({
+                id: r.id,
+                name: r.name,
+                description: r.description,
+                responsibilities: r.responsibilities,
+                deliverables: r.deliverables,
+                roleMarkdown: r.roleMarkdown,
+              })),
             });
+            if (saved) {
+              console.log('[WorkflowBuilder] Template saved:', saved.id, 'with', saved.roles?.length || 0, 'roles');
+            }
             setMode("manual");
           }}
           onDiscard={() => {
@@ -1236,7 +2225,7 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
           step={editingStep}
           template={selectedTemplate}
           data={data}
-          availableRoles={boundRoles.map(({ role }) => role)}
+          flowRoles={boundRoles.map(({ role }) => role)}
           readOnly={templateEnabled}
           onSave={(updates) => {
             updateWorkflowStep(selectedTemplate.id, editingStep.id, updates);

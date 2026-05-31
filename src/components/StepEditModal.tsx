@@ -6,7 +6,7 @@ interface StepEditModalProps {
   step: WorkflowStep;
   template: WorkflowTemplate;
   data: WorkbenchData;
-  availableRoles?: WorkbenchData["roles"];
+  flowRoles?: { id: string; name: string; description?: string; roleMarkdown?: string }[];
   readOnly?: boolean;
   onSave: (updates: Partial<WorkflowStep>) => void;
   onDelete: (stepId: string) => void;
@@ -17,6 +17,7 @@ export function StepEditModal({
   step,
   template,
   data,
+  flowRoles,
   readOnly = false,
   onSave,
   onDelete,
@@ -31,20 +32,14 @@ export function StepEditModal({
   const [outputs, setOutputs] = useState(step.outputs.join(", "));
   const [runnerId, setRunnerId] = useState<string>(step.runnerId ?? "");
 
-  // 角色处理：从 roleId 提取角色名用于编辑，保存时再转回 roleId
+  // 角色处理：从当前流程角色中查找
   const getRoleNameFromId = (rid: string) => {
     if (!rid) return "";
-    if (rid.startsWith("role-ai-draft-")) return rid.replace("role-ai-draft-", "");
-    const role = data.roles.find(r => r.id === rid);
+    const role = (flowRoles ?? []).find(r => r.id === rid);
     return role?.name ?? rid;
   };
-  const makeRoleId = (rname: string) => {
-    if (!rname) return "";
-    // 如果角色池中有匹配的角色，用它的 id
-    const matched = data.roles.find(r => r.name === rname || r.name.includes(rname) || rname.includes(r.name));
-    return matched ? matched.id : `role-ai-draft-${rname}`;
-  };
-  const [roleName, setRoleName] = useState(getRoleNameFromId(step.roleId));
+  const [roleId, setRoleId] = useState(step.roleId || "");
+  const roleName = getRoleNameFromId(roleId);
 
   const enabledRunners = useMemo(() => (data.runnerProfiles ?? []).filter((runner) => runner.enabled), [data.runnerProfiles]);
 
@@ -82,7 +77,7 @@ export function StepEditModal({
       "## 失败策略",
       strategyLabel[failureStrategy] ?? failureStrategy,
     ].join("\n");
-  }, [name, roleName, providerId, modelName, inputs, outputs, failureStrategy, selectedProvider]);
+  }, [name, roleId, roleName, providerId, modelName, inputs, outputs, failureStrategy, selectedProvider]);
 
   const [stepMarkdown, setStepMarkdown] = useState(step.stepMarkdown || defaultStepMarkdown);
 
@@ -100,7 +95,7 @@ export function StepEditModal({
     if (readOnly) return;
     onSave({
       name: name.trim(),
-      roleId: makeRoleId(roleName.trim()),
+      roleId: roleId,
       modelProviderId: providerId,
       modelName,
       gateMode,
@@ -143,18 +138,18 @@ export function StepEditModal({
               </div>
               <div className="form-field">
                 <label>执行角色</label>
-                <input
-                  value={roleName}
-                  onChange={(event) => setRoleName(event.target.value)}
-                  placeholder="输入角色名称"
+                <select
+                  value={roleId}
                   disabled={readOnly}
-                  list="role-suggestions"
-                />
-                <datalist id="role-suggestions">
-                  {data.roles.map((role) => (
-                    <option key={role.id} value={role.name} />
+                  onChange={(event) => setRoleId(event.target.value)}
+                >
+                  <option value="">未绑定角色</option>
+                  {(flowRoles ?? []).map((role) => (
+                    <option key={role.id} value={role.id}>
+                      {role.name}
+                    </option>
                   ))}
-                </datalist>
+                </select>
               </div>
               <div className="form-field">
                 <label>绑定模型</label>
