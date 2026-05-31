@@ -80,20 +80,34 @@ function AiWorkflowDesignInline({
   const ZOOM_MAX = 2;
   const [canvasOffset, setCanvasOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const dragInfoRef = useRef({ startX: 0, startY: 0, hasMoved: false });
   const canvasRef = useRef<HTMLDivElement | null>(null);
 
   // 画布拖拽平移（通过 transform translate 实现）
   const handleCanvasMouseDown = (e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest('.awd-node-v2, .awd-node-v2-delete')) return;
-    setIsDragging(true);
-    setDragStart({ x: e.clientX - canvasOffset.x, y: e.clientY - canvasOffset.y });
+    dragInfoRef.current = { startX: e.clientX, startY: e.clientY, hasMoved: false };
   };
   const handleCanvasMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging) return;
-    setCanvasOffset({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
+    const info = dragInfoRef.current;
+    if (info.startX === 0 && info.startY === 0 && !info.hasMoved) return;
+    const dx = e.clientX - info.startX;
+    const dy = e.clientY - info.startY;
+    // 移动超过 4px 才算拖拽（区分 click）
+    if (!info.hasMoved && Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
+    if (!info.hasMoved) {
+      info.hasMoved = true;
+      setIsDragging(true);
+    }
+    setCanvasOffset(prev => ({ x: prev.x + dx, y: prev.y + dy }));
+    info.startX = e.clientX;
+    info.startY = e.clientY;
   };
-  const handleCanvasMouseUp = () => setIsDragging(false);
+  const handleCanvasMouseUp = () => {
+    if (dragInfoRef.current.hasMoved) {
+      setIsDragging(false);
+    }
+    dragInfoRef.current = { startX: 0, startY: 0, hasMoved: false };
+  };
   const handleWheel = (e: React.WheelEvent) => {
     if (e.ctrlKey || e.metaKey) {
       e.preventDefault();
@@ -1160,114 +1174,118 @@ ${runnersContext}
         </section>
 
         {/* Right: Diff */}
-        <section className="awd-panel awd-diff" style={{ minWidth: 260 }}>
+        <section className="awd-panel awd-diff" style={{ minWidth: 260, overflow: "hidden", display: "flex", flexDirection: "column" }}>
           <div className="awd-panel-head-sm"><h2>差异对比与应用</h2></div>
-          <div className="awd-stats">
-            <div className="awd-stat green"><span>新增步骤</span><strong>{stats.add}</strong><span>已识别新增节点</span></div>
-            <div className="awd-stat"><span>修改步骤</span><strong>{stats.mod}</strong><span>角色/模型/Gate 变更</span></div>
-            <div className="awd-stat warn"><span>保持不变</span><strong>{stats.same}</strong><span>无需变更的步骤</span></div>
-          </div>
-          <div className="awd-diff-list">
-            {diffItems.length === 0 ? (
-              <div className="awd-empty-diff">
-                <div className="awd-empty-icon">📊</div>
-                <p>{draftGenerated ? "暂无差异" : "生成草案后显示差异对比"}</p>
-              </div>
-            ) : (
-              diffItems.map((item, i) => (
-                <div key={i} className={`awd-diff-row ${item.type}`}>
-                  <div className="awd-diff-icon">
-                    {item.type === "add" && <Plus size={14} />}
-                    {item.type === "mod" && <ArrowRight size={14} />}
-                    {item.type === "same" && <Check size={14} />}
-                  </div>
-                  <div>
-                    <h3>{item.title}</h3>
-                    <p>{item.desc}</p>
-                  </div>
+          {/* 可滚动中间区域 */}
+          <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", minHeight: 0 }}>
+            <div className="awd-stats">
+              <div className="awd-stat green"><span>新增步骤</span><strong>{stats.add}</strong><span>已识别新增节点</span></div>
+              <div className="awd-stat"><span>修改步骤</span><strong>{stats.mod}</strong><span>角色/模型/Gate 变更</span></div>
+              <div className="awd-stat warn"><span>保持不变</span><strong>{stats.same}</strong><span>无需变更的步骤</span></div>
+            </div>
+            <div className="awd-diff-list">
+              {diffItems.length === 0 ? (
+                <div className="awd-empty-diff">
+                  <div className="awd-empty-icon">📊</div>
+                  <p>{draftGenerated ? "暂无差异" : "生成草案后显示差异对比"}</p>
                 </div>
-              ))
-            )}
-          </div>
-          <div className="awd-checklist">
-            <h3>流程校验</h3>
-            {validationResults ? (
-              validationResults.map((item, i) => (
-                <div key={i}>
-                  <div className="awd-check-row" style={{ cursor: "default" }}>
-                    <div className={`awd-check-box${item.done ? " done" : ""}`} style={item.done ? {} : { borderColor: "#f3ad3f", background: "rgba(243,173,63,0.12)" }}>
-                      {item.done ? <Check size={10} /> : <span style={{ fontSize: 10, color: "#f3ad3f" }}>✗</span>}
-                    </div>
-                    <span style={{ color: item.done ? "#c1cddd" : "#f3ad3f" }}>{item.label}</span>
-                  </div>
-                  {item.issues.length > 0 && (
-                    <div style={{ paddingLeft: 22, paddingBottom: 4 }}>
-                      {item.issues.map((issue, j) => (
-                        <div key={j} style={{ fontSize: 10, color: "#8d9bb0", lineHeight: 1.4 }}>· {issue}</div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))
-            ) : (
-              <p className="awd-empty-hint">生成草案后自动校验</p>
-            )}
-          </div>
-          {showVersionPanel && (
-            <div className="awd-checklist" style={{ borderTop: "1px solid #1e3a5f" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                <h3 style={{ margin: 0 }}>版本历史</h3>
-                <button
-                  className="awd-btn awd-btn-apply"
-                  style={{ fontSize: 10, padding: "2px 8px", height: 22 }}
-                  onClick={() => saveVersion()}
-                >
-                  <Plus size={10} /> 保存快照
-                </button>
-              </div>
-              {draftVersions.length === 0 ? (
-                <p className="awd-empty-hint">暂无保存的版本</p>
               ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 4, maxHeight: 180, overflowY: "auto" }}>
-                  {[...draftVersions].reverse().map((v, i) => {
-                    const isCurrent = i === 0;
-                    return (
-                      <div
-                        key={v.version}
-                        style={{
-                          display: "flex", alignItems: "center", gap: 8, padding: "6px 8px",
-                          borderRadius: 6, border: isCurrent ? "1px solid #2d6a4f" : "1px solid #1e3a5f",
-                          background: isCurrent ? "rgba(45,106,79,0.12)" : "transparent",
-                        }}
-                      >
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                            <span style={{ fontSize: 11, color: "#c1cddd", fontWeight: 600 }}>v{v.version}</span>
-                            <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 4, background: v.label === "draft" ? "#1e3a5f" : "#2d5a3f", color: "#8fc" }}>
-                              {v.label}
-                            </span>
-                            {isCurrent && <span style={{ fontSize: 9, color: "#4caf50" }}>当前</span>}
-                          </div>
-                          <div style={{ fontSize: 9, color: "#6b7d95", marginTop: 2 }}>
-                            {v.steps.length} 步骤 · {v.roles.length} 角色 · {new Date(v.savedAt).toLocaleString("zh-CN")}
-                          </div>
-                        </div>
-                        {!isCurrent && (
-                          <button
-                            style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, border: "1px solid #f3ad3f", background: "transparent", color: "#f3ad3f", cursor: "pointer", whiteSpace: "nowrap" }}
-                            onClick={() => { if (confirm(`恢复到 v${v.version}？当前未保存的更改将丢失。`)) rollbackVersion(v); }}
-                          >
-                            恢复
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+                diffItems.map((item, i) => (
+                  <div key={i} className={`awd-diff-row ${item.type}`}>
+                    <div className="awd-diff-icon">
+                      {item.type === "add" && <Plus size={14} />}
+                      {item.type === "mod" && <ArrowRight size={14} />}
+                      {item.type === "same" && <Check size={14} />}
+                    </div>
+                    <div>
+                      <h3>{item.title}</h3>
+                      <p>{item.desc}</p>
+                    </div>
+                  </div>
+                ))
               )}
             </div>
-          )}
-          <div className="awd-diff-actions">
+            <div className="awd-checklist">
+              <h3>流程校验</h3>
+              {validationResults ? (
+                validationResults.map((item, i) => (
+                  <div key={i}>
+                    <div className="awd-check-row" style={{ cursor: "default" }}>
+                      <div className={`awd-check-box${item.done ? " done" : ""}`} style={item.done ? {} : { borderColor: "#f3ad3f", background: "rgba(243,173,63,0.12)" }}>
+                        {item.done ? <Check size={10} /> : <span style={{ fontSize: 10, color: "#f3ad3f" }}>✗</span>}
+                      </div>
+                      <span style={{ color: item.done ? "#c1cddd" : "#f3ad3f" }}>{item.label}</span>
+                    </div>
+                    {item.issues.length > 0 && (
+                      <div style={{ paddingLeft: 22, paddingBottom: 4 }}>
+                        {item.issues.map((issue, j) => (
+                          <div key={j} style={{ fontSize: 10, color: "#8d9bb0", lineHeight: 1.4 }}>· {issue}</div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <p className="awd-empty-hint">生成草案后自动校验</p>
+              )}
+            </div>
+            {showVersionPanel && (
+              <div className="awd-checklist" style={{ borderTop: "1px solid #1e3a5f" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                  <h3 style={{ margin: 0 }}>版本历史</h3>
+                  <button
+                    className="awd-btn awd-btn-apply"
+                    style={{ fontSize: 10, padding: "2px 8px", height: 22 }}
+                    onClick={() => saveVersion()}
+                  >
+                    <Plus size={10} /> 保存快照
+                  </button>
+                </div>
+                {draftVersions.length === 0 ? (
+                  <p className="awd-empty-hint">暂无保存的版本</p>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4, maxHeight: 180, overflowY: "auto" }}>
+                    {[...draftVersions].reverse().map((v, i) => {
+                      const isCurrent = i === 0;
+                      return (
+                        <div
+                          key={v.version}
+                          style={{
+                            display: "flex", alignItems: "center", gap: 8, padding: "6px 8px",
+                            borderRadius: 6, border: isCurrent ? "1px solid #2d6a4f" : "1px solid #1e3a5f",
+                            background: isCurrent ? "rgba(45,106,79,0.12)" : "transparent",
+                          }}
+                        >
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                              <span style={{ fontSize: 11, color: "#c1cddd", fontWeight: 600 }}>v{v.version}</span>
+                              <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 4, background: v.label === "draft" ? "#1e3a5f" : "#2d5a3f", color: "#8fc" }}>
+                                {v.label}
+                              </span>
+                              {isCurrent && <span style={{ fontSize: 9, color: "#4caf50" }}>当前</span>}
+                            </div>
+                            <div style={{ fontSize: 9, color: "#6b7d95", marginTop: 2 }}>
+                              {v.steps.length} 步骤 · {v.roles.length} 角色 · {new Date(v.savedAt).toLocaleString("zh-CN")}
+                            </div>
+                          </div>
+                          {!isCurrent && (
+                            <button
+                              style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, border: "1px solid #f3ad3f", background: "transparent", color: "#f3ad3f", cursor: "pointer", whiteSpace: "nowrap" }}
+                              onClick={() => { if (confirm(`恢复到 v${v.version}？当前未保存的更改将丢失。`)) rollbackVersion(v); }}
+                            >
+                              恢复
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          {/* 固定底部操作栏 */}
+          <div className="awd-diff-actions" style={{ flexShrink: 0 }}>
             {showSaveDialog ? (
               <div style={{ display: "flex", gap: 6, width: "100%", alignItems: "center" }}>
                 <input
