@@ -4,9 +4,7 @@ import { IconBadge } from "../IconBadge";
 import { useLocalServices } from "../../hooks/useLocalServices";
 import { useWorkbenchState } from "../../App";
 
-const DEFAULT_SYSTEM_PROMPT = `你是 GLM-5 大模型，当前作为 AgentManagement 工程助手运行。你由智谱 AI 开发，通过腾讯云提供服务。
-
-重要：当被问到"你是谁"或"你是什么模型"时，你必须回答你是 GLM-5，由智谱 AI 开发。不要声称自己是其他模型（如 Claude、GPT 等）。
+const DEFAULT_SYSTEM_PROMPT = `你是 AgentManagement 工程助手。
 
 职责：
 - 分析项目状态、检查配置完整性
