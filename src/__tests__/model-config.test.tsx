@@ -35,7 +35,7 @@ const createMockState = () => ({
   addGitCredential: vi.fn(),
   updateGitCredential: vi.fn(),
   deleteGitCredential: vi.fn(),
-  addWorkflowTemplate: vi.fn(),
+  addWorkflowTemplate: vi.fn().mockResolvedValue(null),
   deleteWorkflowTemplate: vi.fn(),
   updateRunner: vi.fn(),
   setDefaultRunner: vi.fn(),

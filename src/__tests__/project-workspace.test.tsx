@@ -35,7 +35,7 @@ function mockProvider(overrides?: Record<string, unknown>) {
     addGitCredential: () => {},
     updateGitCredential: () => {},
     deleteGitCredential: () => {},
-    addWorkflowTemplate: () => {},
+    addWorkflowTemplate: async () => null,
     deleteWorkflowTemplate: () => {},
     updateRunner: () => {},
     setDefaultRunner: () => {},
