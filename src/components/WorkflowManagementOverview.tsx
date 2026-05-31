@@ -125,6 +125,16 @@ function filterWorkflowsByCategory(
 // Helper function to map workflow template to asset
 function workflowTemplateToAsset(template: WorkbenchData["workflowTemplates"][0], roles: WorkbenchData["roles"]): WorkflowAsset {
   const steps = template.steps || [];
+  // 构建角色查找表：先从模板自带 roles 找，再从全局角色池找
+  const templateRoleMap = new Map((template.roles || []).map(r => [r.id, r]));
+  const globalRoleMap = new Map(roles.map(r => [r.id, r]));
+  const getRoleName = (rid: string) => {
+    const tRole = templateRoleMap.get(rid);
+    if (tRole) return tRole.name;
+    const gRole = globalRoleMap.get(rid);
+    if (gRole) return gRole.name;
+    return rid;
+  };
   // 从步骤中提取不重复的角色，用真实角色名
   const seenRoleIds = new Set<string>();
   const roleAvatars: RoleAvatar[] = [];
@@ -132,8 +142,8 @@ function workflowTemplateToAsset(template: WorkbenchData["workflowTemplates"][0]
   steps.forEach(s => {
     if (s.roleId && !seenRoleIds.has(s.roleId)) {
       seenRoleIds.add(s.roleId);
-      const role = roles.find(r => r.id === s.roleId);
-      const initials = role ? role.name.slice(0, 2) : s.roleId.slice(0, 2);
+      const roleName = getRoleName(s.roleId);
+      const initials = roleName.slice(0, 2);
       roleAvatars.push({ initials: initials.toUpperCase(), color: colors[roleAvatars.length % colors.length] });
     }
   });
