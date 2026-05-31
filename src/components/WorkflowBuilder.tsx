@@ -1458,7 +1458,6 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
     updateRole,
     addWorkflowTemplate,
     updateWorkflowTemplate,
-    deleteWorkflowTemplate,
     addWorkflowStep,
     updateWorkflowStep,
     deleteWorkflowStep,
@@ -1715,20 +1714,6 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
     setEditingStepId(null);
   };
 
-  const handleDeleteTemplate = (templateId: string) => {
-    const template = data.workflowTemplates.find((item) => item.id === templateId);
-    if (!template) return;
-    const current = template.status ?? (data.workflowTemplates[0]?.id === templateId ? "enabled" : "draft");
-    if (current === "enabled" && !confirm(`「${template.name}」是正式流程，确认删除？`)) return;
-    const nextTemplate = data.workflowTemplates.find((item) => item.id !== templateId);
-    if (selectedTemplateId === templateId) {
-      setSelectedTemplateId(nextTemplate?.id ?? "");
-      closeStepInspector();
-      setEditingStepId(null);
-    }
-    deleteWorkflowTemplate(templateId);
-  };
-
   const handleAddRole = () => {
     if (!selectedTemplate || templateEnabled) return;
     const roleName = `自定义角色 ${data.roles.length + 1}`;
@@ -1958,9 +1943,9 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
                             className="wf-v2-template-delete"
                             onClick={(event) => {
                               event.stopPropagation();
-                              handleDeleteTemplate(t.id);
+                              window.alert('请前往流程管理页面进行删除操作');
                             }}
-                            title="删除流程模板"
+                            title="前往流程管理页面删除"
                             aria-label={`删除流程模板 ${t.name}`}
                             disabled={false}
                             type="button"

@@ -63,6 +63,7 @@ interface WorkflowAsset {
   maturityLabel: string;
   category: WorkflowCategory;
   boundProjects: number;
+  boundProjectNames: string[];
   lastUpdated: string;
 }
 
@@ -123,7 +124,7 @@ function filterWorkflowsByCategory(
 }
 
 // Helper function to map workflow template to asset
-function workflowTemplateToAsset(template: WorkbenchData["workflowTemplates"][0], roles: WorkbenchData["roles"]): WorkflowAsset {
+function workflowTemplateToAsset(template: WorkbenchData["workflowTemplates"][0], roles: WorkbenchData["roles"], projects: WorkbenchData["projects"]): WorkflowAsset {
   const steps = template.steps || [];
   // 构建角色查找表：先从模板自带 roles 找，再从全局角色池找
   const templateRoleMap = new Map((template.roles || []).map(r => [r.id, r]));
@@ -167,7 +168,8 @@ function workflowTemplateToAsset(template: WorkbenchData["workflowTemplates"][0]
     maturity: 75,
     maturityLabel: "成熟度",
     category: "dev" as const,
-    boundProjects: 0,
+    boundProjects: projects.filter(p => p.workflowTemplateId === template.id).length,
+    boundProjectNames: projects.filter(p => p.workflowTemplateId === template.id).map(p => p.name),
     lastUpdated: template.updatedAt ? new Date(template.updatedAt).toLocaleDateString("zh-CN") : "未知",
   };
 }
@@ -267,8 +269,8 @@ export function WorkflowManagementOverview({ data, onNavigate, onEnterWorkflowDe
 
   // Convert workflow templates to workflow assets
   const workflowAssets = useMemo(() => {
-    return (data.workflowTemplates || []).map(t => workflowTemplateToAsset(t, data.roles));
-  }, [data.workflowTemplates, data.roles]);
+    return (data.workflowTemplates || []).map(t => workflowTemplateToAsset(t, data.roles, data.projects));
+  }, [data.workflowTemplates, data.roles, data.projects]);
 
   const categoryTabs = useMemo(
     () => ALL_CATEGORIES.filter((category) => category.id === "all" || !deletedCategoryIds.includes(category.id)),
@@ -806,20 +808,36 @@ function WorkflowCard({
               </button>
             </div>
             <div className="pm-v2-pc-confirm-body">
-              <p>
-                请输入 <strong>yes</strong> 以确认删除 <strong>{flow.name}</strong>：
-              </p>
-              <input
-                value={deleteInput}
-                onChange={(event) => setDeleteInput(event.target.value)}
-                placeholder="yes"
-                autoFocus
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" && deleteInput === "yes") {
-                    onDelete(flow.id);
-                  }
-                }}
-              />
+              {flow.boundProjects > 0 ? (
+                <>
+                  <p>
+                    <strong>{flow.name}</strong> 正在被以下 <strong>{flow.boundProjects}</strong> 个项目使用，无法删除：
+                  </p>
+                  <ul style={{ margin: "8px 0", paddingLeft: 20, color: "var(--text-secondary)" }}>
+                    {flow.boundProjectNames.map((name, i) => (
+                      <li key={i}>{name}</li>
+                    ))}
+                  </ul>
+                  <p style={{ color: "var(--warning)" }}>请先将这些项目解绑或切换到其他流程，再进行删除。</p>
+                </>
+              ) : (
+                <>
+                  <p>
+                    请输入 <strong>yes</strong> 以确认删除 <strong>{flow.name}</strong>：
+                  </p>
+                  <input
+                    value={deleteInput}
+                    onChange={(event) => setDeleteInput(event.target.value)}
+                    placeholder="yes"
+                    autoFocus
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" && deleteInput === "yes") {
+                        onDelete(flow.id);
+                      }
+                    }}
+                  />
+                </>
+              )}
             </div>
             <div className="pm-v2-pc-confirm-footer">
               <button
@@ -830,16 +848,18 @@ function WorkflowCard({
                 }}
                 type="button"
               >
-                取消
+                {flow.boundProjects > 0 ? "关闭" : "取消"}
               </button>
-              <button
-                className="pm-v2-btn pm-v2-btn-danger"
-                disabled={deleteInput !== "yes"}
-                onClick={() => onDelete(flow.id)}
-                type="button"
-              >
-                确认删除
-              </button>
+              {flow.boundProjects === 0 && (
+                <button
+                  className="pm-v2-btn pm-v2-btn-danger"
+                  disabled={deleteInput !== "yes"}
+                  onClick={() => onDelete(flow.id)}
+                  type="button"
+                >
+                  确认删除
+                </button>
+              )}
             </div>
           </div>
         </div>
