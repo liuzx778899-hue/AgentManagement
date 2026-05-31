@@ -1525,29 +1525,30 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
   const ZOOM_STEP = 0.1;
   const ZOOM_MIN = 0.3;
   const ZOOM_MAX = 2;
-  const [canvasOffset, setCanvasOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  const manualDragRef = useRef({ startX: 0, startY: 0, hasMoved: false });
+  const manualCanvasRef = useRef<HTMLDivElement | null>(null);
+  const manualDragRef = useRef({ startX: 0, startY: 0, moved: false });
   const handleCanvasMouseDown = (e: React.MouseEvent) => {
-    manualDragRef.current = { startX: e.clientX, startY: e.clientY, hasMoved: false };
+    manualDragRef.current = { startX: e.clientX, startY: e.clientY, moved: false };
   };
   const handleCanvasMouseMove = (e: React.MouseEvent) => {
     const info = manualDragRef.current;
+    if (!manualCanvasRef.current) return;
     const dx = e.clientX - info.startX;
     const dy = e.clientY - info.startY;
-    if (!info.hasMoved && Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
-    if (!info.hasMoved) {
-      info.hasMoved = true;
+    if (!info.moved && Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
+    if (!info.moved) {
+      info.moved = true;
       setIsDragging(true);
     }
-    setCanvasOffset(prev => ({ x: prev.x + dx, y: prev.y + dy }));
+    manualCanvasRef.current.scrollLeft -= dx;
+    manualCanvasRef.current.scrollTop -= dy;
     info.startX = e.clientX;
     info.startY = e.clientY;
   };
   const handleCanvasMouseUp = () => {
-    if (manualDragRef.current.hasMoved) setIsDragging(false);
-    manualDragRef.current = { startX: 0, startY: 0, hasMoved: false };
+    if (manualDragRef.current.moved) setIsDragging(false);
+    manualDragRef.current = { startX: 0, startY: 0, moved: false };
   };
   const handleWheel = (e: React.WheelEvent) => {
     if (e.ctrlKey || e.metaKey) {
@@ -1556,7 +1557,7 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
       setCanvasScale(s => Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, +(s + delta).toFixed(1))));
     }
   };
-  const resetCanvasView = () => { setCanvasScale(1); setCanvasOffset({ x: 0, y: 0 }); };
+  const resetCanvasView = () => { setCanvasScale(1); if (manualCanvasRef.current) { manualCanvasRef.current.scrollLeft = 0; manualCanvasRef.current.scrollTop = 0; } };
 
   // Sync mode to URL search params (for refresh persistence)
   useEffect(() => {
@@ -2034,6 +2035,7 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
             </div>
             <div
               className={`wf-v2-canvas-area${isDragging ? " dragging" : ""}`}
+              ref={manualCanvasRef}
               onMouseDown={handleCanvasMouseDown}
               onMouseMove={handleCanvasMouseMove}
               onMouseUp={handleCanvasMouseUp}
@@ -2042,7 +2044,7 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
             >
                 {selectedTemplate ? (
                   <>
-                    <div className="wf-v2-node-track" style={{ transform: `translate(${canvasOffset.x}px, ${canvasOffset.y}px) scale(${canvasScale})`, transformOrigin: 'top left', transition: isDragging ? 'none' : 'transform 0.1s ease' }}>
+                    <div className="wf-v2-node-track" style={{ zoom: canvasScale }}>
                       {sortedSteps.map((step, i) => {
                         const role = data.roles.find(r => r.id === step.roleId) ?? null;
                         const runnerProfile = data.runnerProfiles?.find(r => r.id === step.runnerId) ?? null;
