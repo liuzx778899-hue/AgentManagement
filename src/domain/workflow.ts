@@ -24,6 +24,7 @@ export interface WorkflowTemplate {
   name: string;
   version: number;
   status?: "enabled" | "disabled" | "draft";
+  category?: WorkflowCategory;
   steps: WorkflowStep[];
   workflowMarkdown?: string;
   versions?: WorkflowVersion[];
@@ -32,6 +33,9 @@ export interface WorkflowTemplate {
   // 流程专属角色（AI 生成的角色定义）
   roles?: WorkflowRole[];
 }
+
+// 流程分类
+export type WorkflowCategory = "dev" | "design" | "review" | "release";
 
 export interface WorkflowRole {
   id: string;

@@ -16,12 +16,14 @@ import {
   X,
 } from "lucide-react";
 import type { WorkbenchData, WorkbenchView } from "../domain/workbench";
+import { WorkflowCategory as WorkflowCategoryBase } from "../domain/workflow";
 
 interface WorkflowManagementOverviewProps {
   data: WorkbenchData;
   onNavigate?: (view: WorkbenchView) => void;
   onEnterWorkflowDesign?: (workflowId: string) => void;
   onDeleteTemplate?: (templateId: string) => void;
+  onUpdateTemplate?: (templateId: string, updates: Partial<WorkbenchData["workflowTemplates"][0]>) => void;
 }
 
 // Workflow status types
@@ -30,8 +32,8 @@ type WorkflowStatus = "enabled" | "draft" | "disabled" | "high-risk";
 // Health status types
 type HealthStatus = "healthy" | "warning" | "error" | "pending";
 
-// Workflow category types
-type WorkflowCategory = "all" | "dev" | "design" | "review" | "release";
+// Workflow category types (包含 "all" 用于筛选)
+type WorkflowCategory = "all" | WorkflowCategoryBase;
 
 // Role coverage avatar
 interface RoleAvatar {
@@ -167,7 +169,7 @@ function workflowTemplateToAsset(template: WorkbenchData["workflowTemplates"][0]
     healthLabel: "健康",
     maturity: 75,
     maturityLabel: "成熟度",
-    category: "dev" as const,
+    category: (template.category || "dev") as WorkflowCategory,
     boundProjects: projects.filter(p => p.workflowTemplateId === template.id).length,
     boundProjectNames: projects.filter(p => p.workflowTemplateId === template.id).map(p => p.name),
     lastUpdated: template.updatedAt ? new Date(template.updatedAt).toLocaleDateString("zh-CN") : "未知",
@@ -256,7 +258,7 @@ function KpiIcon({ type }: { type: "total" | "enabled" | "bound" | "pending" | "
   }
 }
 
-export function WorkflowManagementOverview({ data, onNavigate, onEnterWorkflowDesign, onDeleteTemplate }: WorkflowManagementOverviewProps) {
+export function WorkflowManagementOverview({ data, onNavigate, onEnterWorkflowDesign, onDeleteTemplate, onUpdateTemplate }: WorkflowManagementOverviewProps) {
   const [activeCategory, setActiveCategory] = useState<WorkflowCategory>("all");
   const [validating, setValidating] = useState(false);
 
@@ -348,6 +350,10 @@ export function WorkflowManagementOverview({ data, onNavigate, onEnterWorkflowDe
       ...items,
       [workflowId]: currentStatus === "enabled" ? "disabled" : "enabled",
     }));
+  };
+
+  const handleUpdateCategory = (workflowId: string, category: WorkflowCategoryBase) => {
+    onUpdateTemplate?.(workflowId, { category });
   };
 
   const handleCreateWorkflow = () => {
@@ -538,6 +544,7 @@ export function WorkflowManagementOverview({ data, onNavigate, onEnterWorkflowDe
                   onEnterDesigner={handleEnterDesigner}
                   onDelete={handleDeleteFlow}
                   onToggleStatus={handleToggleFlowStatus}
+                  onUpdateCategory={handleUpdateCategory}
                 />
               ))
             )}
@@ -662,16 +669,25 @@ export function WorkflowManagementOverview({ data, onNavigate, onEnterWorkflowDe
 }
 
 // Individual workflow card
+const CATEGORY_LABELS: Record<WorkflowCategoryBase, string> = {
+  dev: "开发类",
+  design: "设计类",
+  review: "评审类",
+  release: "发布类",
+};
+
 function WorkflowCard({
   flow,
   onEnterDesigner,
   onDelete,
   onToggleStatus,
+  onUpdateCategory,
 }: {
   flow: WorkflowAsset;
   onEnterDesigner: (id: string) => void;
   onDelete: (id: string) => void;
   onToggleStatus: (id: string, currentStatus: WorkflowAsset["status"]) => void;
+  onUpdateCategory?: (id: string, category: WorkflowCategoryBase) => void;
 }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteInput, setDeleteInput] = useState("");
@@ -719,6 +735,17 @@ function WorkflowCard({
             <span className={statusChipClass(flow.status)}>{statusLabel}</span>
             <span className="wmo-chip">{flow.version}</span>
             <span className="wmo-chip">{flow.stepCount} 步骤</span>
+            <select
+              className="wmo-chip wmo-category-select"
+              value={flow.category}
+              onChange={(e) => onUpdateCategory?.(flow.id, e.target.value as WorkflowCategoryBase)}
+              onClick={(e) => e.stopPropagation()}
+              title="设置分类"
+            >
+              {(["dev", "design", "review", "release"] as WorkflowCategoryBase[]).map((cat) => (
+                <option key={cat} value={cat}>{CATEGORY_LABELS[cat]}</option>
+              ))}
+            </select>
           </div>
         </div>
         <span className={healthChipClass(flow.healthStatus)}>{flow.healthLabel}</span>
