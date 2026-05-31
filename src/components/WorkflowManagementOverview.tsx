@@ -143,10 +143,11 @@ function workflowTemplateToAsset(template: WorkbenchData["workflowTemplates"][0]
     if (s.roleId && !seenRoleIds.has(s.roleId)) {
       seenRoleIds.add(s.roleId);
       const roleName = getRoleName(s.roleId);
-      // 中文名取前2字，英文名取单词首字母
-      const initials = /[\u4e00-\u9fff]/.test(roleName)
-        ? roleName.slice(0, 2)
-        : roleName.split(/\s+/).map(w => w[0] || "").join("").slice(0, 2);
+      // 提取前2个中文字符；若开头是英文则取前2个字母
+      const cnChars = (roleName.match(/[\u4e00-\u9fff]/g) || []);
+      const initials = cnChars.length >= 2
+        ? cnChars.slice(0, 2).join("")
+        : roleName.replace(/[\u4e00-\u9fff]/g, "").trim().slice(0, 2);
       roleAvatars.push({ initials: initials.toUpperCase(), color: colors[roleAvatars.length % colors.length] });
     }
   });
