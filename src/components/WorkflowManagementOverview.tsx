@@ -180,7 +180,7 @@ function statusChipClass(status: WorkflowAsset["status"]): string {
     case "enabled":
       return "wmo-chip ok";
     case "draft":
-      return "wmo-chip";
+      return "wmo-chip warn";
     case "high-risk":
       return "wmo-chip bad";
     case "disabled":
@@ -678,7 +678,7 @@ function WorkflowCard({
   const statusLabel = (() => {
     switch (flow.status) {
       case "enabled": return "已启用";
-      case "draft": return "草稿";
+      case "draft": return "待校验";
       case "high-risk": return "高风险";
       case "disabled": return "已禁用";
       default: return "未知";
@@ -709,7 +709,12 @@ function WorkflowCard({
       {/* Top: name, chips, health */}
       <div className="wmo-flow-top">
         <div>
-          <h3>{flow.name}</h3>
+          <h3>
+            {flow.status === "draft" && (
+              <CircleAlert size={14} style={{ color: "var(--warning, #e0a030)", verticalAlign: "middle", marginRight: 6 }} />
+            )}
+            {flow.name}
+          </h3>
           <div className="wmo-chips">
             <span className={statusChipClass(flow.status)}>{statusLabel}</span>
             <span className="wmo-chip">{flow.version}</span>
