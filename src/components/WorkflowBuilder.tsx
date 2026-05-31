@@ -1623,17 +1623,25 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
   const templateStatusText = templateEnabled ? "已启用" : templateStatus === "disabled" ? "已停用" : "草稿";
   const templateStatusColor = templateEnabled ? "green" : templateStatus === "disabled" ? "muted" : "blue";
   const boundRoles = useMemo(() => {
-    const roleIds = selectedTemplate?.steps.map((step) => step.roleId).filter(Boolean) ?? [];
-    const extraRoleIds = selectedTemplate ? templateRoleIds[selectedTemplate.id] ?? [] : [];
+    if (!selectedTemplate) return [];
+    const templateRoleMap = new Map((selectedTemplate.roles || []).map(r => [r.id, r]));
+    const globalRoleMap = new Map(data.roles.map(r => [r.id, r]));
+    const roleIds = selectedTemplate.steps.map((step) => step.roleId).filter(Boolean);
+    const extraRoleIds = templateRoleIds[selectedTemplate.id] ?? [];
     const uniqueRoleIds = Array.from(new Set([...roleIds, ...extraRoleIds]));
     return uniqueRoleIds
       .map((roleId) => {
-        const role = data.roles.find((item) => item.id === roleId);
+        // 优先从模板自带 roles 查找，再从全局角色池查找
+        const templateRole = templateRoleMap.get(roleId);
+        const globalRole = globalRoleMap.get(roleId);
+        const role = templateRole
+          ? { id: templateRole.id, name: templateRole.name, description: templateRole.description ?? "", roleMarkdown: templateRole.roleMarkdown ?? "", isBuiltIn: false, defaultCapabilities: [] as string[], projectId: null as string | null }
+          : globalRole;
         if (!role) return null;
-        const boundSteps = selectedTemplate?.steps.filter((step) => step.roleId === roleId) ?? [];
+        const boundSteps = selectedTemplate.steps.filter((step) => step.roleId === roleId);
         return { role, boundSteps };
       })
-      .filter((item): item is { role: WorkbenchData["roles"][number]; boundSteps: NonNullable<typeof selectedTemplate>["steps"] } => Boolean(item));
+      .filter((item): item is { role: NonNullable<typeof item>["role"]; boundSteps: NonNullable<typeof selectedTemplate>["steps"] } => Boolean(item));
   }, [data.roles, selectedTemplate, templateRoleIds]);
   const workflowTemplateCards = useMemo(
     () => [
@@ -1871,13 +1879,14 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
             <div className="wf-v2-panel-header">
               <h2>模板与角色</h2>
             </div>
-            <div className="wf-v2-scroll">
-              <div className="wf-v2-section-row">
-                <h3 className="wf-v2-section-title">流程模板</h3>
-                <button className="wf-v2-btn wf-v2-btn-xs" onClick={handleCreateTemplate} type="button">
-                  <Plus size={12} /> 新增
-                </button>
-              </div>
+            {/* 流程模板 - 独立滚动 */}
+            <div className="wf-v2-section-row" style={{ padding: "0 12px", flexShrink: 0 }}>
+              <h3 className="wf-v2-section-title">流程模板</h3>
+              <button className="wf-v2-btn wf-v2-btn-xs" onClick={handleCreateTemplate} type="button">
+                <Plus size={12} /> 新增
+              </button>
+            </div>
+            <div style={{ flex: "1 1 50%", overflowY: "auto", minHeight: 0, padding: "0 12px" }}>
               {workflowTemplateCards.map((t) => (
                 <div
                   key={t.id}
@@ -1966,13 +1975,15 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
                   <p>{t.desc}</p>
                 </div>
               ))}
-
-              <div className="wf-v2-section-row" style={{ marginTop: 8 }}>
-                <h3 className="wf-v2-section-title" style={{ margin: 0 }}>项目角色池</h3>
-                <button className="wf-v2-btn wf-v2-btn-xs" onClick={handleAddRole} disabled={!selectedTemplate || templateEnabled} type="button">
-                  <Plus size={12} /> 新增
-                </button>
-              </div>
+            </div>
+            {/* 角色列表 - 独立滚动 */}
+            <div className="wf-v2-section-row" style={{ padding: "0 12px", flexShrink: 0, borderTop: "1px solid #1e3a5f", marginTop: 4 }}>
+              <h3 className="wf-v2-section-title" style={{ margin: 0 }}>流程角色</h3>
+              <button className="wf-v2-btn wf-v2-btn-xs" onClick={handleAddRole} disabled={!selectedTemplate || templateEnabled} type="button">
+                <Plus size={12} /> 新增
+              </button>
+            </div>
+            <div style={{ flex: "1 1 50%", overflowY: "auto", minHeight: 0, padding: "0 12px" }}>
               {boundRoles.map(({ role, boundSteps }, i) => {
                 const initials = role.name.slice(0, 2).toUpperCase();
                 const canRemove = !role.isBuiltIn && boundSteps.length === 0;
