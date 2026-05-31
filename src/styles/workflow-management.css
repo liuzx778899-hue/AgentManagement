@@ -928,8 +928,15 @@
   background: rgba(18, 73, 48, 0.22);
 }
 
-.wmo-flow-actions .wmo-btn-start:hover {
+.wmo-flow-actions .wmo-btn-start:hover:not(:disabled) {
   background: rgba(18, 73, 48, 0.34);
+}
+
+.wmo-flow-actions .wmo-btn-start:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  border-color: rgba(78, 225, 155, 0.2);
+  color: rgba(99, 230, 167, 0.5);
 }
 
 .wmo-flow-actions .wmo-btn-stop {
