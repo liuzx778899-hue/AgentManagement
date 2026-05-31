@@ -291,15 +291,17 @@ export function WorkflowManagementOverview({ data, onNavigate, onEnterWorkflowDe
     [workflowAssets, statusOverrides]
   );
 
-  // Compute KPIs from visibleWorkflows (includes statusOverrides)
+  // Compute KPIs from visibleWorkflows (includes statusOverrides + validationResults)
   const kpis = useMemo((): WorkflowKPIs => {
     const total = visibleWorkflows.length;
     const enabled = visibleWorkflows.filter(w => w.status === "enabled").length;
     const highRisk = visibleWorkflows.filter(w => w.status === "high-risk").length;
-    const pendingValidation = visibleWorkflows.filter(w => w.status === "draft").length;
+    const pendingValidation = visibleWorkflows.filter(w =>
+      w.status === "draft" || (validationResults[w.id] && validationResults[w.id].length > 0)
+    ).length;
     const boundProjects = visibleWorkflows.reduce((sum, w) => sum + w.boundProjects, 0);
     return { total, enabled, boundProjects, pendingValidation, highRisk };
-  }, [visibleWorkflows]);
+  }, [visibleWorkflows, validationResults]);
 
   // Compute health panel data from real data
   const healthPanel = useMemo((): HealthPanelData => {
