@@ -450,6 +450,9 @@ export function WorkbenchProvider({ children }: WorkbenchProviderProps) {
 
   const updateWorkflowTemplate = useCallback((templateId: string, updates: Partial<WorkflowTemplate>) => {
     dispatch(updateWorkflowTemplateAction(templateId, updates));
+    workflowApi.updateTemplate(templateId, updates).catch(err => {
+      console.error('[WorkbenchProvider] Failed to update template on server:', err);
+    });
   }, []);
 
   const deleteWorkflowTemplate = useCallback((templateId: string) => {
