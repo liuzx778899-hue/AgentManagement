@@ -1939,19 +1939,6 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
                           >
                             {t.status}
                           </span>
-                          <button
-                            className="wf-v2-template-delete"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              window.alert('请前往流程管理页面进行删除操作');
-                            }}
-                            title="前往流程管理页面删除"
-                            aria-label={`删除流程模板 ${t.name}`}
-                            disabled={false}
-                            type="button"
-                          >
-                            <Trash2 size={12} />
-                          </button>
                         </>
                       )}
                     </div>
