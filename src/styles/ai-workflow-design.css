@@ -90,7 +90,7 @@
 .awd-insight-badge { height: 20px; display: inline-flex; align-items: center; padding: 0 7px; border: 1px solid #34465e; border-radius: 999px; color: #7f8ea2; font-size: 9px; font-weight: 600; white-space: nowrap; }
 .awd-insight-card ul, .awd-insight-card p { color: #9facbf; line-height: 1.55; font-size: 11px; margin: 0; padding: 0 0 0 14px; }
 .awd-insight-card li { margin-bottom: 2px; }
-.awd-insight-roles { display: flex; flex-direction: column; gap: 4px; }
+.awd-insight-roles { display: flex; flex-direction: column; gap: 4px; max-height: 120px; overflow-y: auto; }
 .awd-role-row { display: flex; align-items: center; gap: 6px; color: #b9c6d7; font-size: 11px; }
 .awd-role-dot { width: 15px; height: 15px; display: grid; place-items: center; border-radius: 999px; color: white; font-size: 9px; font-weight: 800; }
 .awd-cap-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }

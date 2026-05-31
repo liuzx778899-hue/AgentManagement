@@ -40,6 +40,12 @@ function AiWorkflowDesignInline({
   const [generating, setGenerating] = useState(false);
   const materialInputRef = useRef<HTMLInputElement | null>(null);
 
+  // 画布缩放
+  const [canvasScale, setCanvasScale] = useState(1);
+  const ZOOM_STEP = 0.1;
+  const ZOOM_MIN = 0.3;
+  const ZOOM_MAX = 2;
+
   // 材料通知
   const [materialNotice, setMaterialNotice] = useState("");
 
@@ -472,7 +478,7 @@ ${rolesContext}
               <div className="awd-insight-title">♙ 角色建议 <span className="awd-insight-badge">{draftGenerated ? "已分析" : "待分析"}</span></div>
               <div className="awd-insight-roles">
                 {draftGenerated && draftSteps.length > 0 ? (
-                  draftSteps.slice(0, 5).map((step, i) => (
+                  draftSteps.map((step, i) => (
                     <div key={i} className="awd-role-row">
                       <span className="awd-role-dot" style={{background: ["#4268d9","#7257cc","#2f9b68","#d17e34","#4d78e5"][i % 5]}}>
                         {getRoleName(step.roleId)[0] || "未"}
@@ -1084,7 +1090,7 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
               </div>
               <div className="wf-v2-canvas-toolbar-actions">
                 <div className="awd-canvas-zoom-ctrl" style={{ position: "static" }}>
-                  <button className="awd-zoom-btn" title="缩小">−</button><span className="awd-zoom-pct">100%</span><button className="awd-zoom-btn" title="放大">+</button><button className="awd-zoom-btn" title="适应画布">⊞</button>
+                  <button className="awd-zoom-btn" title="缩小" onClick={() => setCanvasScale(s => Math.max(ZOOM_MIN, s - ZOOM_STEP))}>−</button><span className="awd-zoom-pct">{Math.round(canvasScale * 100)}%</span><button className="awd-zoom-btn" title="放大" onClick={() => setCanvasScale(s => Math.min(ZOOM_MAX, s + ZOOM_STEP))}>+</button><button className="awd-zoom-btn" title="适应画布" onClick={() => setCanvasScale(1)}>⊞</button>
                   <span className="awd-toolbar-sep" />
                   <button
                     className="awd-zoom-btn"
@@ -1103,7 +1109,7 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
             <div className="wf-v2-canvas-area">
                 {selectedTemplate ? (
                   <>
-                    <div className="wf-v2-node-track">
+                    <div className="wf-v2-node-track" style={{ transform: `scale(${canvasScale})`, transformOrigin: 'top left' }}>
                       {sortedSteps.map((step, i) => {
                         const role = data.roles.find(r => r.id === step.roleId) ?? null;
                         const runnerProfile = data.runnerProfiles?.find(r => r.id === step.runnerId) ?? null;
