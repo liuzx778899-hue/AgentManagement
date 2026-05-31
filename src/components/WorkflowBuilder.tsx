@@ -1654,18 +1654,7 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
         active: template.id === selectedTemplateId,
         status: template.status === "draft" ? "草稿" : "正式",
         statusColor: (template.status === "draft" ? "blue" : "green") as "green" | "blue" | "muted",
-        dashed: false,
       })),
-      {
-        id: "blank-template",
-        name: "自定义空白流程",
-        steps: 0,
-        desc: "自定义流程从零开始",
-        active: false,
-        status: "草稿",
-        statusColor: "muted" as const,
-        dashed: true,
-      },
     ],
     [data.workflowTemplates, selectedTemplateId]
   );
@@ -1875,15 +1864,13 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
               {workflowTemplateCards.map((t) => (
                 <div
                   key={t.id}
-                  className={`wf-v2-template-card${t.active ? " active" : ""}${t.dashed ? " dashed" : ""}`}
+                  className={`wf-v2-template-card${t.active ? " active" : ""}`}
                   onClick={() => {
-                    if (t.id !== "blank-template") {
-                      setSelectedTemplateId(t.id);
-                      closeStepInspector();
-                    }
+                    setSelectedTemplateId(t.id);
+                    closeStepInspector();
                   }}
                   onKeyDown={(event) => {
-                    if ((event.key === "Enter" || event.key === " ") && t.id !== "blank-template") {
+                    if (event.key === "Enter" || event.key === " ") {
                       setSelectedTemplateId(t.id);
                       closeStepInspector();
                     }
@@ -1902,7 +1889,7 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
                         onKeyDown={(e) => {
                           if (e.key === "Enter") {
                             const newName = (e.target as HTMLInputElement).value.trim();
-                            if (newName && t.id !== "blank-template") {
+                            if (newName) {
                               updateWorkflowTemplate?.(t.id, { name: newName });
                             }
                             setRenamingTemplateId(null);
@@ -1911,7 +1898,7 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
                         }}
                         onBlur={(e) => {
                           const newName = e.target.value.trim();
-                          if (newName && t.id !== "blank-template" && newName !== t.name) {
+                          if (newName && newName !== t.name) {
                             updateWorkflowTemplate?.(t.id, { name: newName });
                           }
                           setRenamingTemplateId(null);
@@ -1920,27 +1907,22 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
                     ) : (
                       <span
                         onDoubleClick={(e) => {
-                          if (t.dashed) return;
                           e.stopPropagation();
                           setRenamingTemplateId(t.id);
                         }}
                         title="双击修改名称"
-                        style={{ cursor: t.dashed ? "default" : "text" }}
+                        style={{ cursor: "text" }}
                       >
                         {t.name}
                       </span>
                     )}
                     <div className="wf-v2-template-card-actions">
-                      {!t.dashed && (
-                        <>
-                          <span
-                            className={`wf-v2-template-status-badge ${t.statusColor}`}
-                            aria-label={`流程模板状态 ${t.status}`}
-                          >
-                            {t.status}
-                          </span>
-                        </>
-                      )}
+                      <span
+                        className={`wf-v2-template-status-badge ${t.statusColor}`}
+                        aria-label={`流程模板状态 ${t.status}`}
+                      >
+                        {t.status}
+                      </span>
                     </div>
                   </div>
                   <p>{t.steps} 个步骤</p>
