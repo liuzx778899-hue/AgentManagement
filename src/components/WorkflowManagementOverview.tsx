@@ -143,7 +143,10 @@ function workflowTemplateToAsset(template: WorkbenchData["workflowTemplates"][0]
     if (s.roleId && !seenRoleIds.has(s.roleId)) {
       seenRoleIds.add(s.roleId);
       const roleName = getRoleName(s.roleId);
-      const initials = roleName.slice(0, 2);
+      // 中文名取前2字，英文名取单词首字母
+      const initials = /[\u4e00-\u9fff]/.test(roleName)
+        ? roleName.slice(0, 2)
+        : roleName.split(/\s+/).map(w => w[0] || "").join("").slice(0, 2);
       roleAvatars.push({ initials: initials.toUpperCase(), color: colors[roleAvatars.length % colors.length] });
     }
   });
@@ -151,7 +154,7 @@ function workflowTemplateToAsset(template: WorkbenchData["workflowTemplates"][0]
     id: template.id,
     name: template.name,
     description: template.workflowMarkdown?.split("\n")[0] || "无描述",
-    status: template.status === "enabled" ? "enabled" : "draft",
+    status: template.status === "enabled" ? "enabled" : template.status === "disabled" ? "disabled" : "draft",
     version: `v${template.version || 1}`,
     stepCount: steps.length,
     steps: steps.slice(0, 5).map((s, i) => ({ no: `${i + 1}`.padStart(2, "0"), name: s.name })),
@@ -266,15 +269,31 @@ export function WorkflowManagementOverview({ data, onNavigate, onEnterWorkflowDe
     return (data.workflowTemplates || []).map(t => workflowTemplateToAsset(t, data.roles));
   }, [data.workflowTemplates, data.roles]);
 
-  // Compute KPIs from real data
+  const categoryTabs = useMemo(
+    () => ALL_CATEGORIES.filter((category) => category.id === "all" || !deletedCategoryIds.includes(category.id)),
+    [deletedCategoryIds]
+  );
+
+  const visibleWorkflows = useMemo(
+    () =>
+      workflowAssets
+        .filter((flow) => !deletedFlowIds.includes(flow.id))
+        .map((flow) => ({
+          ...flow,
+          status: statusOverrides[flow.id] ?? flow.status,
+        })),
+    [workflowAssets, deletedFlowIds, statusOverrides]
+  );
+
+  // Compute KPIs from visibleWorkflows (includes statusOverrides)
   const kpis = useMemo((): WorkflowKPIs => {
-    const total = workflowAssets.length;
-    const enabled = workflowAssets.filter(w => w.status === "enabled").length;
-    const highRisk = workflowAssets.filter(w => w.status === "high-risk").length;
-    const pendingValidation = workflowAssets.filter(w => w.status === "draft").length;
-    const boundProjects = workflowAssets.reduce((sum, w) => sum + w.boundProjects, 0);
+    const total = visibleWorkflows.length;
+    const enabled = visibleWorkflows.filter(w => w.status === "enabled").length;
+    const highRisk = visibleWorkflows.filter(w => w.status === "high-risk").length;
+    const pendingValidation = visibleWorkflows.filter(w => w.status === "draft").length;
+    const boundProjects = visibleWorkflows.reduce((sum, w) => sum + w.boundProjects, 0);
     return { total, enabled, boundProjects, pendingValidation, highRisk };
-  }, [workflowAssets]);
+  }, [visibleWorkflows]);
 
   // Compute health panel data from real data
   const healthPanel = useMemo((): HealthPanelData => {
@@ -296,22 +315,6 @@ export function WorkflowManagementOverview({ data, onNavigate, onEnterWorkflowDe
     };
     return { categories, roleBindingGaps, recentChanges, aiRecommendation };
   }, [workflowAssets]);
-
-  const categoryTabs = useMemo(
-    () => ALL_CATEGORIES.filter((category) => category.id === "all" || !deletedCategoryIds.includes(category.id)),
-    [deletedCategoryIds]
-  );
-
-  const visibleWorkflows = useMemo(
-    () =>
-      workflowAssets
-        .filter((flow) => !deletedFlowIds.includes(flow.id))
-        .map((flow) => ({
-          ...flow,
-          status: statusOverrides[flow.id] ?? flow.status,
-        })),
-    [workflowAssets, deletedFlowIds, statusOverrides]
-  );
 
   const filteredWorkflows = useMemo(
     () => filterWorkflowsByCategory(visibleWorkflows, activeCategory),
