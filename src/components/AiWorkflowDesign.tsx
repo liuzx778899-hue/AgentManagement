@@ -113,6 +113,11 @@ export function AiWorkflowDesign({ data }: AiWorkflowDesignProps) {
 
     // Call AI API
     try {
+      // 先获取 AI 助手配置
+      const configResponse = await fetch("/api/settings/model-providers");
+      const configResult = await configResponse.json();
+      const { aiAssistantModel } = configResult.data || {};
+
       const response = await fetch("/api/ai/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -122,6 +127,8 @@ export function AiWorkflowDesign({ data }: AiWorkflowDesignProps) {
             content: m.text,
           })),
           context: `当前有 ${contextFiles.length} 个上下文文件`,
+          providerId: aiAssistantModel?.providerId,
+          modelName: aiAssistantModel?.modelName,
         }),
       });
 
@@ -164,25 +171,110 @@ export function AiWorkflowDesign({ data }: AiWorkflowDesignProps) {
 
   // Generate workflow draft
   const handleGenerateDraft = async () => {
+    console.log('[AiWorkflowDesign] handleGenerateDraft called');
     setGenerating(true);
 
     try {
-      // TODO: Implement actual AI workflow generation
-      // For now, simulate with a delay and empty state
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // 先获取 AI 助手配置
+      const configResponse = await fetch("/api/settings/model-providers");
+      const configResult = await configResponse.json();
+      const { aiAssistantModel } = configResult.data || {};
 
-      // Set empty draft (would be populated by AI)
+      console.log('[AiWorkflowDesign] AI config:', aiAssistantModel);
+      console.log('[AiWorkflowDesign] Projects:', data.projects.length, data.projects);
+      console.log('[AiWorkflowDesign] Roles:', data.roles.length, data.roles);
+
+      // 获取当前项目信息作为上下文
+      const projectContext = data.projects.length > 0
+        ? `当前项目: ${data.projects.map(p => p.name).join(", ")}`
+        : "暂无活跃项目";
+
+      const rolesContext = data.roles.length > 0
+        ? `可用角色: ${data.roles.map(r => r.name).join(", ")}`
+        : "暂无定义角色";
+
+      // 调用 AI 生成流程草案
+      const response = await fetch("/api/ai/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: [{
+            role: "user",
+            content: `请基于以下上下文，生成一个软件开发工作流程草案：
+
+${projectContext}
+${rolesContext}
+
+请按以下格式输出流程步骤：
+1. 步骤名称
+2. 绑定角色
+3. 使用的模型
+4. Gate 类型（auto/manual/approval）
+
+请直接输出步骤列表，每行一个步骤，格式为：步骤名|角色|模型|Gate类型`
+          }],
+          context: "AI 流程设计模式",
+          providerId: aiAssistantModel?.providerId,
+          modelName: aiAssistantModel?.modelName,
+        }),
+      });
+
+      const result = await response.json();
+      console.log('[AiWorkflowDesign] AI response:', result);
+
+      if (result.ok && result.data?.content) {
+        // 解析 AI 返回的流程步骤
+        const content = result.data.content;
+        const lines = content.split("\n").filter((line: string) => line.trim());
+        const nodes: DraftNode[] = [];
+        const diffs: DiffItem[] = [];
+
+        lines.forEach((line: string, index: number) => {
+          // 尝试解析 "步骤名|角色|模型|Gate类型" 格式
+          const parts = line.split("|").map((p: string) => p.trim());
+          if (parts.length >= 1 && parts[0]) {
+            const stepName = parts[0].replace(/^\d+[\.\、\s]*/, "").trim();
+            const roleName = parts[1] || "待分配";
+            const modelName = parts[2] || "默认模型";
+            const gateType = parts[3] || "auto";
+
+            nodes.push({
+              no: String(index + 1).padStart(2, "0"),
+              name: stepName,
+              role: roleName,
+              model: modelName,
+              gate: gateType,
+              status: index === 0 ? "active" : "idle",
+            });
+
+            diffs.push({
+              type: "add" as const,
+              title: stepName,
+              desc: `角色: ${roleName}, Gate: ${gateType}`,
+            });
+          }
+        });
+
+        setDraftNodes(nodes);
+        setDiffItems(diffs);
+        setDraftGenerated(true);
+
+        // Update checklist based on generation
+        setChecklistItems(prev => prev.map((item, i) => ({
+          ...item,
+          done: i < 2, // Mark first two as done
+        })));
+      } else {
+        // AI 调用失败，显示错误
+        setDraftNodes([]);
+        setDiffItems([]);
+        setDraftGenerated(true);
+      }
+    } catch (error) {
+      console.error("生成失败:", error);
       setDraftNodes([]);
       setDiffItems([]);
       setDraftGenerated(true);
-
-      // Update checklist based on generation
-      setChecklistItems(prev => prev.map((item, i) => ({
-        ...item,
-        done: i < 2, // Mark first two as done
-      })));
-    } catch (error) {
-      console.error("生成失败:", error);
     }
 
     setGenerating(false);
@@ -359,14 +451,15 @@ export function AiWorkflowDesign({ data }: AiWorkflowDesignProps) {
             <div className="awd-insight-card">
               <div className="awd-insight-title">♙ 角色建议 <span className="awd-insight-badge">{draftGenerated ? "已分析" : "待分析"}</span></div>
               <div className="awd-insight-roles">
-                {draftGenerated ? (
-                  <>
-                    <div className="awd-role-row"><span className="awd-role-dot" style={{background:"#4268d9"}}>P</span>产品经理</div>
-                    <div className="awd-role-row"><span className="awd-role-dot" style={{background:"#7257cc"}}>U</span>UI/UX 设计师</div>
-                    <div className="awd-role-row"><span className="awd-role-dot" style={{background:"#2f9b68"}}>F</span>前端工程师</div>
-                    <div className="awd-role-row"><span className="awd-role-dot" style={{background:"#d17e34"}}>R</span>代码审查员</div>
-                    <div className="awd-role-row"><span className="awd-role-dot" style={{background:"#4d78e5"}}>T</span>测试工程师</div>
-                  </>
+                {draftGenerated && draftNodes.length > 0 ? (
+                  draftNodes.map((node, i) => (
+                    <div key={i} className="awd-role-row">
+                      <span className="awd-role-dot" style={{background:["#4268d9","#7257cc","#2f9b68","#d17e34","#4d78e5"][i % 5]}}>
+                        {node.role[0] || "未"}
+                      </span>
+                      {node.role}
+                    </div>
+                  ))
                 ) : (
                   <p className="awd-empty-hint">等待生成草案...</p>
                 )}

@@ -17,47 +17,30 @@ function AiWorkflowDesignInline({ data }: { data: WorkbenchData }) {
   const [draftGenerated, setDraftGenerated] = useState(false);
   const [selectedDraftIndex, setSelectedDraftIndex] = useState(0);
   const [editingDraftStepId, setEditingDraftStepId] = useState<string | null>(null);
+  const [generating, setGenerating] = useState(false);
   const materialInputRef = useRef<HTMLInputElement | null>(null);
 
-  const INITIAL_FILES = [
-    { name: "当前项目计划", ext: "项目计划.md" },
-    { name: "HANDOFF", ext: "HANDOFF_NEXT_TASKS.md" },
-    { name: "AI 建项结果", ext: "ai_project_analysis.md" },
-    { name: "当前流程 v1.3", ext: "software_flow_v1.3.json" },
-    { name: "CODE_REVIEW", ext: "CODE_REVIEW_AND_FIX.md" },
-  ];
-  const [materials, setMaterials] = useState(INITIAL_FILES);
+  // 聊天消息
+  const [chatMessages, setChatMessages] = useState<{ id: number; author: string; text: string; isUser: boolean; time: string }[]>([]);
+
+  // 初始状态为空，由用户上传或 AI 生成
+  const [materials, setMaterials] = useState<{ name: string; ext: string }[]>([]);
   const [materialNotice, setMaterialNotice] = useState("");
 
-  const DRAFT_NODES = [
-    { name: "需求分析", role: "产品经理", runner: "Claude Code CLI", provider: "DeepSeek", model: "deepseek-v4-pro" },
-    { name: "UI/UX 设计", role: "UI/UX 设计师", runner: "Codex CLI", provider: "OpenAI", model: "gpt-5.3-codex" },
-    { name: "前端开发", role: "前端工程师", runner: "Cursor CLI", provider: "OpenAI", model: "gpt-5.3-codex" },
-    { name: "代码审查", role: "代码审查员", runner: "Gemini CLI", provider: "DeepSeek", model: "deepseek-v4-pro" },
-    { name: "测试验证", role: "测试工程师", runner: "Claude Code CLI", provider: "DeepSeek", model: "deepseek-v4-pro" },
-  ];
-  const findRoleId = (name: string) => data.roles.find((role) => role.name === name || role.name.includes(name) || name.includes(role.name))?.id ?? "";
-  const findRunnerId = (name: string) => data.runnerProfiles.find((runner) => runner.displayName === name || runner.displayName.includes(name) || name.includes(runner.displayName))?.id;
-  const findProviderId = (name: string) => data.modelProviders.find((provider) => provider.name === name || provider.name.includes(name) || name.includes(provider.name))?.id
-    ?? data.modelProviders.find((provider) => provider.enabled)?.id
-    ?? data.modelProviders[0]?.id
-    ?? "";
-  const [draftSteps, setDraftSteps] = useState<WorkflowStep[]>(() =>
-    DRAFT_NODES.map((node, index) => ({
-      id: `ai-draft-step-${index + 1}`,
-      order: index + 1,
-      name: node.name,
-      roleId: findRoleId(node.role),
-      modelProviderId: findProviderId(node.provider),
-      modelName: node.model,
-      inputs: index === 0 ? ["项目目标", "协同资料"] : [`步骤 ${index} 输出`],
-      outputs: [`${node.name}结果`],
-      gateMode: index >= 3 ? "manual" : "auto",
-      failureStrategy: "stop",
-      projectOverride: false,
-      runnerId: findRunnerId(node.runner),
-    })),
-  );
+  // 差异对比
+  const [diffItems, setDiffItems] = useState<{ type: "add" | "mod" | "same"; title: string; desc: string }[]>([]);
+
+  // 检查清单
+  const [checklistItems, setChecklistItems] = useState([
+    { label: "步骤完整性检查", done: false },
+    { label: "角色绑定检查", done: false },
+    { label: "模型配置检查", done: false },
+    { label: "Gate 配置检查", done: false },
+    { label: "验收标准确认", done: false },
+  ]);
+
+  // 草案步骤初始为空，由 AI 生成后填充
+  const [draftSteps, setDraftSteps] = useState<WorkflowStep[]>([]);
   const draftTemplate = useMemo<WorkflowTemplate>(() => ({
     id: "ai-draft-template",
     name: "AI 生成流程草案",
@@ -68,16 +51,31 @@ function AiWorkflowDesignInline({ data }: { data: WorkbenchData }) {
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   }), [draftSteps]);
+
   const editingDraftStep = editingDraftStepId ? draftSteps.find((step) => step.id === editingDraftStepId) : null;
-  const getRoleName = (roleId: string) => data.roles.find((role) => role.id === roleId)?.name ?? "未绑定角色";
+
+  // 从 roleId 提取角色名
+  const getRoleName = (roleId: string) => {
+    if (!roleId) return "未绑定角色";
+    if (roleId.startsWith("role-ai-draft-")) {
+      return roleId.replace("role-ai-draft-", "");
+    }
+    // 尝试从角色池查找
+    const role = data.roles.find(r => r.id === roleId);
+    return role?.name ?? "未绑定角色";
+  };
+
   const getRunnerName = (runnerId?: string) => data.runnerProfiles.find((runner) => runner.id === runnerId)?.displayName ?? "未绑定 Runner";
+
   const focusDraftStep = (index: number) => {
     setSelectedDraftIndex(index);
     document.getElementById(`awd-node-${index}`)?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
   };
+
   const handleAddMaterial = () => {
     materialInputRef.current?.click();
   };
+
   const handleMaterialFiles = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files ?? []);
     if (files.length === 0) return;
@@ -96,12 +94,204 @@ function AiWorkflowDesignInline({ data }: { data: WorkbenchData }) {
     event.target.value = "";
   };
 
-  const DIFF_ITEMS = [
-    { type: "add", title: "新增步骤：部署发布", desc: "新增步骤 06，绑定 DevOps 角色" },
-    { type: "mod", title: "角色变更：测试工程师", desc: "替换为 Gemini Pro 模型" },
-    { type: "mod", title: "步骤优化：前端开发", desc: "增加能力授权 MCP + Skills" },
-    { type: "same", title: "保持不变：需求分析", desc: "产品经理角色和模型不变" },
-  ];
+  // 获取当前时间
+  const getCurrentTime = () => {
+    const now = new Date();
+    return now.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false });
+  };
+
+  // 发送聊天消息
+  const handleSendMessage = async () => {
+    const text = composerText.trim();
+    if (!text) return;
+
+    // 添加用户消息
+    const userMessage = {
+      id: Date.now(),
+      author: "我",
+      text,
+      isUser: true,
+      time: getCurrentTime(),
+    };
+    setChatMessages(prev => [...prev, userMessage]);
+    setComposerText("");
+
+    // 获取 AI 配置
+    try {
+      const configResponse = await fetch("/api/settings/model-providers");
+      const configResult = await configResponse.json();
+      const { aiAssistantModel } = configResult.data || {};
+
+      // 构建上下文
+      const materialsContext = materials.length > 0
+        ? `上下文文件: ${materials.map(m => `${m.name}.${m.ext}`).join(", ")}`
+        : "";
+
+      // 调用 AI
+      const response = await fetch("/api/ai/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: [{ role: "user", content: text }],
+          context: materialsContext,
+          providerId: aiAssistantModel?.providerId,
+          modelName: aiAssistantModel?.modelName,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.ok && result.data?.content) {
+        setChatMessages(prev => [...prev, {
+          id: Date.now(),
+          author: "AI 助手",
+          text: result.data.content,
+          isUser: false,
+          time: getCurrentTime(),
+        }]);
+      } else {
+        setChatMessages(prev => [...prev, {
+          id: Date.now(),
+          author: "AI 助手",
+          text: "抱歉，我暂时无法处理您的请求。",
+          isUser: false,
+          time: getCurrentTime(),
+        }]);
+      }
+    } catch (error) {
+      console.error('Chat error:', error);
+      setChatMessages(prev => [...prev, {
+        id: Date.now(),
+        author: "AI 助手",
+        text: "抱歉，连接 AI 服务失败。",
+        isUser: false,
+        time: getCurrentTime(),
+      }]);
+    }
+  };
+
+  // 生成流程草案
+  const handleGenerateDraft = async () => {
+    setGenerating(true);
+
+    try {
+      // 获取 AI 配置
+      const configResponse = await fetch("/api/settings/model-providers");
+      const configResult = await configResponse.json();
+      const { aiAssistantModel } = configResult.data || {};
+
+      // 构建上下文
+      const projectContext = data.projects.length > 0
+        ? `当前项目: ${data.projects.map(p => p.name).join(", ")}`
+        : "暂无活跃项目";
+
+      const materialsContext = materials.length > 0
+        ? `上下文文件: ${materials.map(m => `${m.name}.${m.ext}`).join(", ")}`
+        : "";
+
+      // 调用 AI 生成
+      const response = await fetch("/api/ai/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: [{
+            role: "user",
+            content: `请基于以下上下文，生成一个软件开发工作流程草案：
+
+${projectContext}
+${materialsContext}
+
+请按以下格式输出流程步骤（每行一个步骤）：
+步骤名|角色名|模型名|Gate类型(auto/manual)
+
+例如：
+需求分析|产品经理|glm-5|auto
+UI设计|UI设计师|glm-5|manual`
+          }],
+          context: "AI 流程设计模式",
+          providerId: aiAssistantModel?.providerId,
+          modelName: aiAssistantModel?.modelName,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.ok && result.data?.content) {
+        const content = result.data.content;
+        const lines = content.split("\n").filter((line: string) => line.trim());
+
+        // 清空旧数据
+        const newSteps: WorkflowStep[] = [];
+        const newDiffs: { type: "add" | "mod" | "same"; title: string; desc: string }[] = [];
+
+        lines.forEach((line: string, index: number) => {
+          const parts = line.split("|").map((p: string) => p.trim());
+          if (parts.length >= 1 && parts[0]) {
+            const stepName = parts[0].replace(/^\d+[\.\、\s]*/, "").trim();
+            const roleName = parts[1] || "待分配";
+            const modelName = parts[2] || "默认模型";
+            const gateType = parts[3] || "auto";
+
+            const provider = data.modelProviders.find(p => p.enabled) ?? data.modelProviders[0];
+
+            newSteps.push({
+              id: `ai-draft-step-${index + 1}`,
+              order: index + 1,
+              name: stepName,
+              roleId: `role-ai-draft-${roleName}`, // 角色名直接作为 roleId 的一部分
+              modelProviderId: provider?.id ?? "",
+              modelName,
+              inputs: index === 0 ? ["项目目标", "协同资料"] : [`步骤 ${index} 输出`],
+              outputs: [`${stepName}结果`],
+              gateMode: gateType === "manual" ? "manual" : "auto",
+              failureStrategy: "stop",
+              projectOverride: false,
+            });
+
+            newDiffs.push({
+              type: "add",
+              title: stepName,
+              desc: `角色: ${roleName}, Gate: ${gateType}`,
+            });
+          }
+        });
+
+        if (newSteps.length > 0) {
+          setDraftSteps(newSteps);
+          setDiffItems(newDiffs);
+          setDraftGenerated(true);
+
+          // 更新检查清单
+          setChecklistItems(prev => prev.map((item, i) => ({
+            ...item,
+            done: i < 2,
+          })));
+        }
+      }
+    } catch (error) {
+      console.error('[AiWorkflowDesignInline] Generate failed:', error);
+    }
+
+    setGenerating(false);
+  };
+
+  // 键盘事件
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
+  // 统计
+  const stats = {
+    add: diffItems.filter(d => d.type === "add").length,
+    mod: diffItems.filter(d => d.type === "mod").length,
+    same: diffItems.filter(d => d.type === "same").length,
+  };
+
+  // 检查是否所有清单项都完成
+  const allChecksDone = checklistItems.every(item => item.done);
 
   return (
     <div className="awd-inline-content">
@@ -114,8 +304,22 @@ function AiWorkflowDesignInline({ data }: { data: WorkbenchData }) {
             <div className="awd-ctx-badge">上下文 {materials.length} 项</div>
           </div>
           <div className="awd-chat-compact">
-            <div className="awd-bubble-row me"><div className="awd-bubble-icon">我</div><div className="awd-bubble me">基于当前项目计划和协同文件，帮我优化软件开发流程。</div></div>
-            <div className="awd-bubble-row"><div className="awd-bubble-icon">AI</div><div className="awd-bubble">好的，我已收集资料为你生成流程草案。</div></div>
+            {chatMessages.length === 0 ? (
+              <div className="awd-empty-chat">
+                <p>开始与 AI 助手对话</p>
+                <p className="awd-empty-hint">输入您的需求，AI 将帮助您设计和优化工作流程</p>
+              </div>
+            ) : (
+              chatMessages.map((msg) => (
+                <div key={msg.id} className={`awd-bubble-row${msg.isUser ? " me" : ""}`}>
+                  <div className="awd-bubble-icon">{msg.isUser ? "我" : "AI"}</div>
+                  <div className={`awd-bubble${msg.isUser ? " me" : ""}`}>
+                    <div className="awd-bubble-time">{msg.author}　{msg.time}</div>
+                    {msg.text.split("\n").map((line, j) => <p key={j}>{line}</p>)}
+                  </div>
+                </div>
+              ))
+            )}
           </div>
           <div className="awd-material-box">
             <button className="awd-material-head" onClick={() => setMaterialsExpanded(!materialsExpanded)}>
@@ -124,15 +328,40 @@ function AiWorkflowDesignInline({ data }: { data: WorkbenchData }) {
             </button>
             {materialsExpanded && (
               <div className="awd-file-list">
-                {materials.map((f, i) => (
-                  <div key={i} className="awd-file-row"><span>▣</span><span className="awd-file-name">{f.name}</span><span className="awd-file-ext">{f.ext}</span></div>
-                ))}
+                {materials.length === 0 ? (
+                  <div className="awd-empty-files">
+                    <p>暂无上下文文件</p>
+                    <p className="awd-empty-hint">点击下方「添加资料」上传相关文件</p>
+                  </div>
+                ) : (
+                  materials.map((f, i) => (
+                    <div key={i} className="awd-file-row">
+                      <span>▣</span>
+                      <span className="awd-file-name">{f.name}</span>
+                      <span className="awd-file-ext">{f.ext}</span>
+                      <button
+                        className="awd-file-delete-btn"
+                        onClick={() => setMaterials(materials.filter((_, idx) => idx !== i))}
+                        title="删除文件"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))
+                )}
                 {materialNotice && <div className="awd-material-notice">{materialNotice}</div>}
               </div>
             )}
           </div>
           <div className="awd-composer">
-            <textarea className="awd-textarea" placeholder="输入流程约束或补充说明..." value={composerText} onChange={(e) => setComposerText(e.target.value)} rows={2} />
+            <textarea
+              className="awd-textarea"
+              placeholder="输入流程约束、补充说明或优化建议..."
+              value={composerText}
+              onChange={(e) => setComposerText(e.target.value)}
+              onKeyDown={handleKeyDown}
+              rows={3}
+            />
             <div className="awd-composer-actions">
               <span className="awd-counter">{composerText.length} 字</span>
               <input
@@ -143,7 +372,13 @@ function AiWorkflowDesignInline({ data }: { data: WorkbenchData }) {
                 onChange={handleMaterialFiles}
               />
               <button type="button" className="awd-composer-btn" onClick={handleAddMaterial}><Paperclip size={14} /> 添加资料</button>
-              <button className="awd-send-btn" disabled={!composerText.trim()}><Send size={14} /></button>
+              <button
+                className="awd-send-btn"
+                disabled={!composerText.trim()}
+                onClick={handleSendMessage}
+              >
+                <Send size={14} />
+              </button>
             </div>
           </div>
         </section>
@@ -152,80 +387,129 @@ function AiWorkflowDesignInline({ data }: { data: WorkbenchData }) {
         <section className="awd-panel awd-analysis" style={{ flex: 1 }}>
           <div className="awd-panel-head-sm" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <h2>分析流程与草案</h2>
-            <button className="awd-btn awd-btn-primary" style={{ height: 28, fontSize: 11, padding: "0 14px" }} onClick={() => setDraftGenerated(true)}><Sparkles size={12} /> 生成草案</button>
+            <button
+              className="awd-btn awd-btn-primary"
+              style={{ height: 28, fontSize: 11, padding: "0 14px" }}
+              onClick={handleGenerateDraft}
+              disabled={generating}
+            >
+              <Sparkles size={12} /> {generating ? "生成中..." : "生成草案"}
+            </button>
           </div>
           <div className="awd-steps">
             {["收集资料", "分析需求", "识别角色", "生成草案", "差异对比"].map((s, i) => (
-              <div key={i} className={`awd-step${i <= 2 ? " active" : ""}`}><div className="awd-step-no">{i + 1}</div><span>{s}</span></div>
+              <div key={i} className={`awd-step${i <= (draftGenerated ? 4 : generating ? 3 : materials.length > 0 ? 0 : -1) ? " active" : ""}`}>
+                <div className="awd-step-no">{i + 1}</div><span>{s}</span>
+              </div>
             ))}
           </div>
           <div className="awd-insights-compact">
-            <div className="awd-insight-card"><div className="awd-insight-title">◎ 目标摘要 <span className="awd-insight-badge">待分析</span></div><p>优化软件开发完整流程，补齐角色、模型与能力授权，提升交付质量与效率。</p></div>
-            <div className="awd-insight-card"><div className="awd-insight-title">♙ 角色建议 (5) <span className="awd-insight-badge">待分析</span></div><div className="awd-insight-roles"><div className="awd-role-row"><span className="awd-role-dot" style={{background:"#4268d9"}}>P</span>产品经理</div><div className="awd-role-row"><span className="awd-role-dot" style={{background:"#7257cc"}}>U</span>UI/UX 设计师</div><div className="awd-role-row"><span className="awd-role-dot" style={{background:"#2f9b68"}}>F</span>前端工程师</div><div className="awd-role-row"><span className="awd-role-dot" style={{background:"#d17e34"}}>R</span>代码审查员</div><div className="awd-role-row"><span className="awd-role-dot" style={{background:"#4d78e5"}}>T</span>测试工程师</div></div></div>
-            <div className="awd-insight-card"><div className="awd-insight-title">◇ 能力授权建议 <span className="awd-insight-badge">待分析</span></div><div className="awd-cap-grid"><div className="awd-cap green"><strong>MCP</strong><span>已启用</span></div><div className="awd-cap green"><strong>Skills</strong><span>已启用</span></div><div className="awd-cap green"><strong>Git</strong><span>已启用</span></div><div className="awd-cap warn"><strong>Local Shell</strong><span>待确认</span></div></div></div>
-            <div className="awd-insight-card"><div className="awd-insight-title">⚙ 风险与假设 <span className="awd-insight-badge">待分析</span></div><ul><li>依赖第三方服务稳定性</li><li>模型输出质量波动</li><li>多人协作冲突</li><li>测试覆盖不足</li></ul></div>
+            <div className="awd-insight-card">
+              <div className="awd-insight-title">◎ 目标摘要 <span className="awd-insight-badge">{draftGenerated ? "已分析" : "待分析"}</span></div>
+              <p>{draftGenerated ? "基于上下文资料生成的流程草案，已识别关键步骤和角色分配。" : "点击「生成草案」开始分析..."}</p>
+            </div>
+            <div className="awd-insight-card">
+              <div className="awd-insight-title">♙ 角色建议 <span className="awd-insight-badge">{draftGenerated ? "已分析" : "待分析"}</span></div>
+              <div className="awd-insight-roles">
+                {draftGenerated && draftSteps.length > 0 ? (
+                  draftSteps.slice(0, 5).map((step, i) => (
+                    <div key={i} className="awd-role-row">
+                      <span className="awd-role-dot" style={{background: ["#4268d9","#7257cc","#2f9b68","#d17e34","#4d78e5"][i % 5]}}>
+                        {getRoleName(step.roleId)[0] || "未"}
+                      </span>
+                      {getRoleName(step.roleId)}
+                    </div>
+                  ))
+                ) : (
+                  <p className="awd-empty-hint">等待生成草案...</p>
+                )}
+              </div>
+            </div>
+            <div className="awd-insight-card">
+              <div className="awd-insight-title">◇ 能力授权建议 <span className="awd-insight-badge">{draftGenerated ? "已分析" : "待分析"}</span></div>
+              <div className="awd-cap-grid">
+                <div className={`awd-cap ${draftGenerated ? "green" : ""}`}><strong>MCP</strong><span>{draftGenerated ? "已启用" : "待确认"}</span></div>
+                <div className={`awd-cap ${draftGenerated ? "green" : ""}`}><strong>Skills</strong><span>{draftGenerated ? "已启用" : "待确认"}</span></div>
+                <div className={`awd-cap ${draftGenerated ? "green" : ""}`}><strong>Git</strong><span>{draftGenerated ? "已启用" : "待确认"}</span></div>
+                <div className="awd-cap warn"><strong>Local Shell</strong><span>待确认</span></div>
+              </div>
+            </div>
+            <div className="awd-insight-card">
+              <div className="awd-insight-title">⚙ 风险与假设 <span className="awd-insight-badge">{draftGenerated ? "已分析" : "待分析"}</span></div>
+              {draftGenerated ? (
+                <ul>
+                  <li>依赖第三方服务稳定性</li>
+                  <li>模型输出质量波动</li>
+                  <li>多人协作冲突</li>
+                  <li>测试覆盖不足</li>
+                </ul>
+              ) : (
+                <p className="awd-empty-hint">等待生成草案...</p>
+              )}
+            </div>
           </div>
           <div className="awd-canvas-card">
-            <div className="awd-canvas-head"><div className="awd-draft-title"><span>流程草案</span><span className="awd-mini-tag">v1.4 · 草案</span></div></div>
-            <div className="awd-canvas">
-              {/* Zoom controls — floating over canvas area */}
-              <div className="awd-canvas-zoom-ctrl"><button className="awd-zoom-btn" title="缩小">−</button><span className="awd-zoom-pct">100%</span><button className="awd-zoom-btn" title="放大">+</button><button className="awd-zoom-btn" title="适应画布">⊞</button><span className="awd-toolbar-sep" /><button className="awd-zoom-btn" style={{width:"auto",padding:"0 8px",gap:4}}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 6h16M4 12h16M4 18h7"/></svg>对齐</button><button className="awd-zoom-btn" style={{width:"auto",padding:"0 8px",gap:4}}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>版本管理</button></div>
-              {draftSteps.map((step, i) => {
-                const stateClass = i < 2 ? "done" : i === selectedDraftIndex ? "active" : i === 3 ? "wait" : "";
-                const roleName = getRoleName(step.roleId);
-                const runnerName = getRunnerName(step.runnerId);
-                return (
-                <div key={i} style={{ display: "flex", alignItems: "center", gap: 0 }}>
-                  <div
-                    id={`awd-node-${i}`}
-                    className={`awd-node-v2 ${stateClass}`}
-                    onClick={() => setSelectedDraftIndex(i)}
-                    onDoubleClick={() => setEditingDraftStepId(step.id)}
-                    title="双击编辑步骤"
-                  >
-                    <div className="awd-node-v2-hd">
-                      <span className="awd-node-v2-no">{String(i + 1).padStart(2, "0")}</span>
-                      <span className="awd-node-v2-name">{step.name}</span>
-                    </div>
-                    <div className="awd-node-v2-body">
-                      <div className="awd-node-v2-row">
-                        <div className={`awd-node-v2-avatar ${stateClass}`}>{roleName[0] ?? "未"}</div>
-                        <div>
-                          <div className="awd-node-v2-label">角色</div>
-                          <div className="awd-node-v2-val">{roleName}</div>
-                        </div>
-                      </div>
-                      <div className="awd-node-v2-row">
-                        <span className={`awd-node-v2-dot ${stateClass}`} />
-                        <div>
-                          <div className="awd-node-v2-label">Runner</div>
-                          <div className="awd-node-v2-val">{runnerName}</div>
-                        </div>
-                      </div>
-                      <div className="awd-node-v2-row">
-                        <span className={`awd-node-v2-dot ${stateClass}`} />
-                        <div>
-                          <div className="awd-node-v2-label">模型</div>
-                          <div className="awd-node-v2-val">{step.modelName}</div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  {i < draftSteps.length - 1 && <span className="awd-node-arrow"><ArrowRight size={16} /></span>}
-                </div>
-              )})}
-            </div>
-            {/* Minimap — 跟常规模式完全一致 */}
-            <div className="wf-v2-minimap" aria-label="流程缩略图">
-              <div className="wf-v2-minimap-title">缩略图</div>
-              <div className="wf-v2-minimap-track">
-                {draftSteps.map((step, i) => (
-                  <button key={step.id} type="button" title={step.name} className={`wf-v2-minimap-node${selectedDraftIndex === i ? " active" : ""}`}
-                    onClick={() => focusDraftStep(i)}
-                  />
-                ))}
+            <div className="awd-canvas-head">
+              <div className="awd-draft-title">
+                <span>流程草案</span>
+                {draftGenerated && <span className="awd-mini-tag">草案</span>}
               </div>
-              <div className="wf-v2-minimap-window" />
+            </div>
+            <div className="awd-canvas">
+              {draftSteps.length === 0 ? (
+                <div className="awd-empty-canvas">
+                  <div className="awd-empty-icon">📋</div>
+                  <p>{draftGenerated ? "草案已生成，暂无步骤" : "点击「生成草案」开始"}</p>
+                  {!draftGenerated && <p className="awd-empty-hint">AI 将根据上下文自动生成流程步骤</p>}
+                </div>
+              ) : (
+                draftSteps.map((step, i) => {
+                  const stateClass = i === 0 ? "active" : "idle";
+                  const roleName = getRoleName(step.roleId);
+                  return (
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 0 }}>
+                      <div
+                        id={`awd-node-${i}`}
+                        className={`awd-node-v2 ${stateClass}`}
+                        onClick={() => setSelectedDraftIndex(i)}
+                        onDoubleClick={() => setEditingDraftStepId(step.id)}
+                        title="双击编辑步骤"
+                      >
+                        <div className="awd-node-v2-hd">
+                          <span className="awd-node-v2-no">{String(i + 1).padStart(2, "0")}</span>
+                          <span className="awd-node-v2-name">{step.name}</span>
+                        </div>
+                        <div className="awd-node-v2-body">
+                          <div className="awd-node-v2-row">
+                            <div className={`awd-node-v2-avatar ${stateClass}`}>{roleName[0] ?? "未"}</div>
+                            <div>
+                              <div className="awd-node-v2-label">角色</div>
+                              <div className="awd-node-v2-val">{roleName}</div>
+                            </div>
+                          </div>
+                          <div className="awd-node-v2-row">
+                            <span className={`awd-node-v2-dot ${stateClass}`} />
+                            <div>
+                              <div className="awd-node-v2-label">模型</div>
+                              <div className="awd-node-v2-val">{step.modelName || "—"}</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      {i < draftSteps.length - 1 && <span className="awd-node-arrow"><ArrowRight size={16} /></span>}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+            <div className="awd-canvas-footer">
+              <div className="awd-legend">
+                <span><span className="awd-legend-dot done" />已完成</span>
+                <span><span className="awd-legend-dot active" />运行中</span>
+                <span><span className="awd-legend-dot wait" />等待 Gate</span>
+                <span><span className="awd-legend-dot idle" />待开始</span>
+              </div>
+              <span>{draftSteps.length} 个步骤</span>
             </div>
           </div>
         </section>
@@ -234,26 +518,53 @@ function AiWorkflowDesignInline({ data }: { data: WorkbenchData }) {
         <section className="awd-panel awd-diff" style={{ minWidth: 260 }}>
           <div className="awd-panel-head-sm"><h2>差异对比与应用</h2></div>
           <div className="awd-stats">
-            <div className="awd-stat green"><span>新增步骤</span><strong>2</strong><span>已识别</span></div>
-            <div className="awd-stat"><span>修改步骤</span><strong>2</strong><span>角色/模型变更</span></div>
-            <div className="awd-stat warn"><span>保持不变</span><strong>2</strong><span>无需变更</span></div>
+            <div className="awd-stat green"><span>新增步骤</span><strong>{stats.add}</strong><span>已识别新增节点</span></div>
+            <div className="awd-stat"><span>修改步骤</span><strong>{stats.mod}</strong><span>角色/模型/Gate 变更</span></div>
+            <div className="awd-stat warn"><span>保持不变</span><strong>{stats.same}</strong><span>无需变更的步骤</span></div>
           </div>
           <div className="awd-diff-list">
-            {DIFF_ITEMS.map((item, i) => (
-              <div key={i} className={`awd-diff-row ${item.type}`}>
-                <div className="awd-diff-icon">{item.type==="add"?<Plus size={14}/>:item.type==="mod"?<ArrowRight size={14}/>:<Check size={14}/>}</div>
-                <div><h3>{item.title}</h3><p>{item.desc}</p></div>
+            {diffItems.length === 0 ? (
+              <div className="awd-empty-diff">
+                <div className="awd-empty-icon">📊</div>
+                <p>{draftGenerated ? "暂无差异" : "生成草案后显示差异对比"}</p>
+              </div>
+            ) : (
+              diffItems.map((item, i) => (
+                <div key={i} className={`awd-diff-row ${item.type}`}>
+                  <div className="awd-diff-icon">
+                    {item.type === "add" && <Plus size={14} />}
+                    {item.type === "mod" && <ArrowRight size={14} />}
+                    {item.type === "same" && <Check size={14} />}
+                  </div>
+                  <div>
+                    <h3>{item.title}</h3>
+                    <p>{item.desc}</p>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+          <div className="awd-checklist">
+            <h3>应用前确认</h3>
+            {checklistItems.map((item, i) => (
+              <div
+                key={i}
+                className="awd-check-row"
+                onClick={() => setChecklistItems(prev => prev.map((c, idx) => idx === i ? { ...c, done: !c.done } : c))}
+                style={{ cursor: "pointer" }}
+              >
+                <div className={`awd-check-box${item.done ? " done" : ""}`}>
+                  {item.done && <Check size={10} />}
+                </div>
+                <span>{item.label}</span>
               </div>
             ))}
           </div>
-          <div className="awd-checklist"><h3>应用前确认</h3>
-            {[{label:"已检查步骤完整性",done:true},{label:"已验证角色绑定",done:true},{label:"待确认 Runner 配置",done:false},{label:"待确认验收标准",done:false}].map((c,i)=>(
-              <div key={i} className="awd-check-row"><div className={`awd-check-box${c.done?" done":""}`}>{c.done&&<Check size={10}/>}</div><span>{c.label}</span></div>
-            ))}
-          </div>
           <div className="awd-diff-actions">
-            <button className="awd-btn awd-btn-apply" disabled={!draftGenerated}><Check size={14} /> 确认并应用</button>
-            <button className="awd-btn awd-btn-cancel">放弃草案</button>
+            <button className="awd-btn awd-btn-apply" disabled={!draftGenerated || diffItems.length === 0 || !allChecksDone}>
+              <Check size={14} /> 确认并应用
+            </button>
+            <button className="awd-btn awd-btn-cancel" disabled={!draftGenerated}>放弃草案</button>
           </div>
         </section>
       </div>
@@ -265,10 +576,12 @@ function AiWorkflowDesignInline({ data }: { data: WorkbenchData }) {
           availableRoles={data.roles}
           onSave={(updates) => {
             setDraftSteps((steps) => steps.map((step) => step.id === editingDraftStep.id ? { ...step, ...updates } : step));
+            setEditingDraftStepId(null);
           }}
           onDelete={(stepId) => {
             setDraftSteps((steps) => steps.filter((step) => step.id !== stepId).map((step, index) => ({ ...step, order: index + 1 })));
             setSelectedDraftIndex(0);
+            setEditingDraftStepId(null);
           }}
           onClose={() => setEditingDraftStepId(null)}
         />
