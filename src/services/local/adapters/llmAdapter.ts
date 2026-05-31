@@ -196,13 +196,11 @@ export class LlmAdapter extends BaseAdapter {
     // 判断是否是官方 Anthropic API
     const isOfficialAnthropic = baseUrl.includes('api.anthropic.com');
 
-    // 对于第三方 API（如腾讯云），可能需要 /v1 前缀
-    let endpoint = `${baseUrl}/messages`;
-
-    // 腾讯云 API 需要 /v1 前缀
-    if (baseUrl.includes('lkeap.cloud.tencent.com') && !baseUrl.endsWith('/v1')) {
-      endpoint = `${baseUrl}/v1/messages`;
-    }
+    // Anthropic API 规范：base_url + /v1/messages
+    // 所有 Anthropic 兼容 API（官方、腾讯云、智谱等）都遵循此规范
+    let endpoint = baseUrl.endsWith('/v1')
+      ? `${baseUrl}/messages`
+      : `${baseUrl}/v1/messages`;
 
     console.log('[LlmAdapter] Calling Anthropic API:', { baseUrl, endpoint, model, isOfficialAnthropic });
 

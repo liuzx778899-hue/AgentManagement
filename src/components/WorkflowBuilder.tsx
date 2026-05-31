@@ -140,12 +140,18 @@ function AiWorkflowDesignInline({
         ? `上下文文件: ${materials.map(m => `${m.name}.${m.ext}`).join(", ")}`
         : "";
 
+      // 构建聊天历史（AI 有上下文记忆）
+      const historyMessages = chatMessages.map(msg => ({
+        role: (msg.isUser ? "user" : "assistant") as "user" | "assistant",
+        content: msg.text,
+      }));
+
       // 调用 AI
       const response = await fetch("/api/ai/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: [{ role: "user", content: text }],
+          messages: [...historyMessages, { role: "user", content: text }],
           context: materialsContext,
           providerId: aiAssistantModel?.providerId,
           modelName: aiAssistantModel?.modelName,
@@ -202,26 +208,43 @@ function AiWorkflowDesignInline({
         ? `上下文文件: ${materials.map(m => `${m.name}.${m.ext}`).join(", ")}`
         : "";
 
+      const rolesContext = data.roles.length > 0
+        ? `已定义角色: ${data.roles.map(r => r.name).join(", ")}`
+        : "";
+
+      // 构建聊天历史
+      const historyMessages = chatMessages.map(msg => ({
+        role: (msg.isUser ? "user" : "assistant") as "user" | "assistant",
+        content: msg.text,
+      }));
+
+      // 生成指令：要求 JSON 格式输出
+      const generateInstruction = `基于以上讨论内容，提炼并生成工作流程草案。
+
+${projectContext}
+${materialsContext}
+${rolesContext}
+
+请严格按照以下 JSON 格式输出，不要输出其他任何内容：
+\`\`\`json
+{
+  "steps": [
+    {"name": "步骤名称", "role": "角色名", "model": "模型名", "gate": "auto"}
+  ]
+}
+\`\`\`
+
+要求：
+- 从讨论中提炼实际讨论过的步骤和角色
+- gate 只能是 "auto" 或 "manual"
+- 不要编造未讨论的内容`;
+
       // 调用 AI 生成
       const response = await fetch("/api/ai/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: [{
-            role: "user",
-            content: `请基于以下上下文，生成一个软件开发工作流程草案：
-
-${projectContext}
-${materialsContext}
-
-请按以下格式输出流程步骤（每行一个步骤）：
-步骤名|角色名|模型名|Gate类型(auto/manual)
-
-例如：
-需求分析|产品经理|glm-5|auto
-UI设计|UI设计师|glm-5|manual`
-          }],
-          context: "AI 流程设计模式",
+          messages: [...historyMessages, { role: "user", content: generateInstruction }],
           providerId: aiAssistantModel?.providerId,
           modelName: aiAssistantModel?.modelName,
         }),
@@ -231,42 +254,67 @@ UI设计|UI设计师|glm-5|manual`
 
       if (result.ok && result.data?.content) {
         const content = result.data.content;
-        const lines = content.split("\n").filter((line: string) => line.trim());
 
-        // 清空旧数据
+        // 尝试 JSON 解析
+        let steps: { name: string; role: string; model: string; gate: string }[] = [];
+
+        const jsonMatch = content.match(/```json\s*([\s\S]*?)```/) ||
+                          content.match(/\{[\s\S]*"steps"[\s\S]*\}/);
+        if (jsonMatch) {
+          try {
+            const jsonStr = jsonMatch[1] || jsonMatch[0];
+            const parsed = JSON.parse(jsonStr);
+            if (Array.isArray(parsed.steps)) {
+              steps = parsed.steps;
+            }
+          } catch (e) {
+            console.warn('[GenerateDraft] JSON parse failed, trying fallback', e);
+          }
+        }
+
+        // Fallback: 旧的 | 分隔符解析
+        if (steps.length === 0) {
+          const lines = content.split("\n").filter((line: string) => line.trim());
+          lines.forEach((line: string) => {
+            const parts = line.split("|").map((p: string) => p.trim());
+            if (parts.length >= 1 && parts[0]) {
+              steps.push({
+                name: parts[0].replace(/^\d+[\.\、\s]*/, "").trim(),
+                role: parts[1] || "待分配",
+                model: parts[2] || "默认模型",
+                gate: parts[3] || "auto",
+              });
+            }
+          });
+        }
+
+        // 构建 draftSteps
         const newSteps: WorkflowStep[] = [];
         const newDiffs: { type: "add" | "mod" | "same"; title: string; desc: string }[] = [];
 
-        lines.forEach((line: string, index: number) => {
-          const parts = line.split("|").map((p: string) => p.trim());
-          if (parts.length >= 1 && parts[0]) {
-            const stepName = parts[0].replace(/^\d+[\.\、\s]*/, "").trim();
-            const roleName = parts[1] || "待分配";
-            const modelName = parts[2] || "默认模型";
-            const gateType = parts[3] || "auto";
+        steps.forEach((step, index) => {
+          if (!step.name) return;
+          const provider = data.modelProviders.find(p => p.enabled) ?? data.modelProviders[0];
 
-            const provider = data.modelProviders.find(p => p.enabled) ?? data.modelProviders[0];
+          newSteps.push({
+            id: `ai-draft-step-${index + 1}`,
+            order: index + 1,
+            name: step.name,
+            roleId: `role-ai-draft-${step.role}`,
+            modelProviderId: provider?.id ?? "",
+            modelName: step.model || "默认模型",
+            inputs: index === 0 ? ["项目目标", "协同资料"] : [`步骤 ${index} 输出`],
+            outputs: [`${step.name}结果`],
+            gateMode: step.gate === "manual" ? "manual" : "auto",
+            failureStrategy: "stop",
+            projectOverride: false,
+          });
 
-            newSteps.push({
-              id: `ai-draft-step-${index + 1}`,
-              order: index + 1,
-              name: stepName,
-              roleId: `role-ai-draft-${roleName}`, // 角色名直接作为 roleId 的一部分
-              modelProviderId: provider?.id ?? "",
-              modelName,
-              inputs: index === 0 ? ["项目目标", "协同资料"] : [`步骤 ${index} 输出`],
-              outputs: [`${stepName}结果`],
-              gateMode: gateType === "manual" ? "manual" : "auto",
-              failureStrategy: "stop",
-              projectOverride: false,
-            });
-
-            newDiffs.push({
-              type: "add",
-              title: stepName,
-              desc: `角色: ${roleName}, Gate: ${gateType}`,
-            });
-          }
+          newDiffs.push({
+            type: "add",
+            title: step.name,
+            desc: `角色: ${step.role}, Gate: ${step.gate}`,
+          });
         });
 
         if (newSteps.length > 0) {
@@ -274,7 +322,6 @@ UI设计|UI设计师|glm-5|manual`
           setDiffItems(newDiffs);
           setDraftGenerated(true);
 
-          // 更新检查清单
           setChecklistItems(prev => prev.map((item, i) => ({
             ...item,
             done: i < 2,
