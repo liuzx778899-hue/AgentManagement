@@ -144,8 +144,12 @@ export function workbenchReducer(state: WorkbenchData, action: WorkbenchAction):
     case "ADD_ROLE": {
       const newRole: AgentRole = {
         ...action.role,
-        id: `role-${generateId()}`,
+        id: action.role.id || `role-${generateId()}`,
       };
+      // 如果角色已存在则跳过（避免重复添加）
+      if (state.roles.some(r => r.id === newRole.id)) {
+        return state;
+      }
       return { ...state, roles: [...state.roles, newRole] };
     }
 
@@ -342,6 +346,15 @@ export function workbenchReducer(state: WorkbenchData, action: WorkbenchAction):
 
     case "SET_ROLES":
       return { ...state, roles: action.payload };
+
+    case "SET_CAPABILITIES":
+      return {
+        ...state,
+        mcpServers: action.payload.mcpServers,
+        skills: action.payload.skills,
+        plugins: action.payload.plugins,
+        agents: action.payload.agents,
+      };
 
     case "REFRESH_GIT_STATUS_START":
       // 可以设置 loading 状态

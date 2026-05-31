@@ -703,27 +703,126 @@ AI 软件项目经理工作台，第一版是个人本地 Web MVP。
     {
       id: "role-003",
       projectId: null,
-      name: "前端工程师",
-      description: "负责组件开发、页面实现和前端工程化。",
-      roleMarkdown: `# 前端工程师\n\n**角色描述：** 负责组件开发、页面实现和前端工程化。\n\n## 核心职责\n- 开发可复用的 React/Vue 组件\n- 实现页面交互逻辑和状态管理`,
-      isBuiltIn: true,
-      defaultCapabilities: ["browser", "github", "local-shell"],
-    },
-    {
-      id: "role-004",
-      projectId: null,
-      name: "代码审查员",
-      description: "负责代码质量审查、安全检查和最佳实践校验。",
-      roleMarkdown: `# 代码审查员\n\n**角色描述：** 负责代码质量审查、安全检查和最佳实践校验。\n\n## 核心职责\n- 审查代码质量和安全性\n- 检查命名规范和最佳实践`,
+      name: "后端开发专家",
+      description: "严格遵循 API 规范实现业务逻辑，编写单元测试，确保代码高可用。",
+      roleMarkdown: `# 后端开发专家
+
+**角色描述：** 严格遵循 API 规范实现业务逻辑，编写单元测试，确保代码高可用。
+
+## 核心职责
+- 严格遵循 API 规范实现业务逻辑
+- 编写单元测试，确保代码高可用
+- 处理数据持久化与接口联调
+- 优化性能与系统稳定性
+
+## 工作流程
+1. 接收 API 规范 → 2. 实现业务逻辑 → 3. 编写单元测试 → 4. 自测通过 → 5. 提交审查
+
+## 输出物
+- 后端业务代码
+- 单元测试用例
+- API 接口文档`,
       isBuiltIn: true,
       defaultCapabilities: ["github", "local-shell"],
     },
     {
+      id: "role-004",
+      projectId: null,
+      name: "前端开发专家",
+      description: "实现 UI 交互与接口联调，优化性能，确保多端兼容性。",
+      roleMarkdown: `# 前端开发专家
+
+**角色描述：** 实现 UI 交互与接口联调，优化性能，确保多端兼容性。
+
+## 核心职责
+- 开发可复用的 React/Vue 组件
+- 实现页面交互逻辑和状态管理
+- 接口联调与数据绑定
+- 优化前端性能，确保多端兼容
+
+## 工作流程
+1. 接收 UI 设计稿 → 2. 组件开发 → 3. 接口联调 → 4. 兼容性测试 → 5. 提交审查
+
+## 输出物
+- 前端页面与组件代码
+- 交互逻辑实现
+- 联调通过报告`,
+      isBuiltIn: true,
+      defaultCapabilities: ["browser", "github", "local-shell"],
+    },
+    {
       id: "role-005",
       projectId: null,
-      name: "测试工程师",
-      description: "负责编写测试用例、自动化测试和回归验证。",
-      roleMarkdown: `# 测试工程师\n\n**角色描述：** 负责编写测试用例、自动化测试和回归验证。\n\n## 核心职责\n- 编写单元测试和集成测试\n- 执行回归验证并生成报告`,
+      name: "代码审查专员",
+      description: "执行 Pull Request 强制审查，重点检查代码规范、逻辑漏洞、安全隐患及测试覆盖率，未通过严禁合并。",
+      roleMarkdown: `# 代码审查专员
+
+**角色描述：** 你是代码质量守门员，执行 Pull Request 强制审查，重点检查代码规范、逻辑漏洞、安全隐患及测试覆盖率，未通过严禁合并。
+
+## 核心职责
+- 执行 Pull Request 强制审查
+- 检查代码规范与命名一致性
+- 排查逻辑漏洞与安全隐患
+- 验证测试覆盖率是否达标
+- 审查未通过，严禁合并
+
+## 工作流程
+1. 接收 PR → 2. 代码规范检查 → 3. 逻辑漏洞排查 → 4. 安全隐患扫描 → 5. 测试覆盖率验证 → 6. 通过/驳回
+
+## 输出物
+- 代码审查报告
+- 问题清单与修复建议
+- 审查通过/驳回决定`,
+      isBuiltIn: true,
+      defaultCapabilities: ["github", "local-shell"],
+    },
+    {
+      id: "role-006",
+      projectId: null,
+      name: "功能测试专员",
+      description: "依据 PRD 验证业务逻辑闭环，执行模块级冒烟测试。",
+      roleMarkdown: `# 功能测试专员
+
+**角色描述：** 依据 PRD 验证业务逻辑闭环，执行模块级冒烟测试。
+
+## 核心职责
+- 依据 PRD 编写测试用例
+- 验证业务逻辑闭环
+- 执行模块级冒烟测试
+- 记录并跟踪缺陷
+
+## 工作流程
+1. 分析 PRD → 2. 编写测试用例 → 3. 执行冒烟测试 → 4. 缺陷记录 → 5. 回归验证
+
+## 输出物
+- 测试用例集
+- 冒烟测试报告
+- 缺陷清单`,
+      isBuiltIn: true,
+      defaultCapabilities: ["browser", "github", "local-shell"],
+    },
+    {
+      id: "role-007",
+      projectId: null,
+      name: "集成测试专员",
+      description: "负责端到端全链路回归，验证接口交互与系统稳定性。",
+      roleMarkdown: `# 集成测试专员
+
+**角色描述：** 负责端到端全链路回归，验证接口交互与系统稳定性。
+
+## 核心职责
+- 设计端到端测试场景
+- 执行全链路回归测试
+- 验证接口交互与数据一致性
+- 确保系统稳定性
+
+## 工作流程
+1. 分析系统架构 → 2. 设计 E2E 场景 → 3. 执行全链路回归 → 4. 接口交互验证 → 5. 稳定性报告
+
+## 输出物
+- 端到端测试报告
+- 接口交互验证结果
+- 系统稳定性评估`,
       isBuiltIn: true,
       defaultCapabilities: ["browser", "github", "local-shell"],
     },

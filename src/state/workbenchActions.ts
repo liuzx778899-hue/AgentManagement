@@ -12,6 +12,10 @@ import type {
   ImEventType,
   GitCredential,
   GitStatus,
+  McpServerCapability,
+  SkillCapability,
+  PluginCapability,
+  AgentCapability,
 } from "../domain/workbench";
 import type { RunnerProfile } from "../domain/runner";
 import type { Memory } from "../domain/memory";
@@ -27,7 +31,7 @@ export type WorkbenchAction =
   | { type: "ADD_PROJECT"; project: Omit<Project, "id" | "createdAt" | "updatedAt"> }
   | { type: "UPDATE_PROJECT"; projectId: string; updates: Partial<Project> }
   | { type: "DELETE_PROJECT"; projectId: string }
-  | { type: "ADD_ROLE"; role: Omit<AgentRole, "id"> }
+  | { type: "ADD_ROLE"; role: Omit<AgentRole, "id"> & { id?: string } }
   | { type: "UPDATE_ROLE"; roleId: string; updates: Partial<AgentRole> }
   | { type: "ADD_WORKFLOW_STEP"; templateId: string; step: WorkflowStep }
   | { type: "UPDATE_WORKFLOW_STEP"; templateId: string; stepId: string; updates: Partial<WorkflowStep> }
@@ -58,6 +62,7 @@ export type WorkbenchAction =
   | { type: "SET_MODEL_PROVIDERS"; payload: { providers: ModelProvider[]; aiAssistantModel?: { providerId: string; modelName: string } | null } }
   | { type: "SET_WORKFLOW_TEMPLATES"; payload: WorkflowTemplate[] }
   | { type: "SET_ROLES"; payload: AgentRole[] }
+  | { type: "SET_CAPABILITIES"; payload: { mcpServers: McpServerCapability[]; skills: SkillCapability[]; plugins: PluginCapability[]; agents: AgentCapability[] } }
 
 // Action Creators
 export function updateGateStatus(gateId: string, status: GateStatus): WorkbenchAction {
@@ -220,4 +225,13 @@ export function setWorkflowTemplates(templates: WorkflowTemplate[]): WorkbenchAc
 
 export function setRoles(roles: AgentRole[]): WorkbenchAction {
   return { type: "SET_ROLES", payload: roles };
+}
+
+export function setCapabilities(payload: {
+  mcpServers: McpServerCapability[];
+  skills: SkillCapability[];
+  plugins: PluginCapability[];
+  agents: AgentCapability[];
+}): WorkbenchAction {
+  return { type: "SET_CAPABILITIES", payload };
 }

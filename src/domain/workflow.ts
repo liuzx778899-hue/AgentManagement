@@ -29,6 +29,17 @@ export interface WorkflowTemplate {
   versions?: WorkflowVersion[];
   createdAt: string;
   updatedAt: string;
+  // 流程专属角色（AI 生成的角色定义）
+  roles?: WorkflowRole[];
+}
+
+export interface WorkflowRole {
+  id: string;
+  name: string;
+  description: string;
+  responsibilities?: string[];
+  deliverables?: string[];
+  roleMarkdown?: string;
 }
 
 export interface WorkflowStep {

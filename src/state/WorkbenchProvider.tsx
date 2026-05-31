@@ -53,8 +53,8 @@ import {
   setProjects as setProjectsAction,
   setMemories as setMemoriesAction,
 } from "./workbenchActions";
-import { projectApi, memoryApi, settingsApi, checkServerAvailable, workflowApi, rolesApi } from "../services/api";
-import { setModelProviders as setModelProvidersAction, setWorkflowTemplates as setWorkflowTemplatesAction, setRoles as setRolesAction } from "./workbenchActions";
+import { projectApi, memoryApi, settingsApi, checkServerAvailable, workflowApi, rolesApi, capabilitiesApi } from "../services/api";
+import { setModelProviders as setModelProvidersAction, setWorkflowTemplates as setWorkflowTemplatesAction, setRoles as setRolesAction, setCapabilities as setCapabilitiesAction } from "./workbenchActions";
 
 // Default runner profiles - commonly used CLI tools
 const defaultRunnerProfiles: RunnerProfile[] = [
@@ -139,7 +139,7 @@ interface WorkbenchState {
   addProject: (project: Omit<Project, "id" | "createdAt" | "updatedAt">) => void;
   updateProject: (projectId: string, updates: Partial<Project>) => void;
   deleteProject: (projectId: string) => void;
-  addRole?: (role: Omit<AgentRole, "id">) => void;
+  addRole?: (role: Omit<AgentRole, "id">) => Promise<AgentRole | null>;
   updateRole?: (roleId: string, updates: Partial<AgentRole>) => void;
   addWorkflowStep: (templateId: string, step: WorkflowStep) => void;
   updateWorkflowStep: (templateId: string, stepId: string, updates: Partial<WorkflowStep>) => void;
@@ -159,11 +159,12 @@ interface WorkbenchState {
   addGitCredential: (credential: Omit<GitCredential, "id" | "createdAt" | "updatedAt">) => void;
   updateGitCredential: (credentialId: string, updates: Partial<GitCredential>) => void;
   deleteGitCredential: (credentialId: string) => void;
-  addWorkflowTemplate: (template: Omit<WorkflowTemplate, "id" | "createdAt" | "updatedAt">) => void;
+  addWorkflowTemplate: (template: Omit<WorkflowTemplate, "id" | "createdAt" | "updatedAt">) => Promise<WorkflowTemplate | null>;
   updateWorkflowTemplate?: (templateId: string, updates: Partial<WorkflowTemplate>) => void;
   deleteWorkflowTemplate: (templateId: string) => void;
   updateRunner: (runnerId: string, updates: Partial<RunnerProfile>) => void;
   setDefaultRunner: (runnerId: string | undefined) => void;
+  addRolesBatch?: (roles: Array<Omit<AgentRole, "id"> & { id?: string }>) => Promise<AgentRole[]>;
 }
 
 export const WorkbenchContext = createContext<WorkbenchState | null>(null);
@@ -210,13 +211,14 @@ export function WorkbenchProvider({ children }: WorkbenchProviderProps) {
 
       try {
         // 并行加载所有数据
-        const [projectsResult, memoriesResult, settingsResult, modelProvidersResult, workflowTemplatesResult, rolesResult] = await Promise.all([
+        const [projectsResult, memoriesResult, settingsResult, modelProvidersResult, workflowTemplatesResult, rolesResult, capabilitiesResult] = await Promise.all([
           projectApi.list(),
           memoryApi.list(),
           settingsApi.get(),
           settingsApi.getModelProviders(),
           workflowApi.listTemplates(),
           rolesApi.list(),
+          capabilitiesApi.getAll(),
         ]);
 
         if (!isMounted.current) return;
@@ -268,12 +270,18 @@ export function WorkbenchProvider({ children }: WorkbenchProviderProps) {
           dispatch(setRolesAction(rolesResult.data));
         }
 
+        // 更新能力中心数据
+        if (capabilitiesResult.ok && capabilitiesResult.data) {
+          dispatch(setCapabilitiesAction(capabilitiesResult.data));
+        }
+
         console.log('[WorkbenchProvider] Loaded data from API:', {
           projects: projectsResult.ok ? projectsResult.data?.length : 'failed',
           memories: memoriesResult.ok ? memoriesResult.data?.length : 'failed',
           modelProviders: modelProvidersResult.ok ? modelProvidersResult.data?.providers?.length : 'failed',
           workflowTemplates: workflowTemplatesResult.ok ? workflowTemplatesResult.data?.length : 'failed',
           roles: rolesResult.ok ? rolesResult.data?.length : 'failed',
+          capabilities: capabilitiesResult.ok ? 'loaded' : 'failed',
         });
       } catch (error) {
         console.error('[WorkbenchProvider] Failed to load data from API:', error);
@@ -327,8 +335,16 @@ export function WorkbenchProvider({ children }: WorkbenchProviderProps) {
     dispatch(deleteProjectAction(projectId));
   }, []);
 
-  const addRole = useCallback((role: Omit<AgentRole, "id">) => {
-    dispatch(addRoleAction(role));
+  const addRole = useCallback(async (role: Omit<AgentRole, "id">) => {
+    const result = await rolesApi.create(role);
+    if (result.ok && result.data) {
+      dispatch(addRoleAction(result.data));
+      return result.data;
+    } else {
+      console.error('[WorkbenchProvider] Failed to save role:', result.error);
+      dispatch(addRoleAction(role));
+      return null;
+    }
   }, []);
 
   const updateRole = useCallback((roleId: string, updates: Partial<AgentRole>) => {
@@ -403,8 +419,33 @@ export function WorkbenchProvider({ children }: WorkbenchProviderProps) {
     dispatch(deleteGitCredentialAction(credentialId));
   }, []);
 
-  const addWorkflowTemplate = useCallback((template: Omit<WorkflowTemplate, "id" | "createdAt" | "updatedAt">) => {
-    dispatch(addWorkflowTemplateAction(template));
+  const addWorkflowTemplate = useCallback(async (template: Omit<WorkflowTemplate, "id" | "createdAt" | "updatedAt">) => {
+    // 先调用 API 持久化
+    const result = await workflowApi.createTemplate(template);
+    if (result.ok && result.data) {
+      // 使用 API 返回的完整数据（包含 id、createdAt、updatedAt）
+      dispatch(addWorkflowTemplateAction(result.data));
+      return result.data;
+    } else {
+      console.error('[WorkbenchProvider] Failed to save workflow template:', result.error);
+      // 即使 API 失败，仍然更新本地状态（离线支持）
+      dispatch(addWorkflowTemplateAction(template));
+      return null;
+    }
+  }, []);
+
+  const addRolesBatch = useCallback(async (roles: Array<Omit<AgentRole, "id"> & { id?: string }>) => {
+    const result = await rolesApi.createBatch(roles);
+    if (result.ok && result.data) {
+      // 更新本地角色池
+      result.data.forEach(role => {
+        dispatch(addRoleAction(role as Omit<AgentRole, "id">));
+      });
+      return result.data;
+    } else {
+      console.error('[WorkbenchProvider] Failed to save roles batch:', result.error);
+      return [];
+    }
   }, []);
 
   const updateWorkflowTemplate = useCallback((templateId: string, updates: Partial<WorkflowTemplate>) => {
@@ -413,6 +454,9 @@ export function WorkbenchProvider({ children }: WorkbenchProviderProps) {
 
   const deleteWorkflowTemplate = useCallback((templateId: string) => {
     dispatch(deleteWorkflowTemplateAction(templateId));
+    workflowApi.deleteTemplate(templateId).catch(err => {
+      console.error('[WorkbenchProvider] Failed to delete template from server:', err);
+    });
   }, []);
 
   const updateRunner = useCallback((runnerId: string, updates: Partial<RunnerProfile>) => {
@@ -459,6 +503,7 @@ export function WorkbenchProvider({ children }: WorkbenchProviderProps) {
       deleteWorkflowTemplate,
       updateRunner,
       setDefaultRunner,
+      addRolesBatch,
     }),
     [
       data,
@@ -495,6 +540,7 @@ export function WorkbenchProvider({ children }: WorkbenchProviderProps) {
       deleteWorkflowTemplate,
       updateRunner,
       setDefaultRunner,
+      addRolesBatch,
     ]
   );
 
