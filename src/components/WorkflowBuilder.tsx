@@ -1778,11 +1778,24 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
               className="wf-v2-btn wf-v2-btn-start"
               type="button"
               onClick={() => {
-                if (confirm(`确认将「${selectedTemplate.name}」发布为正式流程？`)) {
+                // 先校验
+                const issues: string[] = [];
+                if (sortedSteps.length === 0) issues.push("流程没有任何步骤");
+                sortedSteps.forEach((s, i) => {
+                  if (!s.name?.trim()) issues.push(`步骤 ${i + 1} 缺少名称`);
+                  if (!s.roleId) issues.push(`步骤 ${i + 1}「${s.name}」未绑定角色`);
+                  if (!s.modelProviderId || !s.modelName) issues.push(`步骤 ${i + 1}「${s.name}」未配置模型`);
+                  if (!s.runnerId) issues.push(`步骤 ${i + 1}「${s.name}」未配置 Runner`);
+                });
+                if (issues.length > 0) {
+                  alert(`校验未通过，无法发布为正式：\n\n${issues.join('\n')}`);
+                  return;
+                }
+                if (confirm(`✓ 校验通过\n确认将「${selectedTemplate.name}」发布为正式流程？`)) {
                   updateWorkflowTemplate?.(selectedTemplate.id, { status: "enabled" });
                 }
               }}
-              title="将草稿流程发布为正式流程"
+              title="将草稿流程发布为正式流程（需先校验通过）"
             >
               <Check size={14} /> 发布为正式
             </button>
