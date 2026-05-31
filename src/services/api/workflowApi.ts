@@ -23,4 +23,13 @@ export const workflowApi = {
 
   listTemplates: () =>
     apiCall<WorkflowTemplate[]>('GET', '/workflow/templates'),
+
+  createTemplate: (template: Omit<WorkflowTemplate, 'id' | 'createdAt' | 'updatedAt'>) =>
+    apiCall<WorkflowTemplate>('POST', '/workflow/templates', template),
+
+  updateTemplate: (templateId: string, updates: Partial<WorkflowTemplate>) =>
+    apiCall<WorkflowTemplate>('PUT', `/workflow/templates/${templateId}`, updates),
+
+  deleteTemplate: (templateId: string) =>
+    apiCall<void>('DELETE', `/workflow/templates/${templateId}`),
 };

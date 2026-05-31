@@ -10,3 +10,4 @@ export { memoryApi, type CreateMemoryInput, type UpdateMemoryInput } from './mem
 export { settingsApi } from './settingsApi';
 export { aiApi, type ChatMessage, type ChatResponse } from './aiApi';
 export { rolesApi } from './rolesApi';
+export { capabilitiesApi, type CapabilitiesData } from './capabilitiesApi';

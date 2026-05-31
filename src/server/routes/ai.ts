@@ -99,23 +99,42 @@ aiRouter.post('/chat', async (req: Request, res: Response, next: NextFunction) =
       }
     }
 
-    // 构建完整的 system prompt
-    const fullSystemPrompt = context
-      ? `${systemPrompt}\n\n当前上下文：\n${context}`
-      : systemPrompt;
+    // 检查前端是否传了 system 消息
+    const hasClientSystemMsg = messages.length > 0 && messages[0].role === 'system';
+    let finalMessages: { role: 'system' | 'user' | 'assistant'; content: string }[];
 
-    // 构建 LLM 调用配置
-    const llmConfig: CompleteConfig = {
-      messages: [
+    if (hasClientSystemMsg) {
+      // 前端传了 system 消息，以它为主，附加 context
+      const clientSystemContent = context
+        ? `${messages[0].content}\n\n当前上下文：\n${context}`
+        : messages[0].content;
+      finalMessages = [
+        { role: 'system', content: clientSystemContent },
+        ...messages.slice(1).map((m: { role: string; content: string }) => ({
+          role: m.role as 'user' | 'assistant',
+          content: m.content,
+        })),
+      ];
+    } else {
+      // 没有前端 system 消息，用服务端的默认提示词
+      const fullSystemPrompt = context
+        ? `${systemPrompt}\n\n当前上下文：\n${context}`
+        : systemPrompt;
+      finalMessages = [
         { role: 'system', content: fullSystemPrompt },
         ...messages.map((m: { role: string; content: string }) => ({
           role: m.role as 'user' | 'assistant',
           content: m.content,
         })),
-      ],
+      ];
+    }
+
+    // 构建 LLM 调用配置
+    const llmConfig: CompleteConfig = {
+      messages: finalMessages,
       model: actualModel,
       temperature: 0.7,
-      maxTokens: 2000,
+      maxTokens: 4096,
       apiKey: providerConfig.apiKey,
       baseUrl: providerConfig.baseUrl,
       apiFormat: providerConfig.apiFormat,

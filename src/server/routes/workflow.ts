@@ -10,7 +10,7 @@ import {
   listProjectWorkflowRuns,
 } from '../../services/local/useCases';
 import type { Workflow, WorkflowStep } from '../../domain/workflow';
-import { readdir, readFile } from 'fs/promises';
+import { readdir, readFile, writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 
 export const workflowRouter = Router();
@@ -43,6 +43,166 @@ workflowRouter.get('/templates', async (_req: Request, res: Response, next: Next
     }
 
     res.json({ ok: true, data: templates });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * POST /api/workflow/templates
+ * Create or update a workflow template
+ */
+workflowRouter.post('/templates', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const template = req.body;
+
+    if (!template || !template.name) {
+      res.status(400).json({
+        ok: false,
+        error: {
+          code: 'INVALID_INPUT',
+          message: 'Template with name is required',
+          recoverable: true,
+        },
+      });
+      return;
+    }
+
+    // Generate ID if not provided
+    const id = template.id || `workflow-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const now = new Date().toISOString();
+
+    const fullTemplate: Workflow = {
+      ...template,
+      id,
+      createdAt: template.createdAt || now,
+      updatedAt: now,
+    };
+
+    // Ensure directory exists
+    const templatesDir = join(process.cwd(), '.agentmanagement', 'workflows');
+    await mkdir(templatesDir, { recursive: true });
+
+    // Write template to file
+    const filePath = join(templatesDir, `${id}.json`);
+    await writeFile(filePath, JSON.stringify(fullTemplate, null, 2), 'utf-8');
+
+    res.json({ ok: true, data: fullTemplate });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * PUT /api/workflow/templates/:id
+ * Update an existing workflow template
+ */
+workflowRouter.put('/templates/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = req.params.id;
+    const updates = req.body;
+
+    if (!id) {
+      res.status(400).json({
+        ok: false,
+        error: {
+          code: 'INVALID_INPUT',
+          message: 'Template ID is required',
+          recoverable: true,
+        },
+      });
+      return;
+    }
+
+    const templatesDir = join(process.cwd(), '.agentmanagement', 'workflows');
+    const filePath = join(templatesDir, `${id}.json`);
+
+    // Read existing template
+    let existing: Workflow | null = null;
+    try {
+      const content = await readFile(filePath, 'utf-8');
+      existing = JSON.parse(content);
+    } catch {
+      // File doesn't exist
+    }
+
+    if (!existing) {
+      res.status(404).json({
+        ok: false,
+        error: {
+          code: 'NOT_FOUND',
+          message: 'Template not found',
+          recoverable: false,
+        },
+      });
+      return;
+    }
+
+    // Merge updates
+    const updated: Workflow = {
+      ...existing,
+      ...updates,
+      id, // Ensure ID doesn't change
+      updatedAt: new Date().toISOString(),
+    };
+
+    await writeFile(filePath, JSON.stringify(updated, null, 2), 'utf-8');
+
+    res.json({ ok: true, data: updated });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * DELETE /api/workflow/templates/:id
+ * Delete a workflow template (soft delete)
+ */
+workflowRouter.delete('/templates/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = req.params.id;
+
+    if (!id) {
+      res.status(400).json({
+        ok: false,
+        error: {
+          code: 'INVALID_INPUT',
+          message: 'Template ID is required',
+          recoverable: true,
+        },
+      });
+      return;
+    }
+
+    const templatesDir = join(process.cwd(), '.agentmanagement', 'workflows');
+    const filePath = join(templatesDir, `${id}.json`);
+
+    // Read and mark as deleted
+    let existing: Workflow | null = null;
+    try {
+      const content = await readFile(filePath, 'utf-8');
+      existing = JSON.parse(content);
+    } catch {
+      // File doesn't exist
+    }
+
+    if (!existing) {
+      res.status(404).json({
+        ok: false,
+        error: {
+          code: 'NOT_FOUND',
+          message: 'Template not found',
+          recoverable: false,
+        },
+      });
+      return;
+    }
+
+    // Soft delete
+    const deleted = { ...existing, deleted: true, deletedAt: new Date().toISOString() };
+    await writeFile(filePath, JSON.stringify(deleted, null, 2), 'utf-8');
+
+    res.json({ ok: true });
   } catch (err) {
     next(err);
   }

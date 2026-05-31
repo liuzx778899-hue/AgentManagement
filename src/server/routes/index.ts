@@ -7,6 +7,7 @@ import { memoryRouter } from './memory';
 import { settingsRouter } from './settings';
 import { aiRouter } from './ai';
 import { rolesRouter } from './roles';
+import { capabilitiesRouter } from './capabilities';
 
 export function createRouter(): Router {
   const router = Router();
@@ -23,6 +24,7 @@ export function createRouter(): Router {
   router.use('/settings', settingsRouter);
   router.use('/ai', aiRouter);
   router.use('/roles', rolesRouter);
+  router.use('/capabilities', capabilitiesRouter);
 
   console.log('[Router] Final router stack length:', (router as any).stack?.length);
 

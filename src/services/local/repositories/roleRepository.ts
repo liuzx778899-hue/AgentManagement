@@ -56,6 +56,7 @@ export class RoleRepository {
             projectId: role.projectId || null,
             name: role.name,
             description: role.description || '',
+            roleMarkdown: role.roleMarkdown || '',
             isBuiltIn: role.isBuiltIn ?? false,
             defaultCapabilities: role.defaultCapabilities || [],
           });
