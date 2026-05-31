@@ -361,17 +361,33 @@ export function AiChatPanel({ view, data, onNavigate, contextMode }: AiChatPanel
 角色数量: ${data.roles.length}
 任务数量: ${data.tasks.length}`;
 
+    // 根据页面场景生成专用 system prompt
+    const systemPrompts: Record<string, string> = {
+      "workbench": "你是工程管理助手。帮助用户查看项目进度、检查配置完整性、管理任务和工作流。简洁直接，中文回答。",
+      "project-management": "你是项目管理助手。帮助用户创建项目、分析项目状态、管理项目生命周期。简洁直接，中文回答。",
+      "ai-briefing": "你是 AI 建项助手。帮助用户从零开始创建项目：讨论项目目标、定义角色分工、设计工作流程。重点引导用户明确项目范围和技术选型。简洁直接，中文回答。",
+      "project-detail": "你是项目详情助手。帮助用户查看项目进度、分析风险、了解角色和流程配置。简洁直接，中文回答。",
+      "project-workspace": "你是项目工作区助手。帮助用户生成项目文档、查看角色分工、分析任务状态。简洁直接，中文回答。",
+      "workflows": "你是工作流管理助手。帮助用户设计工作流模板、优化流程步骤、检查配置完整性。简洁直接，中文回答。",
+      "ai-workflow-design": "你是 AI 流程设计助手。帮助用户设计软件开发工作流程：引导讨论项目目标、角色分工、技术选型。根据讨论内容建议步骤和角色，角色应按实际需要细分（如前端/后端分开、功能测试/集成测试分开）。给出具体建议，中文回答。",
+      "memory": "你是记忆管理助手。帮助用户分析记忆覆盖、建议需要沉淀的记忆、整理项目长期记忆。简洁直接，中文回答。",
+      "settings": "你是设置中心助手。帮助用户检查模型供应商配置、查看能力中心授权状态、配置适配器。简洁直接，中文回答。",
+    };
+    const systemPrompt = systemPrompts[view] || "你是工程管理助手。简洁直接，中文回答。";
+
     // 获取配置的 AI 助手模型
     const modelInfo = getAiAssistantModelInfo(data);
 
     try {
       // Try real API call first
       if (serverAvailable) {
-        const apiMessages: ApiChatMessage[] = messages
-          .slice(-10) // Keep last 10 messages for context
-          .map((m) => ({ role: m.role, content: m.text }));
-
-        apiMessages.push({ role: "user", content: trimmed });
+        const apiMessages: ApiChatMessage[] = [
+          { role: "system", content: systemPrompt },
+          ...messages
+            .slice(-10) // Keep last 10 messages for context
+            .map((m) => ({ role: m.role, content: m.text })),
+          { role: "user", content: trimmed },
+        ];
 
         const result = await aiApi.chat(apiMessages, {
           context: contextInfo,

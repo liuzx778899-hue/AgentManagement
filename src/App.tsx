@@ -63,7 +63,9 @@ function AppContent() {
   };
 
   const enterWorkflowDesign = (workflowId: string) => {
-    setSelectedWorkflowTemplateId(workflowTemplateIdByAssetId[workflowId] ?? data.workflowTemplates[0]?.id);
+    // workflowId is the template.id directly (from workflowTemplateToAsset)
+    const templateId = data.workflowTemplates.find(t => t.id === workflowId)?.id ?? data.workflowTemplates[0]?.id;
+    setSelectedWorkflowTemplateId(templateId);
     setView("workflows");
   };
 

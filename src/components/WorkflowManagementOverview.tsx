@@ -16,6 +16,7 @@ import {
   X,
 } from "lucide-react";
 import type { WorkbenchData, WorkbenchView } from "../domain/workbench";
+import { workflowApi } from "../services/api/workflowApi";
 
 interface WorkflowManagementOverviewProps {
   data: WorkbenchData;
@@ -55,7 +56,6 @@ interface WorkflowAsset {
   steps: WorkflowStepDisplay[];
   roleCoverage: RoleAvatar[];
   runnerCoverage: number;
-  capabilityAuth: string;
   riskGap: string | null;
   healthStatus: HealthStatus;
   healthLabel: string;
@@ -85,13 +85,6 @@ interface WorkflowKPIs {
   highRisk: number;
 }
 
-// Capability authorization gap
-interface CapabilityGap {
-  workflowName: string;
-  missingCapability: string;
-  severity: "high" | "medium" | "low";
-}
-
 // Role binding gap
 interface RoleBindingGap {
   workflowName: string;
@@ -115,7 +108,6 @@ interface AIRecommendation {
 // Health panel data
 interface HealthPanelData {
   categories: CategoryStats[];
-  capabilityGaps: CapabilityGap[];
   roleBindingGaps: RoleBindingGap[];
   recentChanges: RecentChange[];
   aiRecommendation: AIRecommendation;
@@ -131,8 +123,20 @@ function filterWorkflowsByCategory(
 }
 
 // Helper function to map workflow template to asset
-function workflowTemplateToAsset(template: WorkbenchData["workflowTemplates"][0]): WorkflowAsset {
+function workflowTemplateToAsset(template: WorkbenchData["workflowTemplates"][0], roles: WorkbenchData["roles"]): WorkflowAsset {
   const steps = template.steps || [];
+  // 从步骤中提取不重复的角色，用真实角色名
+  const seenRoleIds = new Set<string>();
+  const roleAvatars: RoleAvatar[] = [];
+  const colors: RoleAvatar["color"][] = ["blue", "green", "purple", "orange", "blue", "green", "purple"];
+  steps.forEach(s => {
+    if (s.roleId && !seenRoleIds.has(s.roleId)) {
+      seenRoleIds.add(s.roleId);
+      const role = roles.find(r => r.id === s.roleId);
+      const initials = role ? role.name.slice(0, 2) : s.roleId.slice(0, 2);
+      roleAvatars.push({ initials: initials.toUpperCase(), color: colors[roleAvatars.length % colors.length] });
+    }
+  });
   return {
     id: template.id,
     name: template.name,
@@ -141,13 +145,8 @@ function workflowTemplateToAsset(template: WorkbenchData["workflowTemplates"][0]
     version: `v${template.version || 1}`,
     stepCount: steps.length,
     steps: steps.slice(0, 5).map((s, i) => ({ no: `${i + 1}`.padStart(2, "0"), name: s.name })),
-    roleCoverage: steps
-      .map(s => s.roleId?.slice(0, 2) || "")
-      .filter(Boolean)
-      .slice(0, 5)
-      .map(initials => ({ initials, color: "blue" as const })),
+    roleCoverage: roleAvatars.slice(0, 5),
     runnerCoverage: steps.some(s => s.runnerId) ? 85 : 60,
-    capabilityAuth: steps.flatMap(s => s.inputs || []).slice(0, 3).join(", ") || "",
     riskGap: null,
     healthStatus: "healthy" as const,
     healthLabel: "健康",
@@ -254,8 +253,8 @@ export function WorkflowManagementOverview({ data, onNavigate, onEnterWorkflowDe
 
   // Convert workflow templates to workflow assets
   const workflowAssets = useMemo(() => {
-    return (data.workflowTemplates || []).map(workflowTemplateToAsset);
-  }, [data.workflowTemplates]);
+    return (data.workflowTemplates || []).map(t => workflowTemplateToAsset(t, data.roles));
+  }, [data.workflowTemplates, data.roles]);
 
   // Compute KPIs from real data
   const kpis = useMemo((): WorkflowKPIs => {
@@ -275,7 +274,6 @@ export function WorkflowManagementOverview({ data, onNavigate, onEnterWorkflowDe
       { id: "review", name: "评审类", count: workflowAssets.filter(w => w.category === "review").length, description: "代码审查、产品验收、风险确认", healthPercent: 80, status: "healthy" },
       { id: "release", name: "发布类", count: workflowAssets.filter(w => w.category === "release").length, description: "发布冻结、上线验收、回滚预案", healthPercent: 60, status: "warning" },
     ];
-    const capabilityGaps: CapabilityGap[] = [];
     const roleBindingGaps: RoleBindingGap[] = [];
     const recentChanges: RecentChange[] = workflowAssets.slice(0, 2).map(w => ({
       workflowName: w.name,
@@ -286,7 +284,7 @@ export function WorkflowManagementOverview({ data, onNavigate, onEnterWorkflowDe
       message: workflowAssets.length > 0 ? "当前流程状态良好，继续保持。" : "暂无流程，请创建第一个流程模板。",
       priority: "medium",
     };
-    return { categories, capabilityGaps, roleBindingGaps, recentChanges, aiRecommendation };
+    return { categories, roleBindingGaps, recentChanges, aiRecommendation };
   }, [workflowAssets]);
 
   const categoryTabs = useMemo(
@@ -329,6 +327,9 @@ export function WorkflowManagementOverview({ data, onNavigate, onEnterWorkflowDe
 
   const handleDeleteFlow = (workflowId: string) => {
     setDeletedFlowIds((ids) => (ids.includes(workflowId) ? ids : [...ids, workflowId]));
+    workflowApi.deleteTemplate(workflowId).catch(err => {
+      console.error('[WorkflowManagementOverview] Failed to delete template:', err);
+    });
   };
 
   const handleToggleFlowStatus = (workflowId: string, currentStatus: WorkflowAsset["status"]) => {
@@ -404,7 +405,7 @@ export function WorkflowManagementOverview({ data, onNavigate, onEnterWorkflowDe
       <div className="wmo-header">
         <div className="wmo-title">
           <h1>流程管理</h1>
-          <p>统一管理流程模板、项目流程实例、角色绑定、能力授权与版本变更。</p>
+          <p>统一管理流程模板、项目流程实例、角色绑定与版本变更。</p>
         </div>
         <div className="wmo-actions">
           <button className="wmo-btn wmo-btn-good" onClick={handleValidateAll}>
@@ -480,7 +481,7 @@ export function WorkflowManagementOverview({ data, onNavigate, onEnterWorkflowDe
           <div className="wmo-validating-overlay">
             <Loader2 size={32} className="wmo-loading-spinner" style={{ color: "#5de2a2" }} />
             <h2>正在校验全部流程...</h2>
-            <p>检查角色绑定、能力授权和风险缺口</p>
+            <p>检查角色绑定和风险缺口</p>
           </div>
         )}
 
@@ -539,23 +540,6 @@ export function WorkflowManagementOverview({ data, onNavigate, onEnterWorkflowDe
             <span>AI 诊断</span>
           </div>
           <div className="wmo-sidepanel-body">
-            {/* Capability Gaps */}
-            <div className="wmo-side-card">
-              <h3>能力授权缺口</h3>
-              <div className="wmo-list">
-                {healthPanel.capabilityGaps.map((gap, i) => (
-                  <div key={i} className="wmo-row">
-                    <span>
-                      {gap.workflowName}缺 {gap.missingCapability}
-                    </span>
-                    <small className={`wmo-severity-${gap.severity}`}>
-                      {gap.severity === "high" ? "高" : gap.severity === "medium" ? "中" : "低"}
-                    </small>
-                  </div>
-                ))}
-              </div>
-            </div>
-
             {/* Role Binding Gaps */}
             <div className="wmo-side-card">
               <h3>角色绑定缺口</h3>
@@ -755,10 +739,6 @@ function WorkflowCard({
             <div className="wmo-risk-line">
               <span>Runner</span>
               <b>{flow.runnerCoverage}%</b>
-            </div>
-            <div className="wmo-risk-line">
-              <span>{flow.riskGap ? "缺口" : "授权"}</span>
-              <b>{flow.riskGap || flow.capabilityAuth || "--"}</b>
             </div>
           </div>
         </div>

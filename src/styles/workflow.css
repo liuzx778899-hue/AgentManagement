@@ -449,7 +449,7 @@
 /* Center canvas */
 .wf-v2-center { flex: 1; min-height: 0; display: flex; flex-direction: column; min-width: 0; }
 .wf-v2-canvas { flex: 1; min-height: 0; position: relative; overflow: hidden; }
-.wf-v2-canvas-toolbar { position: absolute; top: 10px; left: 12px; right: 12px; display: flex; justify-content: space-between; z-index: 10; }
+.wf-v2-canvas-toolbar { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border-bottom: 1px solid #30363d; background: #0d1117; flex-shrink: 0; z-index: 10; }
 .wf-v2-canvas-toolbar h2 { font-size: 13px; font-weight: 600; color: white; margin: 0; white-space: nowrap; }
 .wf-v2-canvas-toolbar p { font-size: 11px; color: #8b949e; margin: 2px 0 0; white-space: nowrap; }
 .wf-v2-canvas-toolbar-actions { display: flex; gap: 4px; }
@@ -465,12 +465,14 @@
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  padding: 76px 20px 58px;
+  padding: 20px;
   overflow: auto;
   background: #0d1117;
   background-image: radial-gradient(#30363d 1px, transparent 1px);
   background-size: 20px 20px;
+  cursor: grab;
 }
+.wf-v2-canvas-area.dragging { cursor: grabbing; }
 .wf-v2-node-track {
   display: flex;
   align-items: center;
@@ -692,6 +694,9 @@
 .awd-node-v2-state.active { color: #79a0ff; }
 .awd-node-v2-state.wait { color: #e7a83c; }
 .awd-node-v2-state.idle { color: #8d9bb0; }
+.awd-node-v2-delete { position: absolute; top: 7px; right: 7px; width: 24px; height: 24px; display: inline-grid; place-items: center; border: 1px solid rgba(255,118,112,0.36); border-radius: 6px; background: rgba(116,52,59,0.14); color: #ff8b86; cursor: pointer; opacity: 0; transition: opacity .15s, background .15s, border-color .15s; z-index: 2; padding: 0; }
+.awd-node-v2:hover .awd-node-v2-delete { opacity: 1; }
+.awd-node-v2-delete:hover { background: rgba(116,52,59,0.28); border-color: rgba(255,118,112,0.72); }
 
 /* Minimap — exact conventional design replica, bottom-left */
 .awd-canvas-card { position: relative; }
