@@ -1,28 +1,4 @@
 {
-  "id": "207314ef-927a-43c8-9a3d-72d778d9270c",
-  "name": "示例Web应用",
-  "repoPath": "/path/to/example-web-app",
-  "defaultBranch": "main",
-  "worktreeRoot": "/path/to/example-web-app/.worktrees",
-  "scope": "team",
-  "sourceType": "manual",
-  "phase": "规划中",
-  "riskLevel": "medium",
-  "healthScore": 70,
-  "permissions": {
-    "permissionLevel": "write"
-  },
-  "settings": {
-    "installCommand": "npm install",
-    "testCommand": "npm test",
-    "buildCommand": "npm run build",
-    "previewCommand": "npm run preview",
-    "detectedStack": "Next.js",
-    "riskSummary": "新项目，需要完善配置"
-  },
-  "workflowTemplateId": "software-dev-v1",
-  "createdAt": "2026-05-30T11:35:41.125Z",
-  "updatedAt": "2026-05-30T11:35:41.125Z",
-  "version": "1.0",
-  "persistedAt": "2026-05-30T11:35:41.125Z"
+  "deleted": true,
+  "deletedAt": "2026-05-30T14:09:29.783Z"
 }
