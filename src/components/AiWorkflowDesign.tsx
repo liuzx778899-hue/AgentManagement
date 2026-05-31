@@ -71,6 +71,12 @@ export function AiWorkflowDesign({ data }: AiWorkflowDesignProps) {
   const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>(DEFAULT_CHECKLIST);
   const [generating, setGenerating] = useState(false);
 
+  // 画布缩放
+  const [canvasScale, setCanvasScale] = useState(1);
+  const ZOOM_STEP = 0.1;
+  const ZOOM_MIN = 0.3;
+  const ZOOM_MAX = 2;
+
   // Context files from props (projects)
   const contextFiles: ContextFile[] = data.projects.length > 0
     ? data.projects.map(p => ({
@@ -495,9 +501,14 @@ ${rolesContext}
               <div className="awd-draft-title">
                 <span>流程草案</span><span className="awd-mini-tag">v1.4 · 草案</span>
               </div>
-              <div className="awd-zoom">100%</div>
+              <div className="awd-canvas-zoom-ctrl" style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                <button className="awd-zoom-btn" title="缩小" onClick={() => setCanvasScale(s => Math.max(ZOOM_MIN, s - ZOOM_STEP))} style={{ background: 'none', border: '1px solid #34465e', color: '#8b949e', borderRadius: 3, width: 22, height: 22, cursor: 'pointer', fontSize: 14 }}>−</button>
+                <span style={{ fontSize: 11, color: '#8b949e', padding: '0 4px', minWidth: 36, textAlign: 'center' }}>{Math.round(canvasScale * 100)}%</span>
+                <button className="awd-zoom-btn" title="放大" onClick={() => setCanvasScale(s => Math.min(ZOOM_MAX, s + ZOOM_STEP))} style={{ background: 'none', border: '1px solid #34465e', color: '#8b949e', borderRadius: 3, width: 22, height: 22, cursor: 'pointer', fontSize: 14 }}>+</button>
+                <button className="awd-zoom-btn" title="适应画布" onClick={() => setCanvasScale(1)} style={{ background: 'none', border: '1px solid #34465e', color: '#8b949e', borderRadius: 3, width: 22, height: 22, cursor: 'pointer', fontSize: 14 }}>⊞</button>
+              </div>
             </div>
-            <div className="awd-canvas">
+            <div className="awd-canvas" style={{ transform: `scale(${canvasScale})`, transformOrigin: 'top left' }}>
               {draftNodes.length === 0 ? (
                 <div className="awd-empty-canvas">
                   <div className="awd-empty-icon">📋</div>
