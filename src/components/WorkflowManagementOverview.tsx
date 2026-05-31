@@ -56,6 +56,7 @@ interface WorkflowAsset {
   version: string;
   stepCount: number;
   steps: WorkflowStepDisplay[];
+  fullSteps: Array<{ id: string; name: string; roleId: string; modelProviderId?: string; modelName?: string; runnerId?: string }>;
   roleCoverage: RoleAvatar[];
   runnerCoverage: number;
   riskGap: string | null;
@@ -162,6 +163,7 @@ function workflowTemplateToAsset(template: WorkbenchData["workflowTemplates"][0]
     version: `v${template.version || 1}`,
     stepCount: steps.length,
     steps: steps.slice(0, 5).map((s, i) => ({ no: `${i + 1}`.padStart(2, "0"), name: s.name })),
+    fullSteps: steps.map(s => ({ id: s.id, name: s.name, roleId: s.roleId, modelProviderId: s.modelProviderId, modelName: s.modelName, runnerId: s.runnerId })),
     roleCoverage: roleAvatars.slice(0, 5),
     runnerCoverage: steps.some(s => s.runnerId) ? 85 : 60,
     riskGap: null,
@@ -267,6 +269,7 @@ export function WorkflowManagementOverview({ data, onNavigate, onEnterWorkflowDe
   const [customCategories, setCustomCategories] = useState<string[]>([]);
   const [deletedCategoryIds, setDeletedCategoryIds] = useState<string[]>([]);
   const [statusOverrides, setStatusOverrides] = useState<Record<string, WorkflowAsset["status"]>>({});
+  const [validationResults, setValidationResults] = useState<Record<string, string[]>>({});
   const importInputRef = useRef<HTMLInputElement | null>(null);
 
   // Convert workflow templates to workflow assets
@@ -329,10 +332,23 @@ export function WorkflowManagementOverview({ data, onNavigate, onEnterWorkflowDe
     [healthPanel.categories, deletedCategoryIds]
   );
 
-  // Handle "check all" action
+  // Handle "check all" action — validate every workflow
   const handleValidateAll = () => {
     setValidating(true);
-    setTimeout(() => setValidating(false), 3000);
+    const results: Record<string, string[]> = {};
+    workflowAssets.forEach((flow) => {
+      const issues: string[] = [];
+      if (flow.fullSteps.length === 0) issues.push("流程没有任何步骤");
+      flow.fullSteps.forEach((s, i) => {
+        if (!s.name?.trim()) issues.push(`步骤 ${i + 1} 缺少名称`);
+        if (!s.roleId) issues.push(`步骤 ${i + 1}「${s.name}」未绑定角色`);
+        if (!s.modelProviderId || !s.modelName) issues.push(`步骤 ${i + 1}「${s.name}」未配置模型`);
+        if (!s.runnerId) issues.push(`步骤 ${i + 1}「${s.name}」未配置 Runner`);
+      });
+      if (issues.length > 0) results[flow.id] = issues;
+    });
+    setValidationResults(results);
+    setValidating(false);
   };
 
   // Handle entering workflow designer
@@ -545,6 +561,7 @@ export function WorkflowManagementOverview({ data, onNavigate, onEnterWorkflowDe
                   onDelete={handleDeleteFlow}
                   onToggleStatus={handleToggleFlowStatus}
                   onUpdateCategory={handleUpdateCategory}
+                  validationIssues={validationResults[flow.id]}
                 />
               ))
             )}
@@ -682,15 +699,18 @@ function WorkflowCard({
   onDelete,
   onToggleStatus,
   onUpdateCategory,
+  validationIssues,
 }: {
   flow: WorkflowAsset;
   onEnterDesigner: (id: string) => void;
   onDelete: (id: string) => void;
   onToggleStatus: (id: string, currentStatus: WorkflowAsset["status"]) => void;
   onUpdateCategory?: (id: string, category: WorkflowCategoryBase) => void;
+  validationIssues?: string[] | null;
 }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteInput, setDeleteInput] = useState("");
+
   const statusLabel = (() => {
     switch (flow.status) {
       case "enabled": return "已启用";
@@ -749,6 +769,12 @@ function WorkflowCard({
           </div>
         </div>
         <span className={healthChipClass(flow.healthStatus)}>{flow.healthLabel}</span>
+        {validationIssues && validationIssues.length > 0 && (
+          <span className="wmo-chip warn" style={{ marginLeft: 4 }}>
+            <CircleAlert size={10} style={{ verticalAlign: "middle", marginRight: 2 }} />
+            {validationIssues.length} 个问题
+          </span>
+        )}
       </div>
 
       {/* Description */}
@@ -895,6 +921,28 @@ function WorkflowCard({
                   确认删除
                 </button>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Validation result popup */}
+      {validationIssues && validationIssues.length > 0 && (
+        <div className="pm-v2-pc-confirm-overlay" onClick={(e) => e.stopPropagation()}>
+          <div className="pm-v2-pc-confirm-box" onClick={(e) => e.stopPropagation()}>
+            <div className="pm-v2-pc-confirm-header">
+              <CircleAlert size={16} color="var(--warning, #e0a030)" />
+              <span>校验问题</span>
+              <button className="pm-v2-btn" onClick={(e) => { e.stopPropagation(); onEnterDesigner(flow.id); }} type="button">
+                去修复
+              </button>
+            </div>
+            <div className="pm-v2-pc-confirm-body">
+              <ul style={{ margin: 0, paddingLeft: 20, color: "var(--text-secondary)" }}>
+                {validationIssues.map((issue, i) => (
+                  <li key={i}>{issue}</li>
+                ))}
+              </ul>
             </div>
           </div>
         </div>
