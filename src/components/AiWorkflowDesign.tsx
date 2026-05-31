@@ -595,7 +595,12 @@ ${rolesContext}
           <div className="awd-checklist">
             <h3>应用前确认</h3>
             {checklistItems.map((item, i) => (
-              <div key={i} className="awd-check-row">
+              <div
+                key={i}
+                className="awd-check-row"
+                onClick={() => setChecklistItems(prev => prev.map((c, idx) => idx === i ? { ...c, done: !c.done } : c))}
+                style={{ cursor: "pointer" }}
+              >
                 <div className={`awd-check-box${item.done ? " done" : ""}`}>
                   {item.done && <Check size={10} />}
                 </div>

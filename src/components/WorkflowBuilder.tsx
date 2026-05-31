@@ -19,6 +19,8 @@ function AiWorkflowDesignInline({
   setMaterials,
   draftSteps,
   setDraftSteps,
+  onApply,
+  onDiscard,
 }: {
   data: WorkbenchData;
   chatMessages: { id: number; author: string; text: string; isUser: boolean; time: string }[];
@@ -27,6 +29,8 @@ function AiWorkflowDesignInline({
   setMaterials: React.Dispatch<React.SetStateAction<{ name: string; ext: string }[]>>;
   draftSteps: WorkflowStep[];
   setDraftSteps: React.Dispatch<React.SetStateAction<WorkflowStep[]>>;
+  onApply: (steps: WorkflowStep[]) => void;
+  onDiscard: () => void;
 }) {
   const [materialsExpanded, setMaterialsExpanded] = useState(true);
   const [composerText, setComposerText] = useState("");
@@ -570,10 +574,20 @@ UI设计|UI设计师|glm-5|manual`
             ))}
           </div>
           <div className="awd-diff-actions">
-            <button className="awd-btn awd-btn-apply" disabled={!draftGenerated || diffItems.length === 0 || !allChecksDone}>
+            <button
+              className="awd-btn awd-btn-apply"
+              disabled={!draftGenerated || diffItems.length === 0 || !allChecksDone}
+              onClick={() => onApply(draftSteps)}
+            >
               <Check size={14} /> 确认并应用
             </button>
-            <button className="awd-btn awd-btn-cancel" disabled={!draftGenerated}>放弃草案</button>
+            <button
+              className="awd-btn awd-btn-cancel"
+              disabled={!draftGenerated}
+              onClick={onDiscard}
+            >
+              放弃草案
+            </button>
           </div>
         </section>
       </div>
@@ -1145,6 +1159,22 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
           setMaterials={setAiMaterials}
           draftSteps={aiDraftSteps}
           setDraftSteps={setAiDraftSteps}
+          onApply={(steps) => {
+            // 将草案步骤写入一个新的流程模板
+            const templateName = `AI 生成流程 ${data.workflowTemplates.length + 1}`;
+            addWorkflowTemplate({
+              name: templateName,
+              version: 1,
+              status: "draft",
+              steps: steps.map((s, i) => ({ ...s, order: i + 1 })),
+              workflowMarkdown: `# ${templateName}\n\n由 AI 流程设计生成。`,
+            });
+            setMode("manual");
+          }}
+          onDiscard={() => {
+            setAiDraftSteps([]);
+            setAiChatMessages([]);
+          }}
         />
       )}
 

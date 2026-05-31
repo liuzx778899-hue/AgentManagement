@@ -17,14 +17,12 @@ export function StepEditModal({
   step,
   template,
   data,
-  availableRoles,
   readOnly = false,
   onSave,
   onDelete,
   onClose,
 }: StepEditModalProps) {
   const [name, setName] = useState(step.name);
-  const [roleId, setRoleId] = useState(step.roleId);
   const [providerId, setProviderId] = useState(step.modelProviderId);
   const [modelName, setModelName] = useState(step.modelName);
   const [gateMode, setGateMode] = useState<GateMode>(step.gateMode);
@@ -33,17 +31,25 @@ export function StepEditModal({
   const [outputs, setOutputs] = useState(step.outputs.join(", "));
   const [runnerId, setRunnerId] = useState<string>(step.runnerId ?? "");
 
+  // 角色处理：从 roleId 提取角色名用于编辑，保存时再转回 roleId
+  const getRoleNameFromId = (rid: string) => {
+    if (!rid) return "";
+    if (rid.startsWith("role-ai-draft-")) return rid.replace("role-ai-draft-", "");
+    const role = data.roles.find(r => r.id === rid);
+    return role?.name ?? rid;
+  };
+  const makeRoleId = (rname: string) => {
+    if (!rname) return "";
+    // 如果角色池中有匹配的角色，用它的 id
+    const matched = data.roles.find(r => r.name === rname || r.name.includes(rname) || rname.includes(r.name));
+    return matched ? matched.id : `role-ai-draft-${rname}`;
+  };
+  const [roleName, setRoleName] = useState(getRoleNameFromId(step.roleId));
+
   const enabledRunners = useMemo(() => (data.runnerProfiles ?? []).filter((runner) => runner.enabled), [data.runnerProfiles]);
 
   const sortedSteps = useMemo(() => [...template.steps].sort((a, b) => a.order - b.order), [template.steps]);
   const currentIndex = sortedSteps.findIndex((item) => item.id === step.id);
-
-  const selectableRoles = useMemo(() => {
-    const roles = availableRoles ?? data.roles;
-    if (!roleId || roles.some((role) => role.id === roleId)) return roles;
-    const currentRole = data.roles.find((role) => role.id === roleId);
-    return currentRole ? [...roles, currentRole] : roles;
-  }, [availableRoles, data.roles, roleId]);
 
   const selectedProvider = useMemo(
     () => data.modelProviders.find((provider) => provider.id === providerId),
@@ -51,7 +57,6 @@ export function StepEditModal({
   );
 
   const defaultStepMarkdown = useMemo(() => {
-    const roleName = selectableRoles.find((role) => role.id === roleId)?.name ?? "未绑定角色";
     const providerName = selectedProvider?.name ?? providerId;
     const inputLabels = inputs.split(",").map((item) => item.trim()).filter(Boolean);
     const outputLabels = outputs.split(",").map((item) => item.trim()).filter(Boolean);
@@ -65,7 +70,7 @@ export function StepEditModal({
     return [
       `# ${name}`,
       "",
-      `**执行角色：** ${roleName}`,
+      `**执行角色：** ${roleName || "未绑定角色"}`,
       `**模型：** ${providerName} / ${modelName}`,
       "",
       "## 输入",
@@ -77,7 +82,7 @@ export function StepEditModal({
       "## 失败策略",
       strategyLabel[failureStrategy] ?? failureStrategy,
     ].join("\n");
-  }, [name, roleId, providerId, modelName, inputs, outputs, failureStrategy, selectedProvider, selectableRoles]);
+  }, [name, roleName, providerId, modelName, inputs, outputs, failureStrategy, selectedProvider]);
 
   const [stepMarkdown, setStepMarkdown] = useState(step.stepMarkdown || defaultStepMarkdown);
 
@@ -95,7 +100,7 @@ export function StepEditModal({
     if (readOnly) return;
     onSave({
       name: name.trim(),
-      roleId,
+      roleId: makeRoleId(roleName.trim()),
       modelProviderId: providerId,
       modelName,
       gateMode,
@@ -138,12 +143,18 @@ export function StepEditModal({
               </div>
               <div className="form-field">
                 <label>执行角色</label>
-                <select value={roleId} onChange={(event) => setRoleId(event.target.value)} disabled={readOnly}>
-                  <option value="">未绑定角色</option>
-                  {selectableRoles.map((role) => (
-                    <option key={role.id} value={role.id}>{role.name}</option>
+                <input
+                  value={roleName}
+                  onChange={(event) => setRoleName(event.target.value)}
+                  placeholder="输入角色名称"
+                  disabled={readOnly}
+                  list="role-suggestions"
+                />
+                <datalist id="role-suggestions">
+                  {data.roles.map((role) => (
+                    <option key={role.id} value={role.name} />
                   ))}
-                </select>
+                </datalist>
               </div>
               <div className="form-field">
                 <label>绑定模型</label>
