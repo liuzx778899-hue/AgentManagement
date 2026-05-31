@@ -1,0 +1,9 @@
+{
+  "id": "role-9",
+  "projectId": null,
+  "name": "DevOps工程师",
+  "description": "负责CI/CD流水线搭建、环境部署、监控告警。",
+  "isBuiltIn": false,
+  "defaultCapabilities": [],
+  "persistedAt": "2026-05-31T11:10:56.980Z"
+}

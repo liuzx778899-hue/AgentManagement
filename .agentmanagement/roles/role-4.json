@@ -1,0 +1,10 @@
+{
+  "id": "role-4",
+  "projectId": null,
+  "name": "Vue前端开发工程师",
+  "description": "基于Vue.js框架开发用户界面与交互逻辑。",
+  "roleMarkdown": "# Vue前端开发工程师\n\n## 角色定位\n负责用户可见的界面开发与交互体验优化，实现前后端分离开发。\n\n## 核心职责\n- 使用Vue.js + ElementUI/AntDesign构建页面。\n- 封装Axios模块，对接后端API。\n- 实现组件化开发，管理前端状态。\n\n## 输入输出边界\n- 输入：UI原型图、后端接口文档。\n- 输出：前端工程代码。\n\n## 验收标准\n- 界面还原度高，交互流畅。\n- 能够正确渲染后端数据并处理异常状态。",
+  "isBuiltIn": false,
+  "defaultCapabilities": [],
+  "persistedAt": "2026-05-31T13:41:57.517Z"
+}

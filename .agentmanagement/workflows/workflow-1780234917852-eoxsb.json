@@ -1,0 +1,271 @@
+{
+  "name": "Java Spring + Vue 全生命周期软件开发流程",
+  "version": 1,
+  "status": "draft",
+  "steps": [
+    {
+      "id": "ai-draft-step-1",
+      "order": 1,
+      "name": "需求分析与原型设计",
+      "roleId": "role-1",
+      "modelProviderId": "provider-1780203731833-t5b0dgc",
+      "modelName": "glm-5.1",
+      "inputs": [
+        "用户原始需求",
+        "业务痛点"
+      ],
+      "outputs": [
+        "《产品需求文档》(PRD)",
+        "UI原型图"
+      ],
+      "gateMode": "manual",
+      "failureStrategy": "stop",
+      "stepMarkdown": "# 需求分析与原型设计\n\n**执行角色：** 产品经理\n**模型：** glm / glm-5.1\n\n## 输入\n- 用户原始需求\n- 业务痛点\n\n## 输出\n- 《产品需求文档》(PRD)\n- UI原型图\n\n## 失败策略\n停止流程",
+      "projectOverride": false,
+      "runnerId": "runner-codex-cli"
+    },
+    {
+      "id": "ai-draft-step-2",
+      "order": 2,
+      "name": "架构设计与数据库建模",
+      "roleId": "role-2",
+      "modelProviderId": "provider-1780203731833-t5b0dgc",
+      "modelName": "glm-5.1",
+      "inputs": [
+        "《产品需求文档》"
+      ],
+      "outputs": [
+        "《系统架构设计说明书》",
+        "数据库SQL脚本"
+      ],
+      "gateMode": "manual",
+      "failureStrategy": "stop",
+      "stepMarkdown": "# 架构设计与数据库建模\n\n**执行角色：** Java架构师\n**模型：** glm / glm-5.1\n\n## 输入\n- 《产品需求文档》\n\n## 输出\n- 《系统架构设计说明书》\n- 数据库SQL脚本\n\n## 失败策略\n停止流程",
+      "projectOverride": false,
+      "runnerId": "runner-codex-cli"
+    },
+    {
+      "id": "ai-draft-step-3",
+      "order": 3,
+      "name": "后端接口开发",
+      "roleId": "role-3",
+      "modelProviderId": "provider-1780203731833-t5b0dgc",
+      "modelName": "glm-5.1",
+      "inputs": [
+        "架构设计",
+        "数据库设计"
+      ],
+      "outputs": [
+        "后端服务代码",
+        "Swagger接口文档"
+      ],
+      "gateMode": "auto",
+      "failureStrategy": "retry",
+      "stepMarkdown": "# 后端接口开发\n\n**执行角色：** Java后端开发工程师\n**模型：** glm / glm-5.1\n\n## 输入\n- 架构设计\n- 数据库设计\n\n## 输出\n- 后端服务代码\n- Swagger接口文档\n\n## 失败策略\n重试当前步骤",
+      "projectOverride": false,
+      "runnerId": "runner-codex-cli"
+    },
+    {
+      "id": "ai-draft-step-4",
+      "order": 4,
+      "name": "前端页面开发",
+      "roleId": "role-4",
+      "modelProviderId": "provider-1780203731833-t5b0dgc",
+      "modelName": "glm-5.1",
+      "inputs": [
+        "UI原型图",
+        "Swagger接口文档"
+      ],
+      "outputs": [
+        "前端工程代码"
+      ],
+      "gateMode": "auto",
+      "failureStrategy": "retry",
+      "stepMarkdown": "# 前端页面开发\n\n**执行角色：** Vue前端开发工程师\n**模型：** glm / glm-5.1\n\n## 输入\n- UI原型图\n- Swagger接口文档\n\n## 输出\n- 前端工程代码\n\n## 失败策略\n重试当前步骤",
+      "projectOverride": false,
+      "runnerId": "runner-codex-cli"
+    },
+    {
+      "id": "ai-draft-step-5",
+      "order": 5,
+      "name": "数据库部署与优化",
+      "roleId": "role-5",
+      "modelProviderId": "provider-1780203731833-t5b0dgc",
+      "modelName": "glm-5.1",
+      "inputs": [
+        "数据库SQL脚本"
+      ],
+      "outputs": [
+        "生产环境数据库实例",
+        "索引优化报告"
+      ],
+      "gateMode": "manual",
+      "failureStrategy": "stop",
+      "stepMarkdown": "# 数据库部署与优化\n\n**执行角色：** 数据库管理员 (DBA)\n**模型：** glm / glm-5.1\n\n## 输入\n- 数据库SQL脚本\n\n## 输出\n- 生产环境数据库实例\n- 索引优化报告\n\n## 失败策略\n停止流程",
+      "projectOverride": false,
+      "runnerId": "runner-codex-cli"
+    },
+    {
+      "id": "ai-draft-step-6",
+      "order": 6,
+      "name": "集成测试与验收",
+      "roleId": "role-6",
+      "modelProviderId": "provider-1780203731833-t5b0dgc",
+      "modelName": "glm-5.1",
+      "inputs": [
+        "测试环境部署包",
+        "测试用例"
+      ],
+      "outputs": [
+        "《测试报告》",
+        "Bug列表"
+      ],
+      "gateMode": "manual",
+      "failureStrategy": "stop",
+      "stepMarkdown": "# 集成测试与验收\n\n**执行角色：** 功能测试工程师\n**模型：** glm / glm-5.1\n\n## 输入\n- 测试环境部署包\n- 测试用例\n\n## 输出\n- 《测试报告》\n- Bug列表\n\n## 失败策略\n停止流程",
+      "projectOverride": false,
+      "runnerId": "runner-claude-code"
+    },
+    {
+      "id": "ai-draft-step-7",
+      "order": 7,
+      "name": "运维部署与发布",
+      "roleId": "role-7",
+      "modelProviderId": "provider-1780203731833-t5b0dgc",
+      "modelName": "glm-5.1",
+      "inputs": [
+        "通过测试的源代码"
+      ],
+      "outputs": [
+        "生产环境运行的服务",
+        "监控日志"
+      ],
+      "gateMode": "manual",
+      "failureStrategy": "stop",
+      "stepMarkdown": "# 运维部署与发布\n\n**执行角色：** DevOps工程师\n**模型：** glm / glm-5.1\n\n## 输入\n- 通过测试的源代码\n\n## 输出\n- 生产环境运行的服务\n- 监控日志\n\n## 失败策略\n停止流程",
+      "projectOverride": false,
+      "runnerId": "runner-codex-cli"
+    }
+  ],
+  "workflowMarkdown": "# Java Spring + Vue 全生命周期软件开发流程\n\n由 AI 流程设计生成。",
+  "roles": [
+    {
+      "id": "role-1",
+      "name": "产品经理",
+      "description": "负责需求调研、业务梳理与原型设计，把控产品方向。",
+      "responsibilities": [
+        "调研用户需求",
+        "梳理业务逻辑",
+        "设计产品原型",
+        "编写PRD文档"
+      ],
+      "deliverables": [
+        "《产品需求文档》(PRD)",
+        "UI原型图"
+      ],
+      "roleMarkdown": "# 产品经理\n\n## 角色定位\n负责产品的需求定义与原型设计，是业务与技术团队之间的桥梁。\n\n## 核心职责\n- 收集并分析用户原始需求，转化为功能列表。\n- 梳理业务逻辑流程，明确边界条件。\n- 使用原型工具设计界面交互原型。\n\n## 输入输出边界\n- 输入：用户原始需求、业务痛点。\n- 输出：《产品需求文档》(PRD)、UI原型图。\n\n## 验收标准\n- PRD逻辑清晰，无歧义。\n- 原型图覆盖核心业务流程。"
+    },
+    {
+      "id": "role-2",
+      "name": "Java架构师",
+      "description": "负责系统整体架构设计、技术选型及数据库模型设计。",
+      "responsibilities": [
+        "搭建系统架构",
+        "制定技术规范",
+        "设计数据库ER图",
+        "技术难点攻关"
+      ],
+      "deliverables": [
+        "《系统架构设计说明书》",
+        "数据库SQL脚本",
+        "技术选型清单"
+      ],
+      "roleMarkdown": "# Java架构师\n\n## 角色定位\n负责项目的技术底座搭建与数据库设计，确保系统的扩展性、稳定性与安全性。\n\n## 核心职责\n- 基于Java Spring Boot技术栈进行架构选型（微服务/单体）。\n- 设计数据库表结构、索引及ER图。\n- 制定代码规范与接口标准。\n\n## 输入输出边界\n- 输入：《产品需求文档》。\n- 输出：架构设计文档、初始化SQL脚本。\n\n## 验收标准\n- 架构设计满足高并发/高可用需求。\n- 数据库设计符合三范式，避免性能瓶颈。"
+    },
+    {
+      "id": "role-3",
+      "name": "Java后端开发工程师",
+      "description": "基于Spring框架实现业务逻辑与RESTful API接口。",
+      "responsibilities": [
+        "实现业务逻辑",
+        "开发RESTful API",
+        "数据持久化处理",
+        "编写单元测试"
+      ],
+      "deliverables": [
+        "后端服务代码",
+        "Swagger接口文档",
+        "单元测试代码"
+      ],
+      "roleMarkdown": "# Java后端开发工程师\n\n## 角色定位\n专注于业务逻辑的后端实现，提供稳定可靠的数据接口。\n\n## 核心职责\n- 使用Spring Boot/MVC框架开发Controller、Service、Dao层。\n- 编写RESTful API接口，处理JSON数据交互。\n- 集成MyBatis/JPA进行数据库操作。\n\n## 输入输出边界\n- 输入：架构设计、数据库设计、接口定义。\n- 输出：后端可运行代码、Swagger接口文档。\n\n## 验收标准\n- 接口响应符合预期，状态码正确。\n- 核心业务逻辑覆盖单元测试。"
+    },
+    {
+      "id": "role-4",
+      "name": "Vue前端开发工程师",
+      "description": "基于Vue.js框架开发用户界面与交互逻辑。",
+      "responsibilities": [
+        "开发用户界面",
+        "实现交互逻辑",
+        "封装API调用",
+        "优化用户体验"
+      ],
+      "deliverables": [
+        "前端工程代码",
+        "静态资源文件"
+      ],
+      "roleMarkdown": "# Vue前端开发工程师\n\n## 角色定位\n负责用户可见的界面开发与交互体验优化，实现前后端分离开发。\n\n## 核心职责\n- 使用Vue.js + ElementUI/AntDesign构建页面。\n- 封装Axios模块，对接后端API。\n- 实现组件化开发，管理前端状态。\n\n## 输入输出边界\n- 输入：UI原型图、后端接口文档。\n- 输出：前端工程代码。\n\n## 验收标准\n- 界面还原度高，交互流畅。\n- 能够正确渲染后端数据并处理异常状态。"
+    },
+    {
+      "id": "role-5",
+      "name": "数据库管理员 (DBA)",
+      "description": "负责数据库环境部署、性能优化与数据安全。",
+      "responsibilities": [
+        "数据库环境部署",
+        "SQL性能调优",
+        "权限管理",
+        "备份与容灾"
+      ],
+      "deliverables": [
+        "生产环境数据库实例",
+        "索引优化报告",
+        "备份策略"
+      ],
+      "roleMarkdown": "# 数据库管理员 (DBA)\n\n## 角色定位\n保障数据库服务的高可用与数据安全，解决性能瓶颈。\n\n## 核心职责\n- 安装配置MySQL/Oracle/Redis等数据库服务。\n- 审核SQL语句，添加索引，优化查询速度。\n- 制定并执行数据备份与恢复策略。\n\n## 输入输出边界\n- 输入：数据库设计脚本、后端业务SQL。\n- 输出：生产环境数据库实例、优化报告。\n\n## 验收标准\n- 数据库服务稳定运行。\n- 查询响应时间在阈值内。\n- 备份策略验证通过。"
+    },
+    {
+      "id": "role-6",
+      "name": "功能测试工程师",
+      "description": "负责编写测试用例、执行系统集成测试与Bug管理。",
+      "responsibilities": [
+        "编写测试用例",
+        "执行集成测试",
+        "Bug提交与跟踪",
+        "验收测试"
+      ],
+      "deliverables": [
+        "《测试报告》",
+        "Bug列表"
+      ],
+      "roleMarkdown": "# 功能测试工程师\n\n## 角色定位\n把控软件质量，确保交付产品符合需求规格。\n\n## 核心职责\n- 根据PRD编写测试用例。\n- 执行前后端集成测试，验证业务流程。\n- 使用缺陷管理工具提交并跟踪Bug。\n\n## 输入输出边界\n- 输入：测试环境部署包、测试用例。\n- 输出：《测试报告》、Bug列表。\n\n## 验收标准\n- 测试用例覆盖所有业务场景。\n- 严重级别Bug修复率100%。"
+    },
+    {
+      "id": "role-7",
+      "name": "DevOps工程师",
+      "description": "负责CI/CD流水线搭建、自动化部署与环境维护。",
+      "responsibilities": [
+        "搭建CI/CD流水线",
+        "配置服务器环境",
+        "自动化部署",
+        "线上监控"
+      ],
+      "deliverables": [
+        "生产环境运行服务",
+        "监控日志"
+      ],
+      "roleMarkdown": "# DevOps工程师\n\n## 角色定位\n实现开发运维一体化，提升交付效率与稳定性。\n\n## 核心职责\n- 编写Dockerfile、Jenkinsfile等自动化脚本。\n- 配置Linux服务器、Nginx反向代理等环境。\n- 监控线上服务状态，处理告警。\n\n## 输入输出边界\n- 输入：通过测试的源代码、配置文件。\n- 输出：生产环境运行的服务、监控日志。\n\n## 验收标准\n- 实现一键自动化部署。\n- 服务启动成功，无运行时错误。"
+    }
+  ],
+  "id": "workflow-1780234917852-eoxsb",
+  "createdAt": "2026-05-31T13:41:57.852Z",
+  "updatedAt": "2026-05-31T13:41:57.852Z"
+}

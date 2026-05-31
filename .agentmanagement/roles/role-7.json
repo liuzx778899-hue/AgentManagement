@@ -1,0 +1,10 @@
+{
+  "id": "role-7",
+  "projectId": null,
+  "name": "DevOps工程师",
+  "description": "负责CI/CD流水线搭建、自动化部署与环境维护。",
+  "roleMarkdown": "# DevOps工程师\n\n## 角色定位\n实现开发运维一体化，提升交付效率与稳定性。\n\n## 核心职责\n- 编写Dockerfile、Jenkinsfile等自动化脚本。\n- 配置Linux服务器、Nginx反向代理等环境。\n- 监控线上服务状态，处理告警。\n\n## 输入输出边界\n- 输入：通过测试的源代码、配置文件。\n- 输出：生产环境运行的服务、监控日志。\n\n## 验收标准\n- 实现一键自动化部署。\n- 服务启动成功，无运行时错误。",
+  "isBuiltIn": false,
+  "defaultCapabilities": [],
+  "persistedAt": "2026-05-31T13:41:57.517Z"
+}

@@ -1,0 +1,50 @@
+[
+  {
+    "id": "mcp-browser",
+    "name": "Browser",
+    "source": "built-in",
+    "status": "enabled",
+    "transport": "stdio",
+    "toolCount": 8,
+    "resourceCount": 0,
+    "requiredEnv": [],
+    "usedByRoleIds": ["role-pm", "role-tech-lead", "role-qa"],
+    "usedByWorkflowStepIds": []
+  },
+  {
+    "id": "mcp-github",
+    "name": "GitHub",
+    "source": "built-in",
+    "status": "enabled",
+    "transport": "stdio",
+    "toolCount": 12,
+    "resourceCount": 3,
+    "requiredEnv": ["GITHUB_TOKEN"],
+    "usedByRoleIds": ["role-pm", "role-dev", "role-tech-lead", "role-qa"],
+    "usedByWorkflowStepIds": []
+  },
+  {
+    "id": "mcp-local-shell",
+    "name": "Local Shell",
+    "source": "built-in",
+    "status": "enabled",
+    "transport": "stdio",
+    "toolCount": 6,
+    "resourceCount": 0,
+    "requiredEnv": [],
+    "usedByRoleIds": ["role-dev", "role-tech-lead", "role-qa"],
+    "usedByWorkflowStepIds": []
+  },
+  {
+    "id": "mcp-memory",
+    "name": "Memory Service",
+    "source": "project",
+    "status": "missing-config",
+    "transport": "http",
+    "toolCount": 4,
+    "resourceCount": 5,
+    "requiredEnv": ["MEMORY_SERVICE_URL"],
+    "usedByRoleIds": [],
+    "usedByWorkflowStepIds": []
+  }
+]

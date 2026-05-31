@@ -1,0 +1,325 @@
+{
+  "name": "Java Spring + Vue 全生命周期软件开发流程",
+  "version": 1,
+  "status": "draft",
+  "steps": [
+    {
+      "id": "ai-draft-step-1",
+      "order": 1,
+      "name": "需求分析与原型设计",
+      "roleId": "role-1",
+      "modelProviderId": "provider-1780139451481-84kk7ev",
+      "modelName": "glm-5.1",
+      "inputs": [
+        "客户口头需求",
+        "市场调研报告"
+      ],
+      "outputs": [
+        "产品需求文档 (PRD)",
+        "UI 原型图"
+      ],
+      "gateMode": "manual",
+      "failureStrategy": "stop",
+      "stepMarkdown": "# 需求分析与原型设计\n\n**执行角色：** 产品经理\n**模型：** 腾讯云 / glm-5.1\n\n## 输入\n- 客户口头需求\n- 市场调研报告\n\n## 输出\n- 产品需求文档 (PRD)\n- UI 原型图\n\n## 失败策略\n停止流程",
+      "projectOverride": false,
+      "runnerId": "Claude Code"
+    },
+    {
+      "id": "ai-draft-step-2",
+      "order": 2,
+      "name": "后端架构与技术选型",
+      "roleId": "role-2",
+      "modelProviderId": "provider-1780139451481-84kk7ev",
+      "modelName": "glm-5.1",
+      "inputs": [
+        "产品需求文档 (PRD)"
+      ],
+      "outputs": [
+        "架构设计文档",
+        "API 接口定义文档",
+        "基础工程代码骨架"
+      ],
+      "gateMode": "manual",
+      "failureStrategy": "stop",
+      "stepMarkdown": "# 后端架构与技术选型\n\n**执行角色：** Java架构师\n**模型：** 腾讯云 / glm-5.1\n\n## 输入\n- 产品需求文档 (PRD)\n\n## 输出\n- 架构设计文档\n- API 接口定义文档\n- 基础工程代码骨架\n\n## 失败策略\n停止流程",
+      "projectOverride": false,
+      "runnerId": "Claude Code"
+    },
+    {
+      "id": "ai-draft-step-3",
+      "order": 3,
+      "name": "数据库模型设计",
+      "roleId": "role-3",
+      "modelProviderId": "provider-1780139451481-84kk7ev",
+      "modelName": "glm-5",
+      "inputs": [
+        "产品需求文档(PRD)",
+        "业务实体关系"
+      ],
+      "outputs": [
+        "数据库设计文档(DDD)",
+        "物理表结构SQL脚本",
+        "数据字典"
+      ],
+      "gateMode": "auto",
+      "failureStrategy": "retry",
+      "stepMarkdown": "# 数据库模型设计\n\n**执行角色：** 数据库管理员 (DBA)\n**模型：** glm / glm-5.1\n\n## 输入\n- 产品需求文档(PRD)\n- 业务实体关系\n\n## 输出\n- 数据库设计文档(DDD)\n- 物理表结构SQL脚本\n- 数据字典\n\n## 失败策略\n重试当前步骤",
+      "projectOverride": false,
+      "runnerId": "runner-claude-code"
+    },
+    {
+      "id": "ai-draft-step-4",
+      "order": 4,
+      "name": "后端接口契约定义与 Mock 实现",
+      "roleId": "role-4",
+      "modelProviderId": "provider-1780139451481-84kk7ev",
+      "modelName": "glm-5.1",
+      "inputs": [
+        "API 接口定义文档",
+        "数据库设计文档"
+      ],
+      "outputs": [
+        "Swagger 接口文档地址",
+        "可访问的 Mock 接口"
+      ],
+      "gateMode": "auto",
+      "failureStrategy": "retry",
+      "stepMarkdown": "# 后端接口契约定义与 Mock 实现\n\n**执行角色：** Java后端开发工程师\n**模型：** 腾讯云 / glm-5.1\n\n## 输入\n- API 接口定义文档\n- 数据库设计文档\n\n## 输出\n- Swagger 接口文档地址\n- 可访问的 Mock 接口\n\n## 失败策略\n重试当前步骤",
+      "projectOverride": false,
+      "runnerId": "Claude Code"
+    },
+    {
+      "id": "ai-draft-step-5",
+      "order": 5,
+      "name": "前端页面开发与数据对接",
+      "roleId": "role-5",
+      "modelProviderId": "provider-1780139451481-84kk7ev",
+      "modelName": "glm-5.1",
+      "inputs": [
+        "UI 原型图",
+        "Swagger 接口文档地址",
+        "Mock 接口"
+      ],
+      "outputs": [
+        "前端功能页面",
+        "前端源代码"
+      ],
+      "gateMode": "auto",
+      "failureStrategy": "stop",
+      "stepMarkdown": "# 前端页面开发与数据对接\n\n**执行角色：** Vue前端开发工程师\n**模型：** 腾讯云 / glm-5.1\n\n## 输入\n- UI 原型图\n- Swagger 接口文档地址\n- Mock 接口\n\n## 输出\n- 前端功能页面\n- 前端源代码\n\n## 失败策略\n停止流程",
+      "projectOverride": false,
+      "runnerId": "Claude Code"
+    },
+    {
+      "id": "ai-draft-step-6",
+      "order": 6,
+      "name": "后端核心业务逻辑实现",
+      "roleId": "role-4",
+      "modelProviderId": "provider-1780139451481-84kk7ev",
+      "modelName": "glm-5.1",
+      "inputs": [
+        "API 接口定义文档",
+        "物理表结构 SQL 脚本"
+      ],
+      "outputs": [
+        "后端源代码",
+        "单元测试报告"
+      ],
+      "gateMode": "auto",
+      "failureStrategy": "stop",
+      "stepMarkdown": "# 后端核心业务逻辑实现\n\n**执行角色：** Java后端开发工程师\n**模型：** 腾讯云 / glm-5.1\n\n## 输入\n- API 接口定义文档\n- 物理表结构 SQL 脚本\n\n## 输出\n- 后端源代码\n- 单元测试报告\n\n## 失败策略\n停止流程",
+      "projectOverride": false,
+      "runnerId": "Claude Code"
+    },
+    {
+      "id": "ai-draft-step-7",
+      "order": 7,
+      "name": "前后端集成联调与修复",
+      "roleId": "role-5",
+      "modelProviderId": "provider-1780139451481-84kk7ev",
+      "modelName": "glm-5.1",
+      "inputs": [
+        "前端功能页面",
+        "后端源代码"
+      ],
+      "outputs": [
+        "联调通过的功能模块"
+      ],
+      "gateMode": "manual",
+      "failureStrategy": "retry",
+      "stepMarkdown": "# 前后端集成联调与修复\n\n**执行角色：** Vue前端开发工程师\n**模型：** 腾讯云 / glm-5.1\n\n## 输入\n- 前端功能页面\n- 后端源代码\n\n## 输出\n- 联调通过的功能模块\n\n## 失败策略\n重试当前步骤",
+      "projectOverride": false,
+      "runnerId": "Claude Code"
+    },
+    {
+      "id": "ai-draft-step-8",
+      "order": 8,
+      "name": "功能测试与验收",
+      "roleId": "role-6",
+      "modelProviderId": "provider-1780139451481-84kk7ev",
+      "modelName": "glm-5.1",
+      "inputs": [
+        "联调通过的功能模块",
+        "产品需求文档 (PRD)"
+      ],
+      "outputs": [
+        "测试用例文档",
+        "Bug 缺陷报告",
+        "测试总结报告"
+      ],
+      "gateMode": "manual",
+      "failureStrategy": "stop",
+      "stepMarkdown": "# 功能测试与验收\n\n**执行角色：** 功能测试工程师\n**模型：** 腾讯云 / glm-5.1\n\n## 输入\n- 联调通过的功能模块\n- 产品需求文档 (PRD)\n\n## 输出\n- 测试用例文档\n- Bug 缺陷报告\n- 测试总结报告\n\n## 失败策略\n停止流程",
+      "projectOverride": false,
+      "runnerId": "Claude Code"
+    },
+    {
+      "id": "ai-draft-step-9",
+      "order": 9,
+      "name": "部署发布与运维",
+      "roleId": "role-7",
+      "modelProviderId": "provider-1780139451481-84kk7ev",
+      "modelName": "glm-5.1",
+      "inputs": [
+        "通过测试的源代码",
+        "部署配置要求"
+      ],
+      "outputs": [
+        "自动化部署流水线",
+        "运行中的生产环境"
+      ],
+      "gateMode": "manual",
+      "failureStrategy": "stop",
+      "stepMarkdown": "# 部署发布与运维\n\n**执行角色：** DevOps工程师\n**模型：** 腾讯云 / glm-5.1\n\n## 输入\n- 通过测试的源代码\n- 部署配置要求\n\n## 输出\n- 自动化部署流水线\n- 运行中的生产环境\n\n## 失败策略\n停止流程",
+      "projectOverride": false,
+      "runnerId": "Claude Code"
+    }
+  ],
+  "workflowMarkdown": "# Java Spring + Vue 全生命周期软件开发流程\n\n由 AI 流程设计生成。",
+  "roles": [
+    {
+      "id": "role-1",
+      "name": "产品经理",
+      "description": "负责需求挖掘、产品规划与原型设计，确保产品方向正确。",
+      "responsibilities": [
+        "分析需求可行性",
+        "梳理业务流程",
+        "绘制高保真原型图",
+        "编写产品需求文档"
+      ],
+      "deliverables": [
+        "产品需求文档 (PRD)",
+        "UI 原型图",
+        "需求评审会议纪要"
+      ],
+      "roleMarkdown": "# 产品经理\n\n## 角色定位\n负责产品的需求定义与规划，是业务与技术团队之间的桥梁。\n\n## 核心职责\n1. 分析客户需求，转化为可执行的产品功能。\n2. 设计产品原型，明确业务流程与交互逻辑。\n3. 编写详细的 PRD 文档，指导开发与测试。\n\n## 输入输出边界\n- 输入：客户口头需求、市场调研报告。\n- 输出：PRD 文档、原型图。\n\n## 验收标准\n- 需求逻辑闭环，无歧义。\n- 原型图交互清晰，符合用户体验。"
+    },
+    {
+      "id": "role-2",
+      "name": "Java架构师",
+      "description": "负责后端架构设计、技术选型、核心框架搭建及接口标准制定。",
+      "responsibilities": [
+        "设计系统架构图",
+        "定义 API 接口规范",
+        "选定中间件",
+        "搭建项目脚手架"
+      ],
+      "deliverables": [
+        "架构设计文档",
+        "API 接口定义文档",
+        "基础工程代码骨架"
+      ],
+      "roleMarkdown": "# Java架构师\n\n## 角色定位\n负责系统整体技术架构设计，解决核心技术难题，制定开发规范。\n\n## 核心职责\n1. 基于 Spring Boot/Cloud 技术栈设计高可用架构。\n2. 制定 API 接口标准，协调前后端交互协议。\n3. 搭建项目基础框架，集成基础组件。\n\n## 输入输出边界\n- 输入：PRD 文档、非功能性需求。\n- 输出：架构文档、接口定义、代码骨架。\n\n## 验收标准\n- 架构设计满足性能与扩展性需求。\n- 接口定义完整、规范。"
+    },
+    {
+      "id": "role-3",
+      "name": "数据库管理员 (DBA)",
+      "description": "负责数据模型设计、表结构优化、索引策略及数据安全。",
+      "responsibilities": [
+        "设计 E-R 图",
+        "创建数据库表结构",
+        "制定命名规范",
+        "设计索引策略"
+      ],
+      "deliverables": [
+        "数据库设计文档 (DDD)",
+        "物理表结构 SQL 脚本",
+        "数据字典"
+      ],
+      "roleMarkdown": "# 数据库管理员 (DBA)\n\n## 角色定位\n负责数据资产的存储结构设计、性能优化与安全管理。\n\n## 核心职责\n1. 根据业务模型设计规范的数据库表结构。\n2. 优化 SQL 查询性能，设计合理的索引。\n3. 制定数据备份与安全策略。\n\n## 输入输出边界\n- 输入：业务实体关系、PRD 文档。\n- 输出：E-R 图、建表 SQL、数据字典。\n\n## 验收标准\n- 表结构符合三范式要求，避免冗余。\n- 索引策略能有效提升查询效率。"
+    },
+    {
+      "id": "role-4",
+      "name": "Java后端开发工程师",
+      "description": "负责后端业务逻辑实现、API 接口开发、性能优化。",
+      "responsibilities": [
+        "定义接口契约与 Mock 数据",
+        "实现 Controller/Service/Dao 层代码",
+        "编写单元测试",
+        "参与联调修复"
+      ],
+      "deliverables": [
+        "后端源代码",
+        "Swagger 接口文档",
+        "单元测试报告"
+      ],
+      "roleMarkdown": "# Java后端开发工程师\n\n## 角色定位\n负责服务端业务逻辑实现，提供稳定可靠的后端接口服务。\n\n## 核心职责\n1. 基于 Spring 框架实现业务功能。\n2. 定义并发布 API 接口，编写 Swagger 文档。\n3. 编写单元测试，确保代码质量。\n4. 配合前端进行接口联调。\n\n## 输入输出边界\n- 输入：API 定义文档、数据库表结构。\n- 输出：后端源代码、可运行接口。\n\n## 验收标准\n- 接口返回数据正确，无 Bug。\n- 代码符合规范，单元测试通过。"
+    },
+    {
+      "id": "role-5",
+      "name": "Vue前端开发工程师",
+      "description": "负责前端页面开发、组件封装、前后端交互及用户体验优化。",
+      "responsibilities": [
+        "搭建 Vue 工程与组件结构",
+        "对接 Mock 接口与真实接口",
+        "实现页面交互与状态管理",
+        "前后端集成联调"
+      ],
+      "deliverables": [
+        "前端源代码",
+        "前端组件库",
+        "功能页面"
+      ],
+      "roleMarkdown": "# Vue前端开发工程师\n\n## 角色定位\n负责用户界面开发，实现交互逻辑，提升用户体验。\n\n## 核心职责\n1. 使用 Vue 框架开发页面布局与组件。\n2. 封装 Axios 请求，对接后端 API。\n3. 实现前端状态管理与表单校验。\n4. 主导前后端联调，解决交互问题。\n\n## 输入输出边界\n- 输入：UI 原型图、Swagger 接口文档。\n- 输出：前端源代码、可交互页面。\n\n## 验收标准\n- 页面还原度高，交互流畅。\n- 数据交互正确，无前端报错。"
+    },
+    {
+      "id": "role-6",
+      "name": "功能测试工程师",
+      "description": "负责编写测试用例、执行功能测试、回归测试，确保交付质量。",
+      "responsibilities": [
+        "编写测试用例",
+        "执行冒烟测试与系统测试",
+        "提交并跟踪 Bug",
+        "编写测试报告"
+      ],
+      "deliverables": [
+        "测试用例文档",
+        "Bug 缺陷报告",
+        "测试总结报告"
+      ],
+      "roleMarkdown": "# 功能测试工程师\n\n## 角色定位\n负责软件质量保障，验证功能是否符合需求预期。\n\n## 核心职责\n1. 根据 PRD 编写覆盖全场景的测试用例。\n2. 执行功能测试，记录缺陷。\n3. 验证 Bug 修复情况，进行回归测试。\n\n## 输入输出边界\n- 输入：测试环境部署包、PRD 文档。\n- 输出：测试用例、Bug 报告、测试总结。\n\n## 验收标准\n- 测试覆盖率达标。\n- 严重 Bug 修复率 100%。"
+    },
+    {
+      "id": "role-7",
+      "name": "DevOps工程师",
+      "description": "负责环境搭建、CI/CD 流水线配置、容器化部署及线上运维。",
+      "responsibilities": [
+        "编写 Dockerfile/K8s 配置",
+        "配置 CI/CD 流水线",
+        "部署至生产环境",
+        "配置监控告警"
+      ],
+      "deliverables": [
+        "自动化部署流水线",
+        "生产环境",
+        "运维监控仪表盘"
+      ],
+      "roleMarkdown": "# DevOps工程师\n\n## 角色定位\n负责软件的自动化构建、部署与运维监控。\n\n## 核心职责\n1. 搭建维护 CI/CD 流水线。\n2. 管理容器化环境。\n3. 部署应用到生产环境。\n4. 监控系统运行状态，处理线上故障。\n\n## 输入输出边界\n- 输入：通过测试的源代码。\n- 输出：运行中的生产环境、监控体系。\n\n## 验收标准\n- 部署自动化程度高，无人工干预。\n- 监控告警及时有效。"
+    }
+  ],
+  "id": "workflow-1780228031735-ga3ot",
+  "createdAt": "2026-05-31T11:47:11.735Z",
+  "updatedAt": "2026-05-31T11:47:11.735Z",
+  "deleted": true,
+  "deletedAt": "2026-05-31T12:23:41.518Z"
+}

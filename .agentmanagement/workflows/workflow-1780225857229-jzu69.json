@@ -1,0 +1,348 @@
+{
+  "name": "Java Spring Vue 全生命周期软件开发流程",
+  "version": 1,
+  "status": "draft",
+  "steps": [
+    {
+      "id": "ai-draft-step-1",
+      "order": 1,
+      "name": "需求分析与原型设计",
+      "roleId": "role-1",
+      "modelProviderId": "provider-1780203731833-t5b0dgc",
+      "modelName": "glm-5.1",
+      "inputs": [
+        "用户需求",
+        "业务目标"
+      ],
+      "outputs": [
+        "产品需求文档(PRD)",
+        "原型图"
+      ],
+      "gateMode": "manual",
+      "failureStrategy": "stop",
+      "stepMarkdown": "# 需求分析与原型设计\n\n**执行角色：** 产品经理\n**模型：** glm / glm-5.1\n\n## 输入\n- 用户需求\n- 业务目标\n\n## 输出\n- 产品需求文档(PRD)\n- 原型图\n\n## 失败策略\n停止流程",
+      "projectOverride": false,
+      "runnerId": "runner-claude-code"
+    },
+    {
+      "id": "ai-draft-step-2",
+      "order": 2,
+      "name": "数据库与架构设计",
+      "roleId": "role-2",
+      "modelProviderId": "provider-1780203731833-t5b0dgc",
+      "modelName": "glm-5.1",
+      "inputs": [
+        "产品需求文档(PRD)"
+      ],
+      "outputs": [
+        "架构设计文档",
+        "数据库设计文档"
+      ],
+      "gateMode": "manual",
+      "failureStrategy": "stop",
+      "stepMarkdown": "# 数据库与架构设计\n\n**执行角色：** Java架构师\n**模型：** glm / glm-5.1\n\n## 输入\n- 产品需求文档(PRD)\n\n## 输出\n- 架构设计文档\n- 数据库设计文档\n\n## 失败策略\n停止流程",
+      "projectOverride": false,
+      "runnerId": "runner-claude-code"
+    },
+    {
+      "id": "ai-draft-step-3",
+      "order": 3,
+      "name": "数据库环境初始化",
+      "roleId": "role-3",
+      "modelProviderId": "provider-1780203731833-t5b0dgc",
+      "modelName": "glm-5.1",
+      "inputs": [
+        "数据库设计文档"
+      ],
+      "outputs": [
+        "初始化SQL脚本",
+        "数据库环境"
+      ],
+      "gateMode": "auto",
+      "failureStrategy": "stop",
+      "stepMarkdown": "# 数据库环境初始化\n\n**执行角色：** 数据库管理员(DBA)\n**模型：** glm / glm-5.1\n\n## 输入\n- 数据库设计文档\n\n## 输出\n- 初始化SQL脚本\n- 数据库环境\n\n## 失败策略\n停止流程",
+      "projectOverride": false,
+      "runnerId": "runner-claude-code"
+    },
+    {
+      "id": "ai-draft-step-4",
+      "order": 4,
+      "name": "后端接口开发",
+      "roleId": "role-4",
+      "modelProviderId": "provider-1780203731833-t5b0dgc",
+      "modelName": "glm-5.1",
+      "inputs": [
+        "架构设计文档",
+        "数据库表结构"
+      ],
+      "outputs": [
+        "后端源码",
+        "接口文档(Swagger)",
+        "Jar包"
+      ],
+      "gateMode": "auto",
+      "failureStrategy": "stop",
+      "stepMarkdown": "# 后端接口开发\n\n**执行角色：** Java后端开发工程师\n**模型：** glm / glm-5.1\n\n## 输入\n- 架构设计文档\n- 数据库表结构\n\n## 输出\n- 后端源码\n- 接口文档(Swagger)\n- Jar包\n\n## 失败策略\n停止流程",
+      "projectOverride": false,
+      "runnerId": "runner-claude-code"
+    },
+    {
+      "id": "ai-draft-step-5",
+      "order": 5,
+      "name": "前端页面开发",
+      "roleId": "role-5",
+      "modelProviderId": "provider-1780203731833-t5b0dgc",
+      "modelName": "glm-5.1",
+      "inputs": [
+        "原型图",
+        "接口文档"
+      ],
+      "outputs": [
+        "前端源码",
+        "静态资源包"
+      ],
+      "gateMode": "auto",
+      "failureStrategy": "stop",
+      "stepMarkdown": "# 前端页面开发\n\n**执行角色：** Vue前端开发工程师\n**模型：** glm / glm-5.1\n\n## 输入\n- 原型图\n- 接口文档\n\n## 输出\n- 前端源码\n- 静态资源包\n\n## 失败策略\n停止流程",
+      "projectOverride": false,
+      "runnerId": "runner-claude-code"
+    },
+    {
+      "id": "ai-draft-step-6",
+      "order": 6,
+      "name": "代码审核",
+      "roleId": "role-6",
+      "modelProviderId": "provider-1780203731833-t5b0dgc",
+      "modelName": "glm-5.1",
+      "inputs": [
+        "后端源码",
+        "前端源码"
+      ],
+      "outputs": [
+        "代码审核报告",
+        "整改意见单"
+      ],
+      "gateMode": "manual",
+      "failureStrategy": "stop",
+      "stepMarkdown": "# 代码审核\n\n**执行角色：** 代码审核专家\n**模型：** glm / glm-5.1\n\n## 输入\n- 后端源码\n- 前端源码\n\n## 输出\n- 代码审核报告\n- 整改意见单\n\n## 失败策略\n停止流程",
+      "projectOverride": false,
+      "runnerId": "runner-claude-code"
+    },
+    {
+      "id": "ai-draft-step-7",
+      "order": 7,
+      "name": "功能测试",
+      "roleId": "role-7",
+      "modelProviderId": "provider-1780203731833-t5b0dgc",
+      "modelName": "glm-5.1",
+      "inputs": [
+        "测试环境",
+        "产品需求文档(PRD)"
+      ],
+      "outputs": [
+        "测试用例",
+        "功能测试报告",
+        "Bug列表"
+      ],
+      "gateMode": "manual",
+      "failureStrategy": "stop",
+      "stepMarkdown": "# 功能测试\n\n**执行角色：** 功能测试工程师\n**模型：** glm / glm-5.1\n\n## 输入\n- 测试环境\n- 产品需求文档(PRD)\n\n## 输出\n- 测试用例\n- 功能测试报告\n- Bug列表\n\n## 失败策略\n停止流程",
+      "projectOverride": false,
+      "runnerId": "runner-claude-code"
+    },
+    {
+      "id": "ai-draft-step-8",
+      "order": 8,
+      "name": "集成测试",
+      "roleId": "role-8",
+      "modelProviderId": "provider-1780203731833-t5b0dgc",
+      "modelName": "glm-5.1",
+      "inputs": [
+        "前后端联调后的系统"
+      ],
+      "outputs": [
+        "集成测试报告",
+        "接口问题单"
+      ],
+      "gateMode": "manual",
+      "failureStrategy": "stop",
+      "stepMarkdown": "# 集成测试\n\n**执行角色：** 集成测试工程师\n**模型：** glm / glm-5.1\n\n## 输入\n- 前后端联调后的系统\n\n## 输出\n- 集成测试报告\n- 接口问题单\n\n## 失败策略\n停止流程",
+      "projectOverride": false,
+      "runnerId": "runner-claude-code"
+    },
+    {
+      "id": "ai-draft-step-9",
+      "order": 9,
+      "name": "应用部署与上线运维",
+      "roleId": "role-9",
+      "modelProviderId": "provider-1780203731833-t5b0dgc",
+      "modelName": "glm-5.1",
+      "inputs": [
+        "通过测试的代码分支"
+      ],
+      "outputs": [
+        "生产环境访问地址",
+        "运维监控看板"
+      ],
+      "gateMode": "manual",
+      "failureStrategy": "stop",
+      "stepMarkdown": "# 应用部署与上线运维\n\n**执行角色：** DevOps工程师\n**模型：** glm / glm-5.1\n\n## 输入\n- 通过测试的代码分支\n\n## 输出\n- 生产环境访问地址\n- 运维监控看板\n\n## 失败策略\n停止流程",
+      "projectOverride": false,
+      "runnerId": "runner-claude-code"
+    }
+  ],
+  "workflowMarkdown": "# Java Spring Vue 全生命周期软件开发流程\n\n由 AI 流程设计生成。",
+  "roles": [
+    {
+      "id": "role-1",
+      "name": "产品经理",
+      "description": "负责需求调研、原型设计、编写需求文档（PRD），把控产品方向。",
+      "responsibilities": [
+        "需求调研与分析",
+        "绘制原型图",
+        "编写需求规格说明书",
+        "把控产品方向"
+      ],
+      "deliverables": [
+        "原型图",
+        "产品需求文档(PRD)"
+      ],
+      "roleMarkdown": "# 产品经理\n\n**描述：** 负责需求调研、原型设计、编写需求文档（PRD），把控产品方向。\n\n## 核心职责\n- 需求调研与分析\n- 绘制原型图\n- 编写需求规格说明书\n- 把控产品方向\n\n## 输出物\n- 原型图\n- 产品需求文档(PRD)"
+    },
+    {
+      "id": "role-2",
+      "name": "Java架构师",
+      "description": "负责后端架构设计、技术选型、数据库表结构设计、核心代码编写。",
+      "responsibilities": [
+        "系统架构设计",
+        "技术选型(Spring Boot/Cloud)",
+        "数据库表结构设计",
+        "制定代码规范"
+      ],
+      "deliverables": [
+        "架构设计文档",
+        "数据库设计文档"
+      ],
+      "roleMarkdown": "# Java架构师\n\n**描述：** 负责后端架构设计、技术选型、数据库表结构设计、核心代码编写。\n\n## 核心职责\n- 系统架构设计\n- 技术选型(Spring Boot/Cloud)\n- 数据库表结构设计\n- 制定代码规范\n\n## 输出物\n- 架构设计文档\n- 数据库设计文档"
+    },
+    {
+      "id": "role-3",
+      "name": "数据库管理员(DBA)",
+      "description": "负责数据库安装配置、权限管理、SQL审核与优化、备份恢复策略。",
+      "responsibilities": [
+        "搭建数据库环境",
+        "执行建表脚本",
+        "索引优化",
+        "数据安全与备份"
+      ],
+      "deliverables": [
+        "初始化SQL脚本",
+        "数据库环境"
+      ],
+      "roleMarkdown": "# 数据库管理员(DBA)\n\n**描述：** 负责数据库安装配置、权限管理、SQL审核与优化、备份恢复策略。\n\n## 核心职责\n- 搭建数据库环境\n- 执行建表脚本\n- 索引优化\n- 数据安全与备份\n\n## 输出物\n- 初始化SQL脚本\n- 数据库环境"
+    },
+    {
+      "id": "role-4",
+      "name": "Java后端开发工程师",
+      "description": "基于Spring框架实现具体业务接口、编写单元测试、修复Bug。",
+      "responsibilities": [
+        "实现Controller/Service/Mapper层",
+        "编写单元测试",
+        "生成接口文档",
+        "业务逻辑实现"
+      ],
+      "deliverables": [
+        "后端源码",
+        "接口文档(Swagger)",
+        "Jar包"
+      ],
+      "roleMarkdown": "# Java后端开发工程师\n\n**描述：** 基于Spring框架实现具体业务接口、编写单元测试、修复Bug。\n\n## 核心职责\n- 实现Controller/Service/Mapper层\n- 编写单元测试\n- 生成接口文档\n- 业务逻辑实现\n\n## 输出物\n- 后端源码\n- 接口文档(Swagger)\n- Jar包"
+    },
+    {
+      "id": "role-5",
+      "name": "Vue前端开发工程师",
+      "description": "基于Vue框架实现页面交互、对接后端API、前端状态管理。",
+      "responsibilities": [
+        "搭建Vue项目",
+        "开发页面组件",
+        "对接后端接口",
+        "前端性能优化"
+      ],
+      "deliverables": [
+        "前端源码",
+        "静态资源包"
+      ],
+      "roleMarkdown": "# Vue前端开发工程师\n\n**描述：** 基于Vue框架实现页面交互、对接后端API、前端状态管理。\n\n## 核心职责\n- 搭建Vue项目\n- 开发页面组件\n- 对接后端接口\n- 前端性能优化\n\n## 输出物\n- 前端源码\n- 静态资源包"
+    },
+    {
+      "id": "role-6",
+      "name": "代码审核专家",
+      "description": "审查代码规范、逻辑漏洞、潜在性能瓶颈。",
+      "responsibilities": [
+        "检查代码规范性",
+        "发现逻辑漏洞",
+        "SQL注入风险检查",
+        "性能瓶颈分析"
+      ],
+      "deliverables": [
+        "代码审核报告",
+        "整改意见单"
+      ],
+      "roleMarkdown": "# 代码审核专家\n\n**描述：** 审查代码规范、逻辑漏洞、潜在性能瓶颈。\n\n## 核心职责\n- 检查代码规范性\n- 发现逻辑漏洞\n- SQL注入风险检查\n- 性能瓶颈分析\n\n## 输出物\n- 代码审核报告\n- 整改意见单"
+    },
+    {
+      "id": "role-7",
+      "name": "功能测试工程师",
+      "description": "站在用户角度验证业务功能是否符合需求，编写测试用例。",
+      "responsibilities": [
+        "编写测试用例",
+        "执行功能测试",
+        "验证业务流程",
+        "UI交互体验测试"
+      ],
+      "deliverables": [
+        "测试用例",
+        "功能测试报告",
+        "Bug列表"
+      ],
+      "roleMarkdown": "# 功能测试工程师\n\n**描述：** 站在用户角度验证业务功能是否符合需求，编写测试用例。\n\n## 核心职责\n- 编写测试用例\n- 执行功能测试\n- 验证业务流程\n- UI交互体验测试\n\n## 输出物\n- 测试用例\n- 功能测试报告\n- Bug列表"
+    },
+    {
+      "id": "role-8",
+      "name": "集成测试工程师",
+      "description": "验证模块间的接口调用、前后端数据交互、系统集成稳定性。",
+      "responsibilities": [
+        "API接口测试",
+        "前后端数据交互验证",
+        "数据库事务一致性测试",
+        "系统集成稳定性验证"
+      ],
+      "deliverables": [
+        "集成测试报告",
+        "接口问题单"
+      ],
+      "roleMarkdown": "# 集成测试工程师\n\n**描述：** 验证模块间的接口调用、前后端数据交互、系统集成稳定性。\n\n## 核心职责\n- API接口测试\n- 前后端数据交互验证\n- 数据库事务一致性测试\n- 系统集成稳定性验证\n\n## 输出物\n- 集成测试报告\n- 接口问题单"
+    },
+    {
+      "id": "role-9",
+      "name": "DevOps工程师",
+      "description": "负责CI/CD流水线搭建、环境部署、监控告警。",
+      "responsibilities": [
+        "编写Dockerfile",
+        "配置Jenkins流水线",
+        "部署后端服务",
+        "配置Nginx与监控"
+      ],
+      "deliverables": [
+        "生产环境访问地址",
+        "运维监控看板"
+      ],
+      "roleMarkdown": "# DevOps工程师\n\n**描述：** 负责CI/CD流水线搭建、环境部署、监控告警。\n\n## 核心职责\n- 编写Dockerfile\n- 配置Jenkins流水线\n- 部署后端服务\n- 配置Nginx与监控\n\n## 输出物\n- 生产环境访问地址\n- 运维监控看板"
+    }
+  ],
+  "id": "workflow-1780225857229-jzu69",
+  "createdAt": "2026-05-31T11:10:57.229Z",
+  "updatedAt": "2026-05-31T11:10:57.229Z",
+  "deleted": true,
+  "deletedAt": "2026-05-31T11:38:42.524Z"
+}

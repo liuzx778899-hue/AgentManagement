@@ -1,0 +1,32 @@
+[
+  {
+    "id": "plugin-superpowers",
+    "name": "Superpowers",
+    "version": "1.2.0",
+    "source": "built-in",
+    "status": "enabled",
+    "includedSkillIds": ["skill-planning", "skill-tdd", "skill-verification", "skill-ui-ux-pro-max"],
+    "includedMcpIds": [],
+    "permissions": ["read-files", "write-files", "run-tests"]
+  },
+  {
+    "id": "plugin-github",
+    "name": "GitHub",
+    "version": "2.1.0",
+    "source": "built-in",
+    "status": "enabled",
+    "includedSkillIds": [],
+    "includedMcpIds": ["mcp-github"],
+    "permissions": ["read-repo", "write-repo", "create-pr"]
+  },
+  {
+    "id": "plugin-documents",
+    "name": "Documents",
+    "version": "0.8.0",
+    "source": "plugin",
+    "status": "disabled",
+    "includedSkillIds": [],
+    "includedMcpIds": [],
+    "permissions": ["read-docs"]
+  }
+]

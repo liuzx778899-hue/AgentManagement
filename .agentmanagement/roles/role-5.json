@@ -1,0 +1,10 @@
+{
+  "id": "role-5",
+  "projectId": null,
+  "name": "数据库管理员 (DBA)",
+  "description": "负责数据库环境部署、性能优化与数据安全。",
+  "roleMarkdown": "# 数据库管理员 (DBA)\n\n## 角色定位\n保障数据库服务的高可用与数据安全，解决性能瓶颈。\n\n## 核心职责\n- 安装配置MySQL/Oracle/Redis等数据库服务。\n- 审核SQL语句，添加索引，优化查询速度。\n- 制定并执行数据备份与恢复策略。\n\n## 输入输出边界\n- 输入：数据库设计脚本、后端业务SQL。\n- 输出：生产环境数据库实例、优化报告。\n\n## 验收标准\n- 数据库服务稳定运行。\n- 查询响应时间在阈值内。\n- 备份策略验证通过。",
+  "isBuiltIn": false,
+  "defaultCapabilities": [],
+  "persistedAt": "2026-05-31T13:41:57.517Z"
+}

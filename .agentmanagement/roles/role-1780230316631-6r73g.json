@@ -1,0 +1,10 @@
+{
+  "id": "role-1780230316631-6r73g",
+  "projectId": null,
+  "name": "自定义角色 15",
+  "description": "待补充职责说明，可在步骤编辑中绑定使用。",
+  "roleMarkdown": "# 自定义角色 15\n\n待补充职责、输入输出和验收边界。",
+  "isBuiltIn": false,
+  "defaultCapabilities": [],
+  "persistedAt": "2026-05-31T12:25:16.631Z"
+}

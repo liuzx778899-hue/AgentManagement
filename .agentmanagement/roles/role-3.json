@@ -1,0 +1,10 @@
+{
+  "id": "role-3",
+  "projectId": null,
+  "name": "Java后端开发工程师",
+  "description": "基于Spring框架实现业务逻辑与RESTful API接口。",
+  "roleMarkdown": "# Java后端开发工程师\n\n## 角色定位\n专注于业务逻辑的后端实现，提供稳定可靠的数据接口。\n\n## 核心职责\n- 使用Spring Boot/MVC框架开发Controller、Service、Dao层。\n- 编写RESTful API接口，处理JSON数据交互。\n- 集成MyBatis/JPA进行数据库操作。\n\n## 输入输出边界\n- 输入：架构设计、数据库设计、接口定义。\n- 输出：后端可运行代码、Swagger接口文档。\n\n## 验收标准\n- 接口响应符合预期，状态码正确。\n- 核心业务逻辑覆盖单元测试。",
+  "isBuiltIn": false,
+  "defaultCapabilities": [],
+  "persistedAt": "2026-05-31T13:41:57.517Z"
+}

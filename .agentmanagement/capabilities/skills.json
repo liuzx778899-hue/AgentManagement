@@ -1,0 +1,90 @@
+[
+  {
+    "id": "skill-ui-ux-pro-max",
+    "name": "ui-ux-pro-max",
+    "source": "plugin",
+    "status": "enabled",
+    "description": "UI/UX 设计智能库，包含风格、配色、字体、UX 指南和审查规则。",
+    "triggerRules": ["on-design-request", "on-ui-review"],
+    "requiredToolIds": ["mcp-browser"],
+    "recommendedRoleIds": ["role-tech-lead"],
+    "pluginId": "plugin-superpowers"
+  },
+  {
+    "id": "skill-brainstorming",
+    "name": "Brainstorming",
+    "source": "built-in",
+    "status": "enabled",
+    "description": "产品方案头脑风暴，帮助产品经理探索多种可能性。",
+    "triggerRules": ["on-planning-request"],
+    "requiredToolIds": [],
+    "recommendedRoleIds": ["role-pm"],
+    "pluginId": null
+  },
+  {
+    "id": "skill-planning",
+    "name": "Planning",
+    "source": "plugin",
+    "status": "enabled",
+    "description": "方案和实施计划生成，输出分步骤执行方案。",
+    "triggerRules": ["on-plan-request"],
+    "requiredToolIds": [],
+    "recommendedRoleIds": ["role-pm", "role-dev"],
+    "pluginId": "plugin-superpowers"
+  },
+  {
+    "id": "skill-tdd",
+    "name": "TDD",
+    "source": "plugin",
+    "status": "enabled",
+    "description": "测试驱动开发流程，先写测试再实现。",
+    "triggerRules": ["on-code-request"],
+    "requiredToolIds": ["mcp-local-shell"],
+    "recommendedRoleIds": ["role-dev"],
+    "pluginId": "plugin-superpowers"
+  },
+  {
+    "id": "skill-verification",
+    "name": "Verification Before Completion",
+    "source": "plugin",
+    "status": "enabled",
+    "description": "完成前验证流程，确保测试通过和代码审查完成。",
+    "triggerRules": ["on-complete-request"],
+    "requiredToolIds": ["mcp-local-shell", "mcp-github"],
+    "recommendedRoleIds": ["role-qa"],
+    "pluginId": "plugin-superpowers"
+  },
+  {
+    "id": "skill-receiving-code-review",
+    "name": "Receiving Code Review",
+    "source": "built-in",
+    "status": "enabled",
+    "description": "接收代码审查意见并按要求修改。",
+    "triggerRules": ["on-review-feedback"],
+    "requiredToolIds": [],
+    "recommendedRoleIds": ["role-dev"],
+    "pluginId": null
+  },
+  {
+    "id": "skill-requesting-code-review",
+    "name": "Requesting Code Review",
+    "source": "built-in",
+    "status": "enabled",
+    "description": "发起代码审查请求，准备审查材料。",
+    "triggerRules": ["on-review-request"],
+    "requiredToolIds": ["mcp-github"],
+    "recommendedRoleIds": ["role-tech-lead"],
+    "pluginId": null
+  },
+  {
+    "id": "skill-systematic-debugging",
+    "name": "Systematic Debugging",
+    "source": "built-in",
+    "status": "enabled",
+    "description": "系统性调试流程，定位并修复问题。",
+    "triggerRules": ["on-bug-report"],
+    "requiredToolIds": ["mcp-local-shell"],
+    "recommendedRoleIds": ["role-dev", "role-qa"],
+    "pluginId": null
+  }
+]
