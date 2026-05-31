@@ -8,7 +8,6 @@ import {
   Key,
   Loader2,
   Plus,
-  Sparkles,
   Trash2,
   X,
 } from "lucide-react";
@@ -17,14 +16,12 @@ import { IconBadge } from "../IconBadge";
 
 interface ModelConfigPanelProps {
   modelProviders: ModelProvider[];
-  aiAssistantModel?: { providerId: string; modelName: string };
   onAddProvider: (provider: Omit<ModelProvider, "id">) => void;
   onUpdateProvider: (providerId: string, updates: Partial<ModelProvider>) => void;
   onDeleteProvider: (providerId: string) => void;
   onAddModel: (providerId: string, modelInfo: ModelInfo) => void;
   onDeleteModel: (providerId: string, modelName: string) => void;
   onSetDefaultModel: (providerId: string, modelName: string) => void;
-  onSetAiAssistantModel: (providerId: string, modelName: string) => void;
   onSave?: () => Promise<void>;
 }
 
@@ -42,14 +39,12 @@ interface ToastState {
 
 export function ModelConfigPanel({
   modelProviders,
-  aiAssistantModel,
   onAddProvider,
   onUpdateProvider,
   onDeleteProvider,
   onAddModel,
   onDeleteModel,
   onSetDefaultModel,
-  onSetAiAssistantModel,
   onSave,
 }: ModelConfigPanelProps) {
   // Model CRUD local state
@@ -69,11 +64,6 @@ export function ModelConfigPanel({
   // Custom dialog state
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
-
-  // AI Assistant model config state
-  const [aiProviderId, setAiProviderId] = useState<string>(aiAssistantModel?.providerId || modelProviders.find(p => p.enabled)?.id || "");
-  const aiProvider = modelProviders.find(p => p.id === aiProviderId);
-  const [aiModelName, setAiModelName] = useState<string>(aiAssistantModel?.modelName || aiProvider?.models[0]?.name || "");
 
   // Auto-hide toast after 3 seconds
   useEffect(() => {
@@ -195,46 +185,7 @@ export function ModelConfigPanel({
             </div>
           ))}
         </div>
-        {/* AI Assistant Model Config */}
-        <div className="ai-assistant-section">
-          <div className="ai-section-header">
-            <Sparkles size={14} />
-            <span>AI 工程助手默认模型</span>
-          </div>
-          <div className="ai-current-config">
-            当前：{aiProvider ? aiProvider.name : "未选择"} / {aiModelName || "未选择"}
-          </div>
-          <div className="ai-config-row">
-            <div className="form-field">
-              <label>供应商</label>
-              <select value={aiProviderId} onChange={e => { const newProvider = modelProviders.find(p => p.id === e.target.value); setAiProviderId(e.target.value); setAiModelName(newProvider?.models[0]?.name || ""); }}>
-                <option value="">— 选择供应商 —</option>
-                {modelProviders.filter(p => p.enabled).map(p => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
-            </div>
-            <div className="form-field">
-              <label>模型</label>
-              <select value={aiModelName} onChange={e => setAiModelName(e.target.value)} disabled={!aiProviderId || !aiProvider?.models.length}>
-                <option value="">— 选择模型 —</option>
-                {aiProvider?.models.map(m => (
-                  <option key={m.name} value={m.name}>{m.name}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <button className="btn primary btn-sm" disabled={saving} onClick={async () => {
-              setSaving(true);
-              onSetAiAssistantModel(aiProviderId, aiModelName);
-              if (onSave) {
-                await onSave();
-              }
-              showToast("AI 助手模型配置已保存", "success");
-              setSaving(false);
-            }}>{saving ? "保存中..." : "保存配置"}</button>
-        </div>
-        {editingProviderDetail && (() => {
+                {editingProviderDetail && (() => {
           const p = modelProviders.find(x => x.id === editingProviderDetail.providerId);
           if (!p) return null;
           return (

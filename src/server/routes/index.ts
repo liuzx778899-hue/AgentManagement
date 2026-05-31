@@ -11,6 +11,9 @@ import { rolesRouter } from './roles';
 export function createRouter(): Router {
   const router = Router();
 
+  console.log('[Router] Importing routes...');
+  console.log('[Router] aiRouter type:', typeof aiRouter, 'stack:', (aiRouter as any).stack?.length);
+
   // Mount all route handlers
   router.use('/runner', runnerRouter);
   router.use('/projects', projectsRouter);
@@ -20,6 +23,8 @@ export function createRouter(): Router {
   router.use('/settings', settingsRouter);
   router.use('/ai', aiRouter);
   router.use('/roles', rolesRouter);
+
+  console.log('[Router] Final router stack length:', (router as any).stack?.length);
 
   return router;
 }

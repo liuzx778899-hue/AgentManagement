@@ -21,7 +21,10 @@ export function createApp() {
   });
 
   // API routes (includes /api/ai/chat from aiRouter)
-  app.use('/api', createRouter());
+  const router = createRouter();
+  console.log('[App] Router created, stack length:', (router as any).stack?.length);
+
+  app.use('/api', router);
 
   // Error handler (must be last)
   app.use(errorHandler);

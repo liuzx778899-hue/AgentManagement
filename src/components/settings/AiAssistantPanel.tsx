@@ -1,51 +1,86 @@
-import { useState, useEffect } from "react";
-import { Save, RotateCcw, Bot, Loader2 } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Save, RotateCcw, Bot, Loader2, AlertCircle, CheckCircle2, Sparkles } from "lucide-react";
 import { IconBadge } from "../IconBadge";
 import { useLocalServices } from "../../hooks/useLocalServices";
+import { useWorkbenchState } from "../../App";
 
-const DEFAULT_SYSTEM_PROMPT = `你是 AgentManagement 的智能工程助手。
+const DEFAULT_SYSTEM_PROMPT = `你是 AgentManagement 工程助手。
 
-你的核心职责：
-- 帮助用户分析项目状态和进度
-- 建议下一步任务的优先级
-- 检查项目配置是否完整
-- 回答工程相关问题
-- 协助用户完成工作流程
+职责：
+- 分析项目状态、检查配置完整性
+- 帮助设计工作流程、生成角色定义
 
-你的能力：
-- 可以查看项目列表、角色、工作流模板、记忆等数据
-- 可以帮助生成角色定义、项目文档、工作流模板
-- 可以检查配置完整性和潜在问题
+回答要求：
+- 简洁直接，不超过3句话
+- 有具体建议，不给模糊回答
+- 中文回答`;
 
-回答原则：
-- 简洁明了，直接回答问题
-- 提供具体可行的建议
-- 如果不确定，坦诚说明
-- 使用中文回答`;
+interface ToastState {
+  message: string;
+  type: 'success' | 'error';
+}
 
 export function AiAssistantPanel() {
   const services = useLocalServices();
+  const { data, setAiAssistantModel } = useWorkbenchState();
   const [systemPrompt, setSystemPrompt] = useState(DEFAULT_SYSTEM_PROMPT);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // 加载已保存的配置
-  useEffect(() => {
-    async function loadConfig() {
-      if (!services.getAiAssistantConfig) return;
+  // AI Assistant model config state
+  const [aiProviderId, setAiProviderId] = useState<string>(
+    data.aiAssistantModel?.providerId || data.modelProviders.find(p => p.enabled)?.id || ""
+  );
+  const aiProvider = data.modelProviders.find(p => p.id === aiProviderId);
+  const [aiModelName, setAiModelName] = useState<string>(
+    data.aiAssistantModel?.modelName || aiProvider?.models[0]?.name || ""
+  );
+  const [modelSaving, setModelSaving] = useState(false);
+  const [modelSaved, setModelSaved] = useState(false);
 
-      setLoading(true);
-      const result = await services.getAiAssistantConfig();
-      if (result.ok && result.data) {
-        setSystemPrompt(result.data.systemPrompt || DEFAULT_SYSTEM_PROMPT);
-      }
+  const loadConfig = useCallback(async () => {
+    console.log('[AiAssistantPanel] loadConfig called, services.getAiAssistantConfig:', !!services.getAiAssistantConfig);
+
+    if (!services.getAiAssistantConfig) {
+      console.log('[AiAssistantPanel] getAiAssistantConfig not available, using defaults');
       setLoading(false);
+      return;
     }
 
-    loadConfig();
+    try {
+      console.log('[AiAssistantPanel] Loading config...');
+      const result = await services.getAiAssistantConfig();
+      console.log('[AiAssistantPanel] Config loaded:', result);
+
+      if (result.ok && result.data) {
+        // 只有当返回的值为空时才使用默认值
+        const loadedPrompt = result.data.systemPrompt;
+        if (loadedPrompt && loadedPrompt.trim()) {
+          setSystemPrompt(loadedPrompt);
+        }
+      }
+    } catch (err) {
+      console.error('[AiAssistantPanel] Failed to load config:', err);
+      // Keep default prompt on error
+    } finally {
+      setLoading(false);
+      console.log('[AiAssistantPanel] Loading complete');
+    }
   }, [services]);
+
+  useEffect(() => {
+    // Load immediately, with a fallback timeout
+    const timeoutId = setTimeout(() => {
+      console.log('[AiAssistantPanel] Timeout reached, forcing loading false');
+      setLoading(false);
+    }, 3000);
+
+    loadConfig().finally(() => {
+      clearTimeout(timeoutId);
+    });
+  }, [loadConfig]);
 
   const handleSave = async () => {
     if (!services.saveAiAssistantConfig) {
@@ -56,12 +91,16 @@ export function AiAssistantPanel() {
     setSaving(true);
     setError(null);
 
-    const result = await services.saveAiAssistantConfig({ systemPrompt });
-    if (result.ok) {
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
-    } else {
-      setError(result.error?.message || '保存失败');
+    try {
+      const result = await services.saveAiAssistantConfig({ systemPrompt });
+      if (result.ok) {
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2000);
+      } else {
+        setError(result.error?.message || '保存失败');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '保存失败');
     }
 
     setSaving(false);
@@ -69,14 +108,57 @@ export function AiAssistantPanel() {
 
   const handleReset = () => {
     setSystemPrompt(DEFAULT_SYSTEM_PROMPT);
+    setError(null);
+  };
+
+  // Auto-hide model saved message
+  useEffect(() => {
+    if (modelSaved) {
+      const timer = setTimeout(() => setModelSaved(false), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [modelSaved]);
+
+  // Update model name when provider changes
+  useEffect(() => {
+    const provider = data.modelProviders.find(p => p.id === aiProviderId);
+    if (provider && provider.models.length > 0) {
+      if (!provider.models.find(m => m.name === aiModelName)) {
+        setAiModelName(provider.models[0].name);
+      }
+    }
+  }, [aiProviderId, data.modelProviders, aiModelName]);
+
+  const handleSaveModel = async () => {
+    setModelSaving(true);
+    setAiAssistantModel(aiProviderId, aiModelName);
+
+    // Save to file
+    if (services.saveModelProviders) {
+      await services.saveModelProviders({
+        providers: data.modelProviders,
+        aiAssistantModel: { providerId: aiProviderId, modelName: aiModelName },
+      });
+    }
+
+    setModelSaving(false);
+    setModelSaved(true);
   };
 
   if (loading) {
     return (
-      <div className="panel-body">
-        <div className="loading-indicator">
-          <Loader2 size={20} className="spin" />
-          <span>加载配置...</span>
+      <div className="settings-panel ai-assistant-panel">
+        <div className="panel-header">
+          <div className="panel-title">
+            <IconBadge icon={Bot} label="AI 助手配置" />
+            <h3>AI 助手配置</h3>
+          </div>
+        </div>
+        <div className="panel-body">
+          <div className="loading-indicator" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '20px' }}>
+            <Loader2 size={20} className="spin" />
+            <span>加载配置...</span>
+          </div>
         </div>
       </div>
     );
@@ -110,9 +192,55 @@ export function AiAssistantPanel() {
       </div>
 
       {saved && <div className="save-success-msg">已保存</div>}
-      {error && <div className="save-error-msg">{error}</div>}
+      {error && (
+        <div className="save-error-msg" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <AlertCircle size={14} />
+          {error}
+        </div>
+      )}
 
       <div className="panel-body">
+        {/* AI Assistant Model Config */}
+        <div className="form-section">
+          <div className="form-section-header">
+            <Sparkles size={16} style={{ marginRight: 8 }} />
+            <label>默认模型</label>
+            <span className="form-hint">选择 AI 工程助手使用的模型供应商和模型</span>
+          </div>
+          <div className="ai-config-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+            <div className="form-field">
+              <label>供应商</label>
+              <select value={aiProviderId} onChange={e => setAiProviderId(e.target.value)}>
+                <option value="">— 选择供应商 —</option>
+                {data.modelProviders.filter(p => p.enabled).map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="form-field">
+              <label>模型</label>
+              <select value={aiModelName} onChange={e => setAiModelName(e.target.value)} disabled={!aiProviderId || !aiProvider?.models.length}>
+                <option value="">— 选择模型 —</option>
+                {aiProvider?.models.map(m => (
+                  <option key={m.name} value={m.name}>{m.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button className="btn primary btn-sm" disabled={modelSaving} onClick={handleSaveModel}>
+              {modelSaving ? <Loader2 size={14} className="spin" /> : <Save size={14} />}
+              {modelSaving ? "保存中..." : "保存模型配置"}
+            </button>
+            {modelSaved && (
+              <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--ok)', fontSize: '13px' }}>
+                <CheckCircle2 size={14} />
+                已保存
+              </span>
+            )}
+          </div>
+        </div>
+
         <div className="form-section">
           <div className="form-section-header">
             <label>系统提示词 (System Prompt)</label>
@@ -124,6 +252,7 @@ export function AiAssistantPanel() {
             onChange={(e) => setSystemPrompt(e.target.value)}
             rows={16}
             placeholder="输入系统提示词..."
+            style={{ width: '100%', padding: '12px', fontSize: '14px', fontFamily: 'monospace' }}
           />
         </div>
 

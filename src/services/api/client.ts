@@ -2,7 +2,8 @@
  * Base HTTP client for API calls
  */
 
-const API_BASE = 'http://localhost:3001/api';
+// 在浏览器环境使用相对路径（通过 Vite 代理），服务端使用绝对路径
+const API_BASE = typeof window !== 'undefined' ? '/api' : 'http://localhost:3001/api';
 
 export interface ApiResponse<T> {
   ok: boolean;
@@ -32,7 +33,8 @@ export async function checkServerAvailable(): Promise<boolean> {
   }, 2000);
 
   try {
-    const response = await fetch('http://localhost:3001/api/health', {
+    // 使用 API_BASE 而不是硬编码的 URL
+    const response = await fetch(`${API_BASE}/health`, {
       method: 'GET',
       signal: abortController.signal,
     });

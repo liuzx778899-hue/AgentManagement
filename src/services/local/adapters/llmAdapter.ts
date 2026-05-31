@@ -196,8 +196,13 @@ export class LlmAdapter extends BaseAdapter {
     // 判断是否是官方 Anthropic API
     const isOfficialAnthropic = baseUrl.includes('api.anthropic.com');
 
-    // 对于第三方 API，可能需要不同的路径
+    // 对于第三方 API（如腾讯云），可能需要 /v1 前缀
     let endpoint = `${baseUrl}/messages`;
+
+    // 腾讯云 API 需要 /v1 前缀
+    if (baseUrl.includes('lkeap.cloud.tencent.com') && !baseUrl.endsWith('/v1')) {
+      endpoint = `${baseUrl}/v1/messages`;
+    }
 
     console.log('[LlmAdapter] Calling Anthropic API:', { baseUrl, endpoint, model, isOfficialAnthropic });
 
@@ -356,7 +361,8 @@ export class LlmAdapter extends BaseAdapter {
     if (this.isMockEnabled) {
       const mockResponse = `这是流式响应的模拟内容。每个字符都会依次返回。`;
 
-      async function* mockStream() {
+      const self = this;
+      async function* mockStream(): AsyncGenerator<string> {
         for (const char of mockResponse) {
           yield char;
           await new Promise(resolve => setTimeout(resolve, 10));
@@ -376,7 +382,7 @@ export class LlmAdapter extends BaseAdapter {
     }
 
     const content = result.data!.content;
-    async function* stream() {
+    async function* stream(): AsyncGenerator<string> {
       yield content;
     }
 

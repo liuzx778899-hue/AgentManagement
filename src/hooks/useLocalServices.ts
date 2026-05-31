@@ -1,6 +1,6 @@
 import { useContext, useEffect, useState } from 'react';
 import { ServiceContext } from '../context/ServiceContext';
-import { checkServerAvailable, runnerApi, projectApi, workflowApi, gitApi, memoryApi, settingsApi, aiApi } from '../services/api';
+import { checkServerAvailable, runnerApi, projectApi, workflowApi, gitApi, memoryApi, settingsApi, aiApi, apiCall } from '../services/api';
 import type { LocalEngineeringServices } from '../services/local';
 import type { RunnerProcess, LogEntry } from '../types/localEngineering';
 import type { RunnerKind } from '../domain/runner';
@@ -11,24 +11,39 @@ import type { WorkflowRun } from '../services/local/useCases/workflowExecutionUs
 
 export function useLocalServices(): LocalEngineeringServices {
   const services = useContext(ServiceContext);
-  const [apiAvailable, setApiAvailable] = useState(false);
+  const [apiAvailable, setApiAvailable] = useState<boolean | null>(null);
 
   useEffect(() => {
-    checkServerAvailable().then(setApiAvailable);
+    checkServerAvailable().then((available) => {
+      console.log('[useLocalServices] API available:', available);
+      setApiAvailable(available);
+    });
   }, []);
 
-  if (apiAvailable) {
-    // Return API-based services
+  // If we've checked and API is available, use API services
+  if (apiAvailable === true) {
     return createApiServices();
   }
 
+  // If we've checked and API is not available, use context or mock
+  if (apiAvailable === false) {
+    if (services) {
+      return services;
+    }
+    if (typeof window !== 'undefined') {
+      return createMockServices();
+    }
+  }
+
+  // While checking (apiAvailable === null), return mock services to avoid blocking
+  // This prevents the UI from hanging while waiting for the API check
   if (services) {
     return services;
   }
 
-  // Fallback: browser environment uses mock
   if (typeof window !== 'undefined') {
-    return createMockServices();
+    // Return mock services with API methods that will work once API is available
+    return createApiServices();
   }
 
   throw new Error('useLocalServices must be used within ServiceProvider');
@@ -165,16 +180,12 @@ function createApiServices(): LocalEngineeringServices {
 
     // AI Assistant methods
     getAiAssistantConfig: async () => {
-      const response = await fetch('/api/ai/assistant-config');
-      return response.json() as Promise<{ ok: boolean; data?: { systemPrompt: string }; error?: { code: string; message: string } }>;
+      const result = await apiCall<{ systemPrompt: string }>('GET', '/ai/assistant-config');
+      return result;
     },
     saveAiAssistantConfig: async (data: { systemPrompt: string }) => {
-      const response = await fetch('/api/ai/assistant-config', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      return response.json() as Promise<{ ok: boolean; error?: { code: string; message: string } }>;
+      const result = await apiCall<void>('PUT', '/ai/assistant-config', data);
+      return result;
     },
   };
 }

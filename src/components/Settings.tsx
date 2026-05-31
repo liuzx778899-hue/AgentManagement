@@ -29,7 +29,6 @@ export function Settings({ data }: SettingsProps) {
     addProviderModel,
     deleteProviderModel,
     setDefaultProviderModel,
-    setAiAssistantModel,
     updateRunner,
     setDefaultRunner,
   } = useWorkbenchState();
@@ -173,14 +172,12 @@ export function Settings({ data }: SettingsProps) {
           {activeTab === "models" && (
             <ModelConfigPanel
               modelProviders={data.modelProviders}
-              aiAssistantModel={data.aiAssistantModel}
               onAddProvider={addModelProvider}
               onUpdateProvider={updateModelProvider}
               onDeleteProvider={deleteModelProvider}
               onAddModel={addProviderModel}
               onDeleteModel={deleteProviderModel}
               onSetDefaultModel={setDefaultProviderModel}
-              onSetAiAssistantModel={setAiAssistantModel}
               onSave={handleSaveModelProviders}
             />
           )}
