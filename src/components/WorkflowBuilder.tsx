@@ -11,7 +11,23 @@ interface WorkflowBuilderProps {
 }
 
 // Inline AI workflow design panels (no duplicate header)
-function AiWorkflowDesignInline({ data }: { data: WorkbenchData }) {
+function AiWorkflowDesignInline({
+  data,
+  chatMessages,
+  setChatMessages,
+  materials,
+  setMaterials,
+  draftSteps,
+  setDraftSteps,
+}: {
+  data: WorkbenchData;
+  chatMessages: { id: number; author: string; text: string; isUser: boolean; time: string }[];
+  setChatMessages: React.Dispatch<React.SetStateAction<{ id: number; author: string; text: string; isUser: boolean; time: string }[]>>;
+  materials: { name: string; ext: string }[];
+  setMaterials: React.Dispatch<React.SetStateAction<{ name: string; ext: string }[]>>;
+  draftSteps: WorkflowStep[];
+  setDraftSteps: React.Dispatch<React.SetStateAction<WorkflowStep[]>>;
+}) {
   const [materialsExpanded, setMaterialsExpanded] = useState(true);
   const [composerText, setComposerText] = useState("");
   const [draftGenerated, setDraftGenerated] = useState(false);
@@ -20,11 +36,7 @@ function AiWorkflowDesignInline({ data }: { data: WorkbenchData }) {
   const [generating, setGenerating] = useState(false);
   const materialInputRef = useRef<HTMLInputElement | null>(null);
 
-  // 聊天消息
-  const [chatMessages, setChatMessages] = useState<{ id: number; author: string; text: string; isUser: boolean; time: string }[]>([]);
-
-  // 初始状态为空，由用户上传或 AI 生成
-  const [materials, setMaterials] = useState<{ name: string; ext: string }[]>([]);
+  // 材料通知
   const [materialNotice, setMaterialNotice] = useState("");
 
   // 差异对比
@@ -38,9 +50,6 @@ function AiWorkflowDesignInline({ data }: { data: WorkbenchData }) {
     { label: "Gate 配置检查", done: false },
     { label: "验收标准确认", done: false },
   ]);
-
-  // 草案步骤初始为空，由 AI 生成后填充
-  const [draftSteps, setDraftSteps] = useState<WorkflowStep[]>([]);
   const draftTemplate = useMemo<WorkflowTemplate>(() => ({
     id: "ai-draft-template",
     name: "AI 生成流程草案",
@@ -625,6 +634,11 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
     return (p.get("mode") === "ai" ? "ai" : "manual") as "manual" | "ai";
   });
 
+  // AI 流程设计状态（提升到父组件，切换页面时不丢失）
+  const [aiChatMessages, setAiChatMessages] = useState<{ id: number; author: string; text: string; isUser: boolean; time: string }[]>([]);
+  const [aiMaterials, setAiMaterials] = useState<{ name: string; ext: string }[]>([]);
+  const [aiDraftSteps, setAiDraftSteps] = useState<WorkflowStep[]>([]);
+
   // Sync mode to URL search params (for refresh persistence)
   useEffect(() => {
     const hash = window.location.hash.replace(/\?.*/, "");
@@ -1123,7 +1137,15 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
 
       {/* ===== AI MODE: AI Workflow Design Panels ===== */}
       {mode === "ai" && (
-        <AiWorkflowDesignInline data={data} />
+        <AiWorkflowDesignInline
+          data={data}
+          chatMessages={aiChatMessages}
+          setChatMessages={setAiChatMessages}
+          materials={aiMaterials}
+          setMaterials={setAiMaterials}
+          draftSteps={aiDraftSteps}
+          setDraftSteps={setAiDraftSteps}
+        />
       )}
 
       {editingStep && selectedTemplate && (
