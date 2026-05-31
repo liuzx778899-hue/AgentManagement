@@ -828,15 +828,15 @@ function WorkflowCard({
           <button
             className={`wmo-btn ${flow.status === "enabled" ? "wmo-btn-stop" : "wmo-btn-start"}`}
             onClick={() => {
-              if (flow.status === "draft") {
-                window.alert("流程尚未校验通过，请先进入设计完成校验后再启用");
+              if (flow.status === "draft" || (validationIssues && validationIssues.length > 0)) {
+                window.alert("流程存在校验问题，请先进入设计修复后再启用");
                 return;
               }
               onToggleStatus(flow.id, flow.status);
             }}
             type="button"
-            disabled={flow.status === "draft"}
-            title={flow.status === "draft" ? "待校验流程无法启用" : undefined}
+            disabled={flow.status === "draft" || !!validationIssues?.length}
+            title={(flow.status === "draft" || (validationIssues && validationIssues.length > 0)) ? "待校验流程无法启用" : undefined}
           >
             {flow.status === "enabled" ? <PowerOff size={13} /> : <Power size={13} />}
             {flow.status === "enabled" ? "停用" : "启用"}
