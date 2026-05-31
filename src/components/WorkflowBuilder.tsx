@@ -100,6 +100,12 @@ function AiWorkflowDesignInline({
   const handleCanvasMouseUp = () => {
     aiDragRef.current.dragging = false;
   };
+  // 监听 window mouseup 确保鼠标离开画布后也能停止拖拽
+  useEffect(() => {
+    const onUp = () => { aiDragRef.current.dragging = false; };
+    window.addEventListener('mouseup', onUp);
+    return () => window.removeEventListener('mouseup', onUp);
+  }, []);
   const handleWheel = (e: React.WheelEvent) => {
     if (e.ctrlKey || e.metaKey) {
       e.preventDefault();
@@ -1550,6 +1556,15 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
     if (manualDragRef.current.moved) setIsDragging(false);
     manualDragRef.current = { startX: 0, startY: 0, moved: false };
   };
+  // 监听 window mouseup 确保鼠标离开画布后也能停止拖拽
+  useEffect(() => {
+    const onUp = () => {
+      if (manualDragRef.current.moved) setIsDragging(false);
+      manualDragRef.current = { startX: 0, startY: 0, moved: false };
+    };
+    window.addEventListener('mouseup', onUp);
+    return () => window.removeEventListener('mouseup', onUp);
+  }, []);
   const handleWheel = (e: React.WheelEvent) => {
     if (e.ctrlKey || e.metaKey) {
       e.preventDefault();
