@@ -1183,7 +1183,7 @@ ${runnersContext}
               <div className="awd-stat"><span>修改步骤</span><strong>{stats.mod}</strong><span>角色/模型/Gate 变更</span></div>
               <div className="awd-stat warn"><span>保持不变</span><strong>{stats.same}</strong><span>无需变更的步骤</span></div>
             </div>
-            <div className="awd-diff-list">
+            <div className="awd-diff-list" style={{ flex: "0 0 auto", overflowY: "visible", maxHeight: "none" }}>
               {diffItems.length === 0 ? (
                 <div className="awd-empty-diff">
                   <div className="awd-empty-icon">📊</div>
@@ -1536,16 +1536,27 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
   const [canvasOffset, setCanvasOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const manualDragRef = useRef({ startX: 0, startY: 0, hasMoved: false });
   const handleCanvasMouseDown = (e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest('.wf-v2-node, .wf-v2-insert-step, .wf-v2-node-delete')) return;
-    setIsDragging(true);
-    setDragStart({ x: e.clientX - canvasOffset.x, y: e.clientY - canvasOffset.y });
+    manualDragRef.current = { startX: e.clientX, startY: e.clientY, hasMoved: false };
   };
   const handleCanvasMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging) return;
-    setCanvasOffset({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
+    const info = manualDragRef.current;
+    const dx = e.clientX - info.startX;
+    const dy = e.clientY - info.startY;
+    if (!info.hasMoved && Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
+    if (!info.hasMoved) {
+      info.hasMoved = true;
+      setIsDragging(true);
+    }
+    setCanvasOffset(prev => ({ x: prev.x + dx, y: prev.y + dy }));
+    info.startX = e.clientX;
+    info.startY = e.clientY;
   };
-  const handleCanvasMouseUp = () => setIsDragging(false);
+  const handleCanvasMouseUp = () => {
+    if (manualDragRef.current.hasMoved) setIsDragging(false);
+    manualDragRef.current = { startX: 0, startY: 0, hasMoved: false };
+  };
   const handleWheel = (e: React.WheelEvent) => {
     if (e.ctrlKey || e.metaKey) {
       e.preventDefault();
