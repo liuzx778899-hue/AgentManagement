@@ -15,6 +15,7 @@ const mockGetServices = vi.mocked(getServices);
 describe('Projects Router', () => {
   let app: express.Express;
   let mockProjectRepository: any;
+  let mockGitAdapter: any;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -31,6 +32,22 @@ describe('Projects Router', () => {
       delete: vi.fn(),
     };
 
+    // Create mock git adapter
+    mockGitAdapter = {
+      getStatus: vi.fn().mockResolvedValue({
+        ok: true,
+        data: {
+          branch: 'main',
+          ahead: 0,
+          behind: 0,
+          staged: 0,
+          unstaged: 0,
+          untracked: 0,
+          isClean: true,
+        },
+      }),
+    };
+
     // Default mock for getServices
     mockGetServices.mockReturnValue({
       repositories: {
@@ -38,6 +55,7 @@ describe('Projects Router', () => {
         memory: {},
         workflow: {},
       },
+      git: mockGitAdapter,
     } as any);
   });
 

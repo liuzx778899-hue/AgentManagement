@@ -28,7 +28,7 @@ describe('API Client', () => {
       const result = await checkServerAvailable();
       expect(result).toBe(true);
       expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:3001/api/health',
+        '/api/health',
         expect.objectContaining({ method: 'GET' })
       );
     });
@@ -109,7 +109,7 @@ describe('API Client', () => {
         data: { id: '1', name: 'Test' },
       });
       expect(mockFetch).toHaveBeenLastCalledWith(
-        'http://localhost:3001/api/test',
+        '/api/test',
         expect.objectContaining({
           method: 'GET',
           headers: { 'Content-Type': 'application/json' },
@@ -139,7 +139,7 @@ describe('API Client', () => {
         data: { id: '1' },
       });
       expect(mockFetch).toHaveBeenLastCalledWith(
-        'http://localhost:3001/api/test',
+        '/api/test',
         expect.objectContaining({
           method: 'POST',
           body: JSON.stringify({ name: 'New Item' }),

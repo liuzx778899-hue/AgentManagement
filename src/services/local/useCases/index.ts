@@ -36,3 +36,14 @@ export {
   type AdvanceWorkflowStepConfig,
   type HandleWorkflowGateConfig,
 } from './workflowExecutionUseCase';
+export {
+  createProject,
+  importProject,
+  updateProject,
+  deleteProject,
+  listProjects,
+  getProject,
+  type CreateProjectConfig,
+  type ImportProjectConfig,
+  type UpdateProjectConfig,
+} from './projectUseCase';

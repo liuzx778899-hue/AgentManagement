@@ -62,7 +62,7 @@ export interface LocalEngineeringServices {
 
   // Project service methods
   createProject?: (input: { name: string; repoPath: string; defaultBranch: string; worktreeRoot: string; workflowTemplateId?: string }) => Promise<{ ok: boolean; data?: Project; error?: { code: string; message: string } }>;
-  importProject?: (path: string) => Promise<{ ok: boolean; data?: Project; error?: { code: string; message: string } }>;
+  importProject?: (path: string, options?: { name?: string; sourceType?: 'claude-code' | 'codex' | 'generic' | 'mixed' | 'ai-briefing'; detectSettings?: boolean }) => Promise<{ ok: boolean; data?: Project; error?: { code: string; message: string } }>;
   getProject?: (id: string) => Promise<{ ok: boolean; data?: Project; error?: { code: string; message: string } }>;
   listProjects?: () => Promise<{ ok: boolean; data?: Project[]; error?: { code: string; message: string } }>;
   updateProject?: (id: string, input: Partial<Project>) => Promise<{ ok: boolean; data?: Project; error?: { code: string; message: string } }>;

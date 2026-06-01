@@ -595,4 +595,79 @@ describe('PwWorkflowControl', () => {
       });
     });
   });
+
+  describe('step progress', () => {
+    it('should show step progress when running', async () => {
+      render(
+        <PwWorkflowControl
+          projectId="proj-001"
+          templates={[mockTemplate]}
+          currentStepIndex={0}
+        />
+      );
+
+      // Start workflow
+      const startButton = screen.getByRole('button', { name: /启动工作流/i });
+      fireEvent.click(startButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('步骤进度')).toBeInTheDocument();
+      });
+
+      expect(screen.getByText('0 / 1')).toBeInTheDocument();
+    });
+
+    it('should show current step name when running', async () => {
+      render(
+        <PwWorkflowControl
+          projectId="proj-001"
+          templates={[mockTemplate]}
+          currentStepIndex={0}
+        />
+      );
+
+      // Start workflow
+      const startButton = screen.getByRole('button', { name: /启动工作流/i });
+      fireEvent.click(startButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('当前步骤:')).toBeInTheDocument();
+      });
+
+      expect(screen.getByText('需求分析')).toBeInTheDocument();
+    });
+
+    it('should update step progress with different currentStepIndex', async () => {
+      render(
+        <PwWorkflowControl
+          projectId="proj-001"
+          templates={[mockTemplate]}
+          currentStepIndex={1}
+        />
+      );
+
+      // Start workflow - this will show progress but with index out of bounds
+      const startButton = screen.getByRole('button', { name: /启动工作流/i });
+      fireEvent.click(startButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('RUNNING')).toBeInTheDocument();
+      });
+
+      // Should show progress
+      expect(screen.getByText('步骤进度')).toBeInTheDocument();
+    });
+
+    it('should not show step progress when idle', () => {
+      render(
+        <PwWorkflowControl
+          projectId="proj-001"
+          templates={[mockTemplate]}
+          currentStepIndex={0}
+        />
+      );
+
+      expect(screen.queryByText('步骤进度')).not.toBeInTheDocument();
+    });
+  });
 });

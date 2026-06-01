@@ -322,10 +322,16 @@ export async function handleWorkflowGate(
   }
 
   // 继续下一步
+  // 收集之前所有步骤的输出制品作为下一步的输入
+  const accumulatedArtifacts = updatedSteps
+    .slice(0, currentStepIndex + 1)
+    .flatMap(s => s.outputArtifacts || []);
+
   updatedSteps[nextIndex] = {
     ...updatedSteps[nextIndex],
     state: 'running',
     startedAt: new Date().toISOString(),
+    inputArtifacts: accumulatedArtifacts,
   };
 
   const continuedRun: WorkflowRun = {

@@ -88,7 +88,7 @@ describe('Project API', () => {
     it('should call POST /projects/import with path', async () => {
       mockApiCall.mockResolvedValueOnce({ ok: true, data: mockProject });
 
-      const result = await projectApi.import('/path/to/import');
+      const result = await projectApi.import({ path: '/path/to/import' });
 
       expect(mockApiCall).toHaveBeenCalledWith('POST', '/projects/import', {
         path: '/path/to/import',

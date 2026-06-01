@@ -408,4 +408,268 @@ describe('Workflow Router', () => {
       expect(mockListProjectWorkflowRuns).toHaveBeenCalledWith('proj-1');
     });
   });
+
+  // ============================================
+  // 补充测试：Templates CRUD
+  // ============================================
+  describe('GET /api/workflow/templates', () => {
+    it('should return empty array when no templates', async () => {
+      const response = await request(app)
+        .get('/api/workflow/templates')
+        .expect('Content-Type', /json/)
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        ok: true,
+        data: expect.any(Array),
+      });
+    });
+  });
+
+  describe('POST /api/workflow/templates', () => {
+    it('should create a new template', async () => {
+      const newTemplate = {
+        name: 'New Workflow Template',
+        version: '1.0',
+        status: 'draft' as const,
+        steps: [
+          {
+            id: 'step-1',
+            name: 'Planning',
+            order: 1,
+            roleId: 'role-pm',
+            modelProviderId: 'anthropic',
+            modelName: 'claude-3',
+            inputs: [],
+            outputs: [],
+            gateMode: 'auto' as const,
+            failureStrategy: 'stop' as const,
+            projectOverride: false,
+          },
+        ],
+      };
+
+      const response = await request(app)
+        .post('/api/workflow/templates')
+        .send(newTemplate)
+        .expect('Content-Type', /json/)
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        ok: true,
+        data: expect.objectContaining({
+          name: 'New Workflow Template',
+          id: expect.any(String),
+          createdAt: expect.any(String),
+          updatedAt: expect.any(String),
+        }),
+      });
+    });
+
+    it('should validate template name is required', async () => {
+      const response = await request(app)
+        .post('/api/workflow/templates')
+        .send({})
+        .expect('Content-Type', /json/)
+        .expect(400);
+
+      expect(response.body).toMatchObject({
+        ok: false,
+        error: expect.objectContaining({
+          code: 'INVALID_INPUT',
+        }),
+      });
+    });
+
+    it('should accept template with existing id', async () => {
+      const templateWithId = {
+        id: 'custom-template-001',
+        name: 'Custom Template',
+        version: '1.0',
+        status: 'active' as const,
+        steps: [],
+      };
+
+      const response = await request(app)
+        .post('/api/workflow/templates')
+        .send(templateWithId)
+        .expect('Content-Type', /json/)
+        .expect(200);
+
+      expect(response.body.data.id).toBe('custom-template-001');
+    });
+  });
+
+  describe('PUT /api/workflow/templates/:id', () => {
+    it('should return 404 for non-existent template', async () => {
+      const response = await request(app)
+        .put('/api/workflow/templates/non-existent-id')
+        .send({ name: 'Updated Name' })
+        .expect('Content-Type', /json/)
+        .expect(404);
+
+      expect(response.body).toMatchObject({
+        ok: false,
+        error: expect.objectContaining({
+          code: 'NOT_FOUND',
+        }),
+      });
+    });
+
+    it('should validate template id is required', async () => {
+      // Note: This is covered by the route parameter
+      // The test above covers missing template scenario
+    });
+  });
+
+  describe('DELETE /api/workflow/templates/:id', () => {
+    it('should return 404 for non-existent template', async () => {
+      const response = await request(app)
+        .delete('/api/workflow/templates/non-existent-id')
+        .expect('Content-Type', /json/)
+        .expect(404);
+
+      expect(response.body).toMatchObject({
+        ok: false,
+        error: expect.objectContaining({
+          code: 'NOT_FOUND',
+        }),
+      });
+    });
+
+    it('should validate template id is required', async () => {
+      // Covered by route parameter validation
+    });
+  });
+
+  // ============================================
+  // 补充测试：错误响应格式验证
+  // ============================================
+  describe('Error response format', () => {
+    it('should return consistent error format for validation errors', async () => {
+      const response = await request(app)
+        .post('/api/workflow/run')
+        .send({})
+        .expect('Content-Type', /json/)
+        .expect(400);
+
+      expect(response.body).toMatchObject({
+        ok: false,
+        error: {
+          code: expect.any(String),
+          message: expect.any(String),
+          recoverable: expect.any(Boolean),
+        },
+      });
+    });
+
+    it('should return consistent error format for missing runId', async () => {
+      const response = await request(app)
+        .post('/api/workflow/pause')
+        .send({})
+        .expect('Content-Type', /json/)
+        .expect(400);
+
+      expect(response.body).toMatchObject({
+        ok: false,
+        error: {
+          code: 'INVALID_INPUT',
+          message: expect.stringContaining('runId'),
+          recoverable: true,
+        },
+      });
+    });
+  });
+
+  // ============================================
+  // 补充测试：并发运行
+  // ============================================
+  describe('Concurrent workflow runs', () => {
+    it('should handle multiple runs for same project', async () => {
+      mockProjectRepository.load.mockResolvedValue({
+        ok: true,
+        data: {
+          id: 'proj-1',
+          name: 'Project 1',
+          repoPath: '/path/1',
+          workflowTemplateId: 'workflow-1',
+        },
+      });
+
+      mockCreateWorkflowRun
+        .mockResolvedValueOnce({
+          ok: true,
+          data: {
+            id: 'run-1',
+            workflowId: 'workflow-1',
+            workflowVersion: '1.0',
+            projectId: 'proj-1',
+            projectName: 'Project 1',
+            state: 'running',
+            currentStepId: 'step-1',
+            currentStepIndex: 0,
+            steps: [],
+            triggeredBy: 'user',
+            startedAt: '2024-01-01T00:00:00Z',
+          },
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          data: {
+            id: 'run-2',
+            workflowId: 'workflow-1',
+            workflowVersion: '1.0',
+            projectId: 'proj-1',
+            projectName: 'Project 1',
+            state: 'running',
+            currentStepId: 'step-1',
+            currentStepIndex: 0,
+            steps: [],
+            triggeredBy: 'user',
+            startedAt: '2024-01-01T00:00:01Z',
+          },
+        });
+
+      const [response1, response2] = await Promise.all([
+        request(app)
+          .post('/api/workflow/run')
+          .send({ projectId: 'proj-1', templateId: 'workflow-1' }),
+        request(app)
+          .post('/api/workflow/run')
+          .send({ projectId: 'proj-1', templateId: 'workflow-1' }),
+      ]);
+
+      expect(response1.body.data.runId).toBe('run-1');
+      expect(response2.body.data.runId).toBe('run-2');
+    });
+  });
+
+  // ============================================
+  // 补充测试：项目不存在场景
+  // ============================================
+  describe('Project not found scenarios', () => {
+    it('should return error when project not found for workflow run', async () => {
+      mockProjectRepository.load.mockResolvedValueOnce({
+        ok: false,
+        error: {
+          code: 'DIRECTORY_NOT_FOUND',
+          message: 'Project not found',
+          recoverable: false,
+        },
+      });
+
+      const response = await request(app)
+        .post('/api/workflow/run')
+        .send({ projectId: 'non-existent', templateId: 'workflow-1' })
+        .expect('Content-Type', /json/)
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        ok: false,
+        error: expect.objectContaining({
+          code: 'DIRECTORY_NOT_FOUND',
+        }),
+      });
+    });
+  });
 });

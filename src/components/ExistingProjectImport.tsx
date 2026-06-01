@@ -497,7 +497,12 @@ export function ExistingProjectImport({ data }: ExistingProjectImportProps) {
       if (!services.importProject) {
         throw new Error('服务不可用');
       }
-      const result = await services.importProject(repoPath);
+      // Call importProject UseCase with additional options from detection results
+      const result = await services.importProject(repoPath, {
+        name: detected.projectName,
+        sourceType,
+        detectSettings: true,
+      });
 
       if (result.ok && result.data) {
         addProject({

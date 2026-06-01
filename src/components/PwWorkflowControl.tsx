@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react';
-import { Play, Pause, RotateCcw, Square, ChevronRight } from 'lucide-react';
+import { useState, useCallback, useMemo } from 'react';
+import { Play, Pause, RotateCcw, Square, ChevronRight, CheckCircle2 } from 'lucide-react';
 import { useLocalServices } from '../hooks/useLocalServices';
 import type { WorkflowTemplate } from '../domain/workflow';
 
@@ -7,6 +7,7 @@ interface PwWorkflowControlProps {
   projectId: string;
   templates: WorkflowTemplate[];
   currentRunId?: string;
+  currentStepIndex?: number;
   onRunChange?: (runId: string | null) => void;
 }
 
@@ -16,6 +17,7 @@ export function PwWorkflowControl({
   projectId,
   templates,
   currentRunId,
+  currentStepIndex = 0,
   onRunChange,
 }: PwWorkflowControlProps) {
   const services = useLocalServices();
@@ -25,6 +27,25 @@ export function PwWorkflowControl({
   const [runState, setRunState] = useState<RunState>('idle');
   const [runId, setRunId] = useState<string | null>(currentRunId ?? null);
   const [error, setError] = useState<string | null>(null);
+
+  // Get selected template for step progress
+  const selectedTemplate = useMemo(() => {
+    return templates.find(t => t.id === selectedTemplateId);
+  }, [templates, selectedTemplateId]);
+
+  // Calculate step progress
+  const stepProgress = useMemo(() => {
+    if (!selectedTemplate || selectedTemplate.steps.length === 0) {
+      return { completed: 0, total: 0, pct: 0, currentStepName: null };
+    }
+    const total = selectedTemplate.steps.length;
+    const completed = runState === 'completed' ? total : currentStepIndex;
+    const pct = Math.round((completed / total) * 100);
+    const currentStepName = runState === 'running' || runState === 'paused'
+      ? selectedTemplate.steps[currentStepIndex]?.name ?? null
+      : null;
+    return { completed, total, pct, currentStepName };
+  }, [selectedTemplate, currentStepIndex, runState]);
 
   const handleStart = useCallback(async () => {
     if (!selectedTemplateId || !services.createWorkflowRun) return;
@@ -97,6 +118,38 @@ export function PwWorkflowControl({
           {runState.toUpperCase()}
         </span>
       </header>
+
+      {/* Step Progress Section */}
+      {(runState === 'running' || runState === 'paused' || runState === 'completed') && stepProgress.total > 0 && (
+        <div className="pw-wfc-progress">
+          <div className="pw-wfc-progress-header">
+            <span className="pw-wfc-progress-label">
+              步骤进度
+            </span>
+            <span className="pw-wfc-progress-count">
+              {stepProgress.completed} / {stepProgress.total}
+            </span>
+          </div>
+          <div className="pw-wfc-progress-bar">
+            <div
+              className="pw-wfc-progress-fill"
+              style={{ width: `${stepProgress.pct}%` }}
+            />
+          </div>
+          {stepProgress.currentStepName && (
+            <div className="pw-wfc-current-step">
+              <span className="pw-wfc-current-step-label">当前步骤:</span>
+              <span className="pw-wfc-current-step-name">{stepProgress.currentStepName}</span>
+            </div>
+          )}
+          {runState === 'completed' && (
+            <div className="pw-wfc-completed">
+              <CheckCircle2 size={14} />
+              <span>工作流已完成</span>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="pw-wfc-body">
         {runState === 'idle' && (

@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { getServices } from '../services/serviceFactory';
 import type { Project } from '../../domain/project';
 import { randomUUID } from 'crypto';
+import { importProject, type ImportProjectConfig } from '../../services/local/useCases/projectUseCase';
 
 export const projectsRouter = Router();
 
@@ -102,11 +103,11 @@ projectsRouter.post('/', async (req: Request, res: Response, next: NextFunction)
 
 /**
  * POST /api/projects/import
- * Import an existing project
+ * Import an existing project using the importProject UseCase
  */
 projectsRouter.post('/import', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { path, name } = req.body;
+    const { path, name, sourceType, detectSettings } = req.body;
 
     // Validate required fields
     if (!path) {
@@ -124,33 +125,23 @@ projectsRouter.post('/import', async (req: Request, res: Response, next: NextFun
     // Extract project name from path if not provided
     const projectName = name || path.split('/').pop() || 'Imported Project';
 
-    const now = new Date().toISOString();
-    const project: Project = {
-      id: randomUUID(),
+    const services = getServices();
+
+    // Create the import config for the UseCase
+    const config: ImportProjectConfig = {
       name: projectName,
       repoPath: path,
-      defaultBranch: 'main',
-      worktreeRoot: `${path}/.worktrees`,
-      scope: 'personal',
-      desktopIntegrationStatus: 'deferred',
-      permissions: {
-        permissionLevel: 'owner',
-      },
-      settings: {
-        installCommand: 'npm install',
-        testCommand: 'npm test',
-        buildCommand: 'npm run build',
-        previewCommand: 'npm run preview',
-        detectedStack: '',
-        riskSummary: '',
-      },
-      workflowTemplateId: 'default',
-      createdAt: now,
-      updatedAt: now,
+      sourceType: sourceType || 'generic',
+      detectSettings: detectSettings !== false, // Default to true
     };
 
-    const services = getServices();
-    const result = await services.repositories.project.save(project);
+    // Call the importProject UseCase
+    const result = await importProject(
+      services.repositories.project,
+      services.git,
+      config
+    );
+
     res.json(result);
   } catch (err) {
     next(err);

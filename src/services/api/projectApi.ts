@@ -20,6 +20,13 @@ export interface UpdateProjectInput {
   workflowTemplateId?: string;
 }
 
+export interface ImportProjectInput {
+  path: string;
+  name?: string;
+  sourceType?: 'claude-code' | 'codex' | 'generic' | 'mixed' | 'ai-briefing';
+  detectSettings?: boolean;
+}
+
 export const projectApi = {
   list: () =>
     apiCall<Project[]>('GET', '/projects'),
@@ -30,8 +37,8 @@ export const projectApi = {
   create: (input: CreateProjectInput) =>
     apiCall<Project>('POST', '/projects', input),
 
-  import: (path: string) =>
-    apiCall<Project>('POST', '/projects/import', { path }),
+  import: (input: ImportProjectInput) =>
+    apiCall<Project>('POST', '/projects/import', input),
 
   update: (id: string, input: UpdateProjectInput) =>
     apiCall<Project>('PUT', `/projects/${id}`, input),

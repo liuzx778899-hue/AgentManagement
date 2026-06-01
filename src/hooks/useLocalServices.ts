@@ -1,6 +1,6 @@
 import { useContext, useEffect, useState } from 'react';
 import { ServiceContext } from '../context/ServiceContext';
-import { checkServerAvailable, runnerApi, projectApi, workflowApi, gitApi, memoryApi, settingsApi, aiApi, apiCall } from '../services/api';
+import { checkServerAvailable, runnerApi, projectApi, workflowApi, gitApi, memoryApi, settingsApi, aiApi, apiCall, type ImportProjectInput } from '../services/api';
 import type { LocalEngineeringServices } from '../services/local';
 import type { RunnerProcess, LogEntry } from '../types/localEngineering';
 import type { RunnerKind } from '../domain/runner';
@@ -85,8 +85,8 @@ function createApiServices(): LocalEngineeringServices {
       const result = await projectApi.create(input);
       return result as { ok: boolean; data?: Project; error?: { code: string; message: string } };
     },
-    importProject: async (path: string) => {
-      const result = await projectApi.import(path);
+    importProject: async (path: string, options?: Omit<ImportProjectInput, 'path'>) => {
+      const result = await projectApi.import({ path, ...options });
       return result as { ok: boolean; data?: Project; error?: { code: string; message: string } };
     },
     getProject: async (id: string) => {

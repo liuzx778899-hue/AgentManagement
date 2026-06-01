@@ -1533,6 +1533,74 @@
   font-weight: 550;
 }
 
+/* Step Progress Styles */
+.pw-wfc-progress {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-sm);
+}
+
+.pw-wfc-progress-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pw-wfc-progress-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.pw-wfc-progress-count {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.pw-wfc-progress-bar {
+  height: 6px;
+  background: var(--line-soft);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.pw-wfc-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), var(--ok));
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.pw-wfc-current-step {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: 12px;
+}
+
+.pw-wfc-current-step-label {
+  color: var(--muted);
+}
+
+.pw-wfc-current-step-name {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.pw-wfc-completed {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: 12px;
+  color: var(--ok);
+  font-weight: 600;
+}
+
 /* ==============================
    Confirm Dialog
    ============================== */
