@@ -5,6 +5,7 @@ import type { AgentRole } from "../domain/role";
 import { useWorkbenchState } from "../App";
 import { useLocalServices } from "../hooks/useLocalServices";
 import type { CreateProjectInput } from "../services/api/projectApi";
+import { taskApi } from "../services/api";
 
 interface NewProjectWizardProps {
   data: WorkbenchData;
@@ -219,6 +220,23 @@ export function NewProjectWizard({ data }: NewProjectWizardProps) {
           workflowTemplateId: result.data.workflowTemplateId,
           roleOverrides: result.data.roleOverrides,
         });
+
+        // Create initial tasks from workflow template
+        if (selectedWorkflowId) {
+          try {
+            const tasksResult = await taskApi.createFromWorkflow({
+              projectId: result.data.id,
+              workflowTemplateId: selectedWorkflowId,
+            });
+            if (tasksResult.ok && tasksResult.data) {
+              console.log(`[NewProjectWizard] Created ${tasksResult.data.length} initial tasks`);
+            }
+          } catch (taskError) {
+            console.error('[NewProjectWizard] Failed to create initial tasks:', taskError);
+            // Don't fail the whole project creation if task creation fails
+          }
+        }
+
         setCreating(false);
         setCreated(true);
         setWizardState("success");
