@@ -1,4 +1,4 @@
-import { useRef, useState, useMemo } from "react";
+import { useRef, useState, useMemo, useEffect } from "react";
 import {
   CheckCircle2,
   CircleAlert,
@@ -352,6 +352,12 @@ export function WorkflowManagementOverview({ data, onNavigate, onEnterWorkflowDe
     setValidationResults(results);
     setValidating(false);
   };
+
+  // Auto-validate on initial load
+  useEffect(() => {
+    handleValidateAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workflowAssets.length]);
 
   // Handle entering workflow designer
   const handleEnterDesigner = (workflowId: string) => {
