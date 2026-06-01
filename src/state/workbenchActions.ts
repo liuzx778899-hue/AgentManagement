@@ -63,6 +63,7 @@ export type WorkbenchAction =
   | { type: "SET_WORKFLOW_TEMPLATES"; payload: WorkflowTemplate[] }
   | { type: "SET_ROLES"; payload: AgentRole[] }
   | { type: "SET_CAPABILITIES"; payload: { mcpServers: McpServerCapability[]; skills: SkillCapability[]; plugins: PluginCapability[]; agents: AgentCapability[] } }
+  | { type: "SET_TASKS"; payload: Task[] }
 
 // Action Creators
 export function updateGateStatus(gateId: string, status: GateStatus): WorkbenchAction {
@@ -234,4 +235,8 @@ export function setCapabilities(payload: {
   agents: AgentCapability[];
 }): WorkbenchAction {
   return { type: "SET_CAPABILITIES", payload };
+}
+
+export function setTasks(tasks: Task[]): WorkbenchAction {
+  return { type: "SET_TASKS", payload: tasks };
 }

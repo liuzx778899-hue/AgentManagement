@@ -53,8 +53,8 @@ import {
   setProjects as setProjectsAction,
   setMemories as setMemoriesAction,
 } from "./workbenchActions";
-import { projectApi, memoryApi, settingsApi, checkServerAvailable, workflowApi, rolesApi, capabilitiesApi } from "../services/api";
-import { setModelProviders as setModelProvidersAction, setWorkflowTemplates as setWorkflowTemplatesAction, setRoles as setRolesAction, setCapabilities as setCapabilitiesAction } from "./workbenchActions";
+import { projectApi, memoryApi, settingsApi, checkServerAvailable, workflowApi, rolesApi, capabilitiesApi, taskApi } from "../services/api";
+import { setModelProviders as setModelProvidersAction, setWorkflowTemplates as setWorkflowTemplatesAction, setRoles as setRolesAction, setCapabilities as setCapabilitiesAction, setTasks as setTasksAction } from "./workbenchActions";
 
 // Default runner profiles - commonly used CLI tools
 const defaultRunnerProfiles: RunnerProfile[] = [
@@ -211,7 +211,7 @@ export function WorkbenchProvider({ children }: WorkbenchProviderProps) {
 
       try {
         // 并行加载所有数据
-        const [projectsResult, memoriesResult, settingsResult, modelProvidersResult, workflowTemplatesResult, rolesResult, capabilitiesResult] = await Promise.all([
+        const [projectsResult, memoriesResult, settingsResult, modelProvidersResult, workflowTemplatesResult, rolesResult, capabilitiesResult, tasksResult] = await Promise.all([
           projectApi.list(),
           memoryApi.list(),
           settingsApi.get(),
@@ -219,6 +219,7 @@ export function WorkbenchProvider({ children }: WorkbenchProviderProps) {
           workflowApi.listTemplates(),
           rolesApi.list(),
           capabilitiesApi.getAll(),
+          taskApi.list(),
         ]);
 
         if (!isMounted.current) return;
@@ -275,6 +276,11 @@ export function WorkbenchProvider({ children }: WorkbenchProviderProps) {
           dispatch(setCapabilitiesAction(capabilitiesResult.data));
         }
 
+        // 更新任务列表
+        if (tasksResult.ok && tasksResult.data) {
+          dispatch(setTasksAction(tasksResult.data));
+        }
+
         console.log('[WorkbenchProvider] Loaded data from API:', {
           projects: projectsResult.ok ? projectsResult.data?.length : 'failed',
           memories: memoriesResult.ok ? memoriesResult.data?.length : 'failed',
@@ -282,6 +288,7 @@ export function WorkbenchProvider({ children }: WorkbenchProviderProps) {
           workflowTemplates: workflowTemplatesResult.ok ? workflowTemplatesResult.data?.length : 'failed',
           roles: rolesResult.ok ? rolesResult.data?.length : 'failed',
           capabilities: capabilitiesResult.ok ? 'loaded' : 'failed',
+          tasks: tasksResult.ok ? tasksResult.data?.length : 'failed',
         });
       } catch (error) {
         console.error('[WorkbenchProvider] Failed to load data from API:', error);
