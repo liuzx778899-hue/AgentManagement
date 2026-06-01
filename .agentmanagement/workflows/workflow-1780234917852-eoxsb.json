@@ -267,5 +267,7 @@
   ],
   "id": "workflow-1780234917852-eoxsb",
   "createdAt": "2026-05-31T13:41:57.852Z",
-  "updatedAt": "2026-05-31T13:41:57.852Z"
+  "updatedAt": "2026-05-31T13:41:57.852Z",
+  "deleted": true,
+  "deletedAt": "2026-05-31T15:03:14.991Z"
 }

@@ -1,5 +1,15 @@
 # Handoff: Next Tasks
 
+## 2026-06-01 协同状态同步与清理基线
+
+本节记录当前 main 清理后的最新协作边界。
+
+- 当前清理任务归属：GitHub Issue `#18`。
+- `.agentmanagement` 中已经被 Git 跟踪的项目、角色、流程、能力和模型配置视为本地产品基线数据；修改这些文件必须走 Issue 并提交，不能长期留在 main 工作区。
+- `.agentmanagement` 中新增的项目、角色或流程文件如果是产品基线的一部分，需要随对应 Issue 提交；如果只是个人试验数据，应在独立 worktree 内处理，不进入 main。
+- 一次性本地脚本、抢购/监控脚本、个人实验脚本不得进入仓库；根目录 `glm-monitor.*` 已加入忽略规则。
+- `src/server/routes/capabilities.ts` 与 `src/services/api/capabilitiesApi.ts` 属于能力授权 API 的真实接入文件，必须纳入版本控制，避免已引用但文件缺失。
+
 ## 2026-05-30 Phase 2 工程层完成 / Phase 3 UI 集成启动
 
 本节是后续协作的最新入口，优先级高于后面的历史任务和旧页面差距段落。
