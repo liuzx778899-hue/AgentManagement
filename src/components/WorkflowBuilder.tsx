@@ -1749,6 +1749,24 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
     const template = data.workflowTemplates.find((item) => item.id === templateId);
     if (!template) return;
     const current = template.status ?? (data.workflowTemplates[0]?.id === template.id ? "enabled" : "draft");
+
+    // 如果要启用，先校验
+    if (current !== "enabled") {
+      const issues: string[] = [];
+      const steps = template.steps || [];
+      if (steps.length === 0) issues.push("流程没有任何步骤");
+      steps.forEach((s, i) => {
+        if (!s.name?.trim()) issues.push(`步骤 ${i + 1} 缺少名称`);
+        if (!s.roleId) issues.push(`步骤 ${i + 1}「${s.name}」未绑定角色`);
+        if (!s.modelProviderId || !s.modelName) issues.push(`步骤 ${i + 1}「${s.name}」未配置模型`);
+        if (!s.runnerId) issues.push(`步骤 ${i + 1}「${s.name}」未配置 Runner`);
+      });
+      if (issues.length > 0) {
+        alert(`流程存在校验问题，无法启用：\n\n${issues.join('\n')}`);
+        return;
+      }
+    }
+
     updateWorkflowTemplate?.(template.id, { status: current === "enabled" ? "disabled" : "enabled" });
   };
 
