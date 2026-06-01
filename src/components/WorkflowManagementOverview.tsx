@@ -364,10 +364,12 @@ export function WorkflowManagementOverview({ data, onNavigate, onEnterWorkflowDe
   };
 
   const handleToggleFlowStatus = (workflowId: string, currentStatus: WorkflowAsset["status"]) => {
+    const newStatus = currentStatus === "enabled" ? "disabled" : "enabled";
     setStatusOverrides((items) => ({
       ...items,
-      [workflowId]: currentStatus === "enabled" ? "disabled" : "enabled",
+      [workflowId]: newStatus,
     }));
+    onUpdateTemplate?.(workflowId, { status: newStatus });
   };
 
   const handleUpdateCategory = (workflowId: string, category: WorkflowCategoryBase) => {
