@@ -2,7 +2,7 @@
   "id": "software-dev-v1",
   "name": "软件开发流程",
   "version": 1,
-  "status": "enabled",
+  "status": "disabled",
   "steps": [
     {
       "id": "step-req",
@@ -108,5 +108,5 @@
     }
   ],
   "createdAt": "2026-05-30T17:07:53.190Z",
-  "updatedAt": "2026-05-30T17:07:53.190Z"
+  "updatedAt": "2026-06-01T04:09:12.639Z"
 }

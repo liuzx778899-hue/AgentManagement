@@ -25,3 +25,6 @@ vite.config.d.ts
 /*.webp
 /*.yaml
 /*.yml
+
+# Local one-off automation scripts that should not enter the product repo.
+/glm-monitor.*
