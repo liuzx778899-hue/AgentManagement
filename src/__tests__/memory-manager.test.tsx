@@ -8,7 +8,7 @@ import { WorkbenchContext } from "../App";
 const mockState = {
   data: workbenchData,
   updateGateStatus: () => {},
-  addMemory: () => {},
+  addMemory: async () => {},
   updateMemory: () => {},
   deleteMemory: () => {},
   createTask: () => {},

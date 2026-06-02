@@ -54,10 +54,9 @@ export {
   deleteTask,
   listTasks,
   listTasksByProject,
-  getTask,
-  type CreateTaskInput,
-  type CreateTasksFromWorkflowInput,
-  type UpdateTaskInput,
+  type CreateTaskConfig,
+  type CreateTasksFromWorkflowConfig,
+  type UpdateTaskConfig,
 } from './taskUseCase';
 export {
   getSettings,

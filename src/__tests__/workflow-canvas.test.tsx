@@ -11,7 +11,7 @@ function mockProvider(overrides?: Partial<{ updateWorkflowStep: () => void }>) {
     data: workbenchData,
     updateGateStatus: () => {},
     reassignAgentRun: () => {},
-    addMemory: () => {},
+    addMemory: async () => {},
     updateMemory: () => {},
     deleteMemory: () => {},
     createTask: () => {},

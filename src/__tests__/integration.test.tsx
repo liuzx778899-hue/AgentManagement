@@ -32,7 +32,7 @@ describe("MVP 交互闭环验证", () => {
     const mockState = {
       data: initialData,
       updateGateStatus: () => {},
-      addMemory: (memory: Omit<typeof initialData.memories[0], "id" | "createdAt" | "updatedAt">) => {
+      addMemory: async (memory: Omit<typeof initialData.memories[0], "id" | "createdAt" | "updatedAt">) => {
         mockState.data = {
           ...mockState.data,
           memories: [
@@ -104,7 +104,7 @@ describe("MVP 交互闭环验证", () => {
           ),
         };
       },
-      addMemory: () => {},
+      addMemory: async () => {},
       updateMemory: () => {},
       deleteMemory: () => {},
       createTask: () => {},

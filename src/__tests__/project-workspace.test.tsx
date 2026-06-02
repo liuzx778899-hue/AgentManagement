@@ -11,7 +11,7 @@ function mockProvider(overrides?: Record<string, unknown>) {
     data: workbenchData,
     updateGateStatus: () => {},
     reassignAgentRun: () => {},
-    addMemory: () => {},
+    addMemory: async () => {},
     updateMemory: () => {},
     deleteMemory: () => {},
     createTask: () => {},
