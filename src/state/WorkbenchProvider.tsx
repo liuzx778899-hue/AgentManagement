@@ -49,12 +49,13 @@ import {
   updateWorkflowTemplate as updateWorkflowTemplateAction,
   deleteWorkflowTemplate as deleteWorkflowTemplateAction,
   updateRunner as updateRunnerAction,
+  updateSettings as updateSettingsAction,
   setDefaultRunner as setDefaultRunnerAction,
   setProjects as setProjectsAction,
   setMemories as setMemoriesAction,
 } from "./workbenchActions";
 import { projectApi, memoryApi, settingsApi, checkServerAvailable, workflowApi, rolesApi, capabilitiesApi, taskApi } from "../services/api";
-import { setModelProviders as setModelProvidersAction, setWorkflowTemplates as setWorkflowTemplatesAction, setRoles as setRolesAction, setCapabilities as setCapabilitiesAction, setTasks as setTasksAction } from "./workbenchActions";
+import { setModelProviders as setModelProvidersAction, setWorkflowTemplates as setWorkflowTemplatesAction, setRoles as setRolesAction, setCapabilities as setCapabilitiesAction, setTasks as setTasksAction, setSettings as setSettingsAction } from "./workbenchActions";
 
 // Default runner profiles - commonly used CLI tools
 const defaultRunnerProfiles: RunnerProfile[] = [
@@ -126,6 +127,16 @@ const emptyData: WorkbenchData = {
   gitBranches: [],
   runnerProfiles: defaultRunnerProfiles,
   defaultRunner: "runner-claude-code",
+  settings: {
+    theme: 'system',
+    language: 'zh-CN',
+    notifications: true,
+    autoSave: true,
+    editorFontSize: 14,
+    editorFontFamily: 'monospace',
+    runner: { defaultTimeout: 300000, autoRestart: false },
+    git: { autoFetch: true, fetchInterval: 60000 },
+  },
 };
 
 // State Context
@@ -165,6 +176,8 @@ interface WorkbenchState {
   updateRunner: (runnerId: string, updates: Partial<RunnerProfile>) => void;
   setDefaultRunner: (runnerId: string | undefined) => void;
   addRolesBatch?: (roles: Array<Omit<AgentRole, "id"> & { id?: string }>) => Promise<AgentRole[]>;
+  updateSettings: (updates: Partial<import("../types/settings").AppSettings>) => void;
+  setTasks: (tasks: WorkbenchData["tasks"]) => void;
 }
 
 export const WorkbenchContext = createContext<WorkbenchState | null>(null);
@@ -248,9 +261,9 @@ export function WorkbenchProvider({ children }: WorkbenchProviderProps) {
           dispatch(setMemoriesAction(memoryItems));
         }
 
-        // 更新设置（如果有设置相关的 action）
+        // 更新设置
         if (settingsResult.ok && settingsResult.data) {
-          // TODO: 添加设置相关的 action
+          dispatch(setSettingsAction(settingsResult.data));
         }
 
         // 更新模型配置
@@ -477,6 +490,14 @@ export function WorkbenchProvider({ children }: WorkbenchProviderProps) {
     dispatch(setDefaultRunnerAction(runnerId));
   }, []);
 
+  const updateSettings = useCallback((updates: Partial<import("../types/settings").AppSettings>) => {
+    dispatch(updateSettingsAction(updates));
+  }, []);
+
+  const setTasks = useCallback((tasks: WorkbenchData["tasks"]) => {
+    dispatch(setTasksAction(tasks));
+  }, []);
+
   const state = useMemo(
     () => ({
       data,
@@ -514,6 +535,8 @@ export function WorkbenchProvider({ children }: WorkbenchProviderProps) {
       updateRunner,
       setDefaultRunner,
       addRolesBatch,
+      updateSettings,
+      setTasks,
     }),
     [
       data,
@@ -551,6 +574,8 @@ export function WorkbenchProvider({ children }: WorkbenchProviderProps) {
       updateRunner,
       setDefaultRunner,
       addRolesBatch,
+      updateSettings,
+      setTasks,
     ]
   );
 

@@ -53,7 +53,7 @@ const categoryConfig: Record<TemplateCategory, { label: string; icon: React.Reac
 };
 
 export function NewProjectWizard({ data }: NewProjectWizardProps) {
-  const { addProject } = useWorkbenchState();
+  const { addProject, setTasks } = useWorkbenchState();
   const services = useLocalServices();
   const [step, setStep] = useState<WizardStep>("info");
   const [wizardState, setWizardState] = useState<WizardState>("empty");
@@ -230,6 +230,8 @@ export function NewProjectWizard({ data }: NewProjectWizardProps) {
             });
             if (tasksResult.ok && tasksResult.data) {
               console.log(`[NewProjectWizard] Created ${tasksResult.data.length} initial tasks`);
+              // Sync created tasks to reducer state so ProjectDetailPage can find them
+              setTasks([...data.tasks, ...tasksResult.data]);
             }
           } catch (taskError) {
             console.error('[NewProjectWizard] Failed to create initial tasks:', taskError);
