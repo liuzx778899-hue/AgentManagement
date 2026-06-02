@@ -25,11 +25,13 @@ import {
   Zap,
 } from "lucide-react";
 import { PwLogStream } from "./PwLogStream";
+import { StepEditModal } from "./StepEditModal";
 import { taskApi } from "../services/api/taskApi";
 import { runnerApi } from "../services/api/runnerApi";
 import { gitApi } from "../services/api/gitApi";
+import { useWorkbenchState } from "../state";
 import type { LogEntry } from "../types/localEngineering";
-import type { WorkbenchData, WorkbenchView } from "../domain/workbench";
+import type { WorkflowStep, WorkbenchData, WorkbenchView } from "../domain/workbench";
 
 interface WorkbenchHomeProps {
   data: WorkbenchData;
@@ -65,11 +67,15 @@ function taskStatusToStepStatus(
 }
 
 export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHomeProps) {
+  const { updateWorkflowTemplate } = useWorkbenchState();
   const project = data.projects.find((item) => item.id === activeProjectId) ?? data.projects[0];
   const template = useMemo(
     () => project?.workflowTemplateId ? data.workflowTemplates.find((t) => t.id === project.workflowTemplateId) ?? null : null,
     [data.workflowTemplates, project?.workflowTemplateId],
   );
+
+  // --- 双击编辑步骤 ---
+  const [editingStep, setEditingStep] = useState<WorkflowStep | null>(null);
 
   // --- 构建 tab 列表：每个流程步骤对应一个 tab ---
   const tabs: FlowTab[] = useMemo(() => {
@@ -541,6 +547,7 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
                   key={step.id}
                   className={`wb-flow-card ${status.cls}${`tab-${step.id}` === activeTabId ? " active" : ""}`}
                   onClick={() => setActiveTabId(`tab-${step.id}`)}
+                  onDoubleClick={() => setEditingStep(step)}
                   type="button"
                 >
                   <div className="wb-flow-card-title">
@@ -768,6 +775,26 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
 
       {renderSelectPopover()}
       {renderToolPopover()}
+
+      {editingStep && template && (
+        <StepEditModal
+          step={editingStep}
+          template={template}
+          data={data}
+          flowRoles={template.roles ?? data.roles.map((r) => ({ id: r.id, name: r.name, description: r.description, roleMarkdown: r.roleMarkdown }))}
+          onSave={(updates) => {
+            const newSteps = template.steps.map((s) =>
+              s.id === editingStep.id ? { ...s, ...updates } : s,
+            );
+            updateWorkflowTemplate?.(template.id, { steps: newSteps });
+          }}
+          onDelete={(stepId) => {
+            const newSteps = template.steps.filter((s) => s.id !== stepId);
+            updateWorkflowTemplate?.(template.id, { steps: newSteps });
+          }}
+          onClose={() => setEditingStep(null)}
+        />
+      )}
     </div>
   );
 }
