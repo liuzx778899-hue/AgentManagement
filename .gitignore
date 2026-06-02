@@ -18,6 +18,9 @@ screenshots/
 vite.config.js
 vite.config.d.ts
 
+# Local data directory - user-generated workflows, projects, tasks, memories
+.agentmanagement/
+
 # Local visual QA artifacts generated at the repository root.
 /*.png
 /*.jpg
