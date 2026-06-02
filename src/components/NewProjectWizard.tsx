@@ -178,7 +178,9 @@ export function NewProjectWizard({ data }: NewProjectWizardProps) {
   };
 
   const handleCreate = async () => {
-    if (!projectInfo.name || !projectInfo.repoPath) return;
+    const trimmedName = projectInfo.name.trim();
+    const trimmedPath = projectInfo.repoPath.trim();
+    if (!trimmedName || !trimmedPath) return;
 
     // Validation
     setWizardState("validation");
@@ -193,8 +195,8 @@ export function NewProjectWizard({ data }: NewProjectWizardProps) {
     setError(null);
 
     const input: CreateProjectInput = {
-      name: projectInfo.name,
-      repoPath: projectInfo.repoPath,
+      name: trimmedName,
+      repoPath: trimmedPath,
       defaultBranch: projectInfo.defaultBranch,
       worktreeRoot: projectInfo.worktreeRoot,
       workflowTemplateId: selectedWorkflowId,
