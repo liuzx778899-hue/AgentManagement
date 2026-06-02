@@ -862,7 +862,18 @@ export function ProjectDetailPage({ data, projectId, onBack, onEnterWorkbench }:
 
   function renderProgressTabDesign() {
     const days = phases.length > 0 ? phases : ["阶段1", "阶段2", "阶段3", "阶段4"];
-    const ganttRows = projectTasks.map((task, i) => {
+    // Sort tasks by workflow step order (same logic as renderPlanTabDesign)
+    const stepOrderMap = template?.steps
+      ? new Map(template.steps.map((s, i) => [s.id, i]))
+      : new Map<string, number>();
+    const sortedForGantt = [...projectTasks].sort((a, b) => {
+      const aStepId = template?.steps?.find(s => a.roleAssignment?.[s.id])?.id;
+      const bStepId = template?.steps?.find(s => b.roleAssignment?.[s.id])?.id;
+      const aOrder = aStepId ? (stepOrderMap.get(aStepId) ?? 999) : 999;
+      const bOrder = bStepId ? (stepOrderMap.get(bStepId) ?? 999) : 999;
+      return aOrder - bOrder;
+    });
+    const ganttRows = sortedForGantt.map((task, i) => {
       const roleNames = Object.values(task.roleAssignment ?? {}).map((rid) =>
         data.roles.find((r) => r.id === rid)?.name ?? rid
       ).join("、") || "未分配";
