@@ -40,6 +40,8 @@ function mockProvider(overrides?: Record<string, unknown>) {
     deleteWorkflowTemplate: vi.fn(),
     updateRunner: vi.fn(),
     setDefaultRunner: vi.fn(),
+    updateSettings: vi.fn(),
+    setTasks: vi.fn(),
     ...overrides,
   };
   function Wrapper({ children }: { children: ReactNode }) {

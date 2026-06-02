@@ -69,6 +69,8 @@ describe("MVP 交互闭环验证", () => {
       deleteWorkflowTemplate: () => {},
       updateRunner: () => {},
       setDefaultRunner: () => {},
+      updateSettings: () => {},
+      setTasks: () => {},
     };
 
     const wrapper = ({ children }: { children: React.ReactNode }) => (
@@ -131,6 +133,8 @@ describe("MVP 交互闭环验证", () => {
       deleteWorkflowTemplate: () => {},
       updateRunner: () => {},
       setDefaultRunner: () => {},
+      updateSettings: () => {},
+      setTasks: () => {},
     };
 
     const wrapper = ({ children }: { children: React.ReactNode }) => (

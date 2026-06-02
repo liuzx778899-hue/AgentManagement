@@ -37,6 +37,8 @@ const mockState = {
   deleteWorkflowTemplate: () => {},
   updateRunner: () => {},
   setDefaultRunner: () => {},
+  updateSettings: () => {},
+  setTasks: () => {},
 };
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (

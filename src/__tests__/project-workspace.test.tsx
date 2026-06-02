@@ -39,6 +39,8 @@ function mockProvider(overrides?: Record<string, unknown>) {
     deleteWorkflowTemplate: () => {},
     updateRunner: () => {},
     setDefaultRunner: () => {},
+    updateSettings: () => {},
+    setTasks: () => {},
     ...overrides,
   };
   function Wrapper({ children }: { children: ReactNode }) {

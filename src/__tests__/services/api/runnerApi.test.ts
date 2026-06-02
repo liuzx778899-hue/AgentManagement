@@ -35,7 +35,7 @@ describe('Runner API', () => {
         },
       });
 
-      const result = await runnerApi.start('runner-1', 'claude-code', '/path/to/cwd');
+      const result = await runnerApi.start({ runnerId: 'runner-1', kind: 'claude-code', cwd: '/path/to/cwd' });
 
       expect(mockApiCall).toHaveBeenCalledWith('POST', '/runner/start', {
         runnerId: 'runner-1',
