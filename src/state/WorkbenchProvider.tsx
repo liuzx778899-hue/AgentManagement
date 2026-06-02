@@ -143,7 +143,7 @@ const emptyData: WorkbenchData = {
 interface WorkbenchState {
   data: WorkbenchData;
   updateGateStatus: (gateId: string, status: GateStatus) => void;
-  addMemory: (memory: Omit<MemoryItem, "id" | "createdAt" | "updatedAt">) => void;
+  addMemory: (memory: Omit<MemoryItem, "id" | "createdAt" | "updatedAt">) => Promise<void>;
   updateMemory: (memoryId: string, updates: Partial<Pick<MemoryItem, "title" | "body">>) => void;
   deleteMemory: (memoryId: string) => void;
   createTask: (task: Omit<WorkbenchData["tasks"][0], "id" | "createdAt" | "updatedAt">) => void;
@@ -327,15 +327,57 @@ export function WorkbenchProvider({ children }: WorkbenchProviderProps) {
     dispatch(reassignAgentRunAction(runId, newRoleId));
   }, []);
 
-  const addMemory = useCallback((memory: Omit<MemoryItem, "id" | "createdAt" | "updatedAt">) => {
-    dispatch(addMemoryAction(memory));
+  const addMemory = useCallback(async (memory: Omit<MemoryItem, "id" | "createdAt" | "updatedAt">) => {
+    // Persist to server first
+    const result = await memoryApi.create({
+      kind: memory.kind,
+      scope: memory.scope,
+      projectId: memory.projectId,
+      roleId: memory.roleId,
+      taskId: memory.taskId,
+      title: memory.title,
+      body: memory.body,
+    });
+    if (result.ok && result.data) {
+      // Use server-returned data (with id, createdAt, updatedAt)
+      const savedItem: MemoryItem = {
+        id: result.data.id,
+        kind: result.data.kind || memory.kind,
+        scope: result.data.scope || memory.scope,
+        projectId: result.data.projectId || memory.projectId,
+        roleId: result.data.roleId ?? memory.roleId,
+        taskId: result.data.taskId ?? memory.taskId,
+        title: result.data.title,
+        body: result.data.body || result.data.content || memory.body,
+        citation: result.data.citation || [],
+        createdAt: result.data.createdAt,
+        updatedAt: result.data.updatedAt,
+      };
+      dispatch(addMemoryAction(savedItem));
+    } else {
+      console.error('[WorkbenchProvider] Failed to save memory:', result.error);
+      // Fallback: update local state even if API fails (offline support)
+      dispatch(addMemoryAction(memory));
+    }
   }, []);
 
-  const updateMemory = useCallback((memoryId: string, updates: Partial<Pick<MemoryItem, "title" | "body">>) => {
+  const updateMemory = useCallback(async (memoryId: string, updates: Partial<Pick<MemoryItem, "title" | "body">>) => {
+    // Persist to server
+    const result = await memoryApi.update(memoryId, updates);
+    if (!result.ok) {
+      console.error('[WorkbenchProvider] Failed to update memory on server:', result.error);
+    }
+    // Update local state regardless (optimistic)
     dispatch(updateMemoryAction(memoryId, updates));
   }, []);
 
-  const deleteMemory = useCallback((memoryId: string) => {
+  const deleteMemory = useCallback(async (memoryId: string) => {
+    // Persist to server
+    const result = await memoryApi.delete(memoryId);
+    if (!result.ok) {
+      console.error('[WorkbenchProvider] Failed to delete memory from server:', result.error);
+    }
+    // Update local state regardless (optimistic)
     dispatch(deleteMemoryAction(memoryId));
   }, []);
 

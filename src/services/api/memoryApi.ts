@@ -39,9 +39,9 @@ export const memoryApi = {
     apiCall<void>('DELETE', `/memory/${id}`),
 
   search: (keyword: string, projectId?: string) => {
-    const query = projectId
-      ? `keyword=${encodeURIComponent(keyword)}&projectId=${projectId}`
-      : `keyword=${encodeURIComponent(keyword)}`;
-    return apiCall<Memory[]>('GET', `/memory/search?${query}`);
+    const params = new URLSearchParams();
+    params.set('q', keyword);
+    if (projectId) params.set('projectId', projectId);
+    return apiCall<Memory[]>('GET', `/memory/search?${params.toString()}`);
   },
 };

@@ -118,9 +118,11 @@ memoryRouter.delete('/:id', async (req: Request, res: Response, next: NextFuncti
  */
 memoryRouter.get('/search', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { keyword, projectId } = req.query;
+    const rawQ = req.query.q ?? req.query.keyword;
+    const keyword = typeof rawQ === 'string' ? rawQ : '';
+    const { projectId } = req.query;
 
-    if (!keyword || typeof keyword !== 'string') {
+    if (!keyword) {
       res.status(400).json({
         ok: false,
         error: {

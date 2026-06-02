@@ -1,0 +1,18 @@
+{
+  "id": "task-mpvzxtfc-lm9482",
+  "projectId": "c0a0b799-33de-4dd8-b884-9e5825115b2a",
+  "goal": "技术架构与方案设计",
+  "acceptanceCriteria": [],
+  "workflowTemplateId": "workflow-1780222480567-0c8g4",
+  "roleAssignment": {
+    "ai-draft-step-2": "role-2"
+  },
+  "capabilityAuthorization": [],
+  "launchStrategy": "direct",
+  "status": "queued",
+  "activeRunId": null,
+  "createdAt": "2026-06-02T02:06:24.312Z",
+  "updatedAt": "2026-06-02T02:06:24.312Z",
+  "version": "1.0",
+  "persistedAt": "2026-06-02T02:06:24.319Z"
+}
