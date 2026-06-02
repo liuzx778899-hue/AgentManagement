@@ -1,6 +1,6 @@
 import { useContext, useEffect, useState } from 'react';
 import { ServiceContext } from '../context/ServiceContext';
-import { checkServerAvailable, runnerApi, projectApi, workflowApi, gitApi, memoryApi, settingsApi, aiApi, apiCall, type ImportProjectInput } from '../services/api';
+import { checkServerAvailable, runnerApi, projectApi, workflowApi, gitApi, memoryApi, settingsApi, aiApi, apiCall, type ImportProjectInput, type RunnerStartParams } from '../services/api';
 import type { LocalEngineeringServices } from '../services/local';
 import type { RunnerProcess, LogEntry } from '../types/localEngineering';
 import type { RunnerKind } from '../domain/runner';
@@ -51,16 +51,47 @@ export function useLocalServices(): LocalEngineeringServices {
 
 function createApiServices(): LocalEngineeringServices {
   return {
-    // Core adapters (empty placeholders - use API methods instead)
+    // Core adapters - API-backed implementations
     git: {} as any,
     fileStore: {} as any,
-    processRunner: {} as any,
+    processRunner: {
+      start: async (config: import('../services/local/adapters/processRunnerAdapter').ProcessStartConfig) => {
+        const params: RunnerStartParams = {
+          runnerId: config.runnerId,
+          kind: 'claude-code' as RunnerKind,
+          cwd: config.cwd,
+          command: config.command,
+          args: config.args,
+          env: config.env,
+          timeout: config.timeout,
+        };
+        const result = await runnerApi.start(params);
+        return result as { ok: boolean; data?: RunnerProcess; error?: { code: string; message: string } };
+      },
+      stop: async (processId: string) => {
+        const result = await runnerApi.stop(processId);
+        return result as { ok: boolean; data?: RunnerProcess; error?: { code: string; message: string } };
+      },
+      getLogs: async (processId: string) => {
+        const result = await runnerApi.getLogs(processId);
+        return result as { ok: boolean; data?: LogEntry[]; error?: { code: string; message: string } };
+      },
+      getStatus: async (processId: string) => {
+        const result = await runnerApi.getStatus(processId);
+        return result as { ok: boolean; data?: RunnerProcess; error?: { code: string; message: string } };
+      },
+      listProcesses: async () => {
+        const result = await runnerApi.list();
+        return result as { ok: boolean; data?: RunnerProcess[]; error?: { code: string; message: string } };
+      },
+      cleanup: async () => ({ ok: true }),
+    } as any,
     llm: {} as any,
     repositories: {} as any,
 
     // Runner methods
     startRunner: async (runnerId: string, kind: RunnerKind, cwd: string) => {
-      const result = await runnerApi.start(runnerId, kind, cwd);
+      const result = await runnerApi.start({ runnerId, kind, cwd });
       return result as { ok: boolean; data?: RunnerProcess; error?: { code: string; message: string } };
     },
     stopRunner: async (processId: string) => {
@@ -131,7 +162,7 @@ function createApiServices(): LocalEngineeringServices {
     // Git methods
     getGitStatus: async (repoPath: string) => {
       const result = await gitApi.getStatus(repoPath);
-      return result as { ok: boolean; data?: { branch: string; ahead: number; behind: number; staged: number; unstaged: number; untracked: number; isClean: boolean }; error?: { code: string; message: string } };
+      return result as { ok: boolean; data?: import('../services/api/gitApi').GitStatus; error?: { code: string; message: string } };
     },
     getGitBranches: async (repoPath: string) => {
       const result = await gitApi.getBranches(repoPath);

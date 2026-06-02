@@ -11,7 +11,13 @@ export interface GitStatus {
   staged: number;
   unstaged: number;
   untracked: number;
+  lastCommitSha: string;
+  lastCommitMessage: string;
+  lastCommitDate: string;
   isClean: boolean;
+  projectId: string;
+  repoPath: string;
+  fetchedAt: string;
 }
 
 export const gitApi = {
