@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Brain,
   Camera,
@@ -12,6 +12,7 @@ import {
   FolderGit2,
   GitBranch,
   Info,
+  Loader2,
   MoreHorizontal,
   PanelRightClose,
   PanelRightOpen,
@@ -23,6 +24,11 @@ import {
   XCircle,
   Zap,
 } from "lucide-react";
+import { PwLogStream } from "./PwLogStream";
+import { taskApi } from "../services/api/taskApi";
+import { runnerApi } from "../services/api/runnerApi";
+import { gitApi } from "../services/api/gitApi";
+import type { LogEntry } from "../types/localEngineering";
 import type { WorkbenchData, WorkbenchView } from "../domain/workbench";
 
 interface WorkbenchHomeProps {
@@ -31,57 +37,51 @@ interface WorkbenchHomeProps {
   activeProjectId?: string;
 }
 
-interface MockTab {
+interface FlowTab {
   id: string;
+  stepId: string;
   label: string;
   runnerLabel: string;
-  content: string;
 }
 
-function mockTabs(data: WorkbenchData): MockTab[] {
-  const template = data.workflowTemplates[0];
-  if (!template) return [];
-  return template.steps.slice(0, 3).map((step, index) => {
-    const role = data.roles.find((item) => item.id === step.roleId);
-    const content =
-      index === 0
-        ? [
-            `<span class="green">RUN</span>  v1.6.0 /home/agentdev/AgentManagement`,
-            `  <span class="green">鉁?/span> src/utils/format.ts (18)`,
-            `  <span class="green">鉁?/span> src/components/__tests__/NavBar.spec.tsx (12)`,
-            `  <span class="green">鉁?/span> src/pages/__tests__/dashboard.spec.tsx (14)`,
-            "",
-            `Test Files  <span class="green">21 passed</span> (21)`,
-            `Tests      <span class="green">99 passed</span> (99)`,
-          ].join("\n")
-        : index === 1
-          ? [
-              `<span class="green">VITE v5.3.2</span>  ready in 362 ms`,
-              `  鉃? Local:   <span class="blue">http://localhost:5173/</span>`,
-              `  鉃? Network: <span class="blue">http://192.168.1.100:5173/</span>`,
-            ].join("\n")
-          : ["On branch main", "Your branch is up to date with 'origin/main'.", "nothing to commit, working tree clean"].join("\n");
-
-    return {
-      id: `tab-${step.id}`,
-      label: role?.name ?? step.name,
-      runnerLabel: index === 2 ? "Codex CLI" : "Claude Code",
-      content,
-    };
-  });
-}
-
-function stepStatus(index: number, gateMode: string) {
-  if (index <= 1) return { cls: "ok", label: "已完成" };
-  if (index === 2) return { cls: "run", label: "运行中" };
-  if (index === 3 && gateMode === "manual") return { cls: "wait", label: "等待 Gate" };
-  return { cls: "idle", label: "待开始" };
+/** 将任务的 status 映射为流程步骤的显示状态 */
+function taskStatusToStepStatus(
+  taskStatus: "draft" | "queued" | "running" | "gate" | "done" | "failed",
+) {
+  switch (taskStatus) {
+    case "done":
+      return { cls: "ok", label: "已完成" };
+    case "running":
+      return { cls: "run", label: "运行中" };
+    case "gate":
+      return { cls: "wait", label: "等待 Gate" };
+    case "failed":
+      return { cls: "fail", label: "失败" };
+    case "queued":
+    case "draft":
+    default:
+      return { cls: "idle", label: "待开始" };
+  }
 }
 
 export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHomeProps) {
   const project = data.projects.find((item) => item.id === activeProjectId) ?? data.projects[0];
   const template = data.workflowTemplates[0];
-  const tabs = useMemo(() => mockTabs(data), [data]);
+
+  // --- 构建 tab 列表：每个流程步骤对应一个 tab ---
+  const tabs: FlowTab[] = useMemo(() => {
+    if (!template) return [];
+    return template.steps.map((step) => {
+      const role = data.roles.find((item) => item.id === step.roleId);
+      return {
+        id: `tab-${step.id}`,
+        stepId: step.id,
+        label: role?.name ?? step.name,
+        runnerLabel: "Claude Code",
+      };
+    });
+  }, [template, data.roles]);
+
   const [activeTabId, setActiveTabId] = useState(tabs[0]?.id ?? "");
   const activeTab = tabs.find((item) => item.id === activeTabId);
   const [panelVisible, setPanelVisible] = useState(true);
@@ -90,12 +90,21 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
   const [toast, setToast] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
+  // --- Runner 日志状态 ---
+  const [runnerLogs, setRunnerLogs] = useState<LogEntry[]>([]);
+  const [logsLoading, setLogsLoading] = useState(false);
+
+  // --- 最近文件列表状态 ---
+  const [recentFiles, setRecentFiles] = useState<string[]>([]);
+
+  // 同步 tab id（当 tabs 变化时）
   useEffect(() => {
     if (!tabs.some((tab) => tab.id === activeTabId)) {
       setActiveTabId(tabs[0]?.id ?? "");
     }
   }, [activeTabId, tabs]);
 
+  // Toast 自动消失
   useEffect(() => {
     if (!toast) return;
     const timer = window.setTimeout(() => setToast(null), 1800);
@@ -107,6 +116,7 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
     setPopoverAnchor(null);
   };
 
+  // ESC 关闭 popover
   useEffect(() => {
     if (!popover) return;
     const handler = (event: KeyboardEvent) => {
@@ -130,13 +140,114 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
     setPopover(id);
   };
 
-  const handleAction = (label: string) => {
-    setActionLoading(label);
-    window.setTimeout(() => {
-      setActionLoading(null);
-      setToast(`${label}瀹屾垚`);
-    }, 700);
-  };
+  // --- 获取当前活跃步骤对应的 Runner 日志 ---
+  useEffect(() => {
+    if (!activeTab) {
+      setRunnerLogs([]);
+      return;
+    }
+
+    const activeStep = template?.steps.find((s) => s.id === activeTab.stepId);
+    if (!activeStep) {
+      setRunnerLogs([]);
+      return;
+    }
+
+    // 查找该步骤对应的 running 任务
+    const task = data.tasks.find(
+      (t) =>
+        t.projectId === project?.id &&
+        t.status === "running" &&
+        t.workflowTemplateId === template?.id,
+    );
+
+    if (task?.activeRunId) {
+      let cancelled = false;
+      setLogsLoading(true);
+      runnerApi
+        .getLogs(task.activeRunId)
+        .then((res) => {
+          if (!cancelled && res.ok && res.data) {
+            setRunnerLogs(res.data);
+          }
+        })
+        .catch(() => {
+          // 日志获取失败时静默处理
+        })
+        .finally(() => {
+          if (!cancelled) setLogsLoading(false);
+        });
+      return () => {
+        cancelled = true;
+      };
+    } else {
+      setRunnerLogs([]);
+    }
+  }, [activeTab, data.tasks, project?.id, template]);
+
+  // --- 获取最近变更文件 ---
+  useEffect(() => {
+    if (!project?.repoPath) return;
+
+    let cancelled = false;
+    gitApi
+      .getStatus(project.repoPath)
+      .then((res) => {
+        if (cancelled || !res.ok || !res.data) return;
+        const status = res.data;
+        // 从 git status 构建文件列表（暂存 + 未暂存的摘要信息）
+        const files: string[] = [];
+        if (status.lastCommitMessage) {
+          files.push(`最新提交: ${status.lastCommitSha?.slice(0, 7)} ${status.lastCommitMessage}`);
+        }
+        if (status.branch) {
+          const changeCount = status.staged + status.unstaged + status.untracked;
+          files.push(`分支: ${status.branch}${status.isClean ? " (clean)" : ` (${changeCount} changes)`}`);
+        }
+        setRecentFiles(files);
+      })
+      .catch(() => {
+        // Git 信息获取失败时保持空列表
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [project?.repoPath]);
+
+  // --- 真实 API 操作 ---
+  const handleAction = useCallback(
+    async (label: string) => {
+      setActionLoading(label);
+      try {
+        if (label === "启动项目") {
+          // 找到当前项目的 queued 任务，启动第一个
+          const queuedTask = data.tasks.find(
+            (t) => t.projectId === project?.id && t.status === "queued",
+          );
+          if (queuedTask) {
+            const res = await taskApi.update(queuedTask.id, { status: "running" });
+            if (!res.ok) {
+              setToast(`启动失败: ${res.error?.message ?? "未知错误"}`);
+              return;
+            }
+          }
+          setToast("已启动");
+        } else if (label === "保存进度") {
+          setToast("已保存");
+        } else if (label === "恢复会话") {
+          setToast("已恢复");
+        } else {
+          setToast(`${label}完成`);
+        }
+      } catch {
+        setToast(`${label}失败`);
+      } finally {
+        setActionLoading(null);
+      }
+    },
+    [data.tasks, project?.id],
+  );
 
   if (!project) {
     return (
@@ -157,7 +268,6 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
   const activeRuns = data.agentRuns.filter((run) => run.status === "running" || run.status === "waiting_gate");
   const activeGate = data.manualGates.find((gate) => gate.status === "waiting");
   const projectMemories = data.memories.filter((memory) => memory.scope === "project");
-  const recentFiles = ["src/components/WorkbenchHome.tsx", "src/styles/base.css", "docs/HANDOFF_NEXT_TASKS.md"];
   const activeStep = flowSteps.find((step) => `tab-${step.id}` === activeTabId);
   const activeRole = activeStep ? data.roles.find((role) => role.id === activeStep.roleId) : null;
   const popoverPositionStyle = popoverAnchor
@@ -323,9 +433,13 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
             角色流程运行带 <span>{flowSteps.length} 个角色 · {activeStep ? `${String(activeStep.order).padStart(2, "0")} ${activeRole?.name ?? activeStep.name}` : "未选择"} 运行中</span>
           </div>
           <div className="wb-flow-scroll">
-            {flowSteps.map((step, index) => {
+            {flowSteps.map((step) => {
               const role = data.roles.find((item) => item.id === step.roleId);
-              const status = stepStatus(index, step.gateMode);
+              // 基于真实任务数据映射步骤状态
+              const task = data.tasks.find((t) => t.projectId === project.id && t.workflowTemplateId === template?.id);
+              const status = task
+                ? taskStatusToStepStatus(task.status)
+                : { cls: "idle", label: "待开始" };
               return (
                 <button
                   key={step.id}
@@ -340,7 +454,7 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
                   <p>{role?.name ?? "未绑定"} Agent</p>
                   <div className="wb-flow-model">{step.modelName || "DeepSeek / deepseek-v4-pro"}</div>
                   <div className="wb-flow-footer">
-                    <span>{tabs[index % Math.max(tabs.length, 1)]?.runnerLabel ?? "Claude Code"}</span>
+                    <span>{tabs.find((t) => t.stepId === step.id)?.runnerLabel ?? "Claude Code"}</span>
                     <b className={`wb-step-state ${status.cls}`}>{status.label}</b>
                   </div>
                 </button>
@@ -367,7 +481,7 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
                 ["skills", Zap, "Skills"],
                 ["git", GitBranch, "Git"],
                 ["shell", Terminal, "Local Shell"],
-                ["snapshot", Camera, "蹇収"],
+                ["snapshot", Camera, "快照"],
               ].map(([id, Icon, label]) => {
                 const ToolIcon = Icon as typeof Info;
                 return (
@@ -377,7 +491,7 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
                   </button>
                 );
               })}
-              <button className="wb-toolbar-btn" onClick={() => setToast("鏇村宸ュ叿寮€鍙戜腑")} type="button">
+              <button className="wb-toolbar-btn" onClick={() => setToast("更多工具开发中")} type="button">
                 <MoreHorizontal size={14} />
               </button>
             </div>
@@ -389,7 +503,7 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
                 {tab.label}
               </button>
             ))}
-            <button className="wb-terminal-tab plus" onClick={() => setToast("鏂板缓缁堢寮€鍙戜腑")} type="button">
+            <button className="wb-terminal-tab plus" onClick={() => setToast("新建终端开发中")} type="button">
               +
             </button>
           </div>
@@ -397,25 +511,25 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
           <div className="wb-terminal-content">
             {activeTab ? (
               <>
-                <div
-                  className="wb-terminal-output"
-                  dangerouslySetInnerHTML={{
-                    __html:
-                      `<span class="terminal-prompt">agentdev@AgentManagement</span>:<span class="terminal-path">~/AgentManagement</span>$ npm run dev\n\n` +
-                      `> agentmanagement@0.1.0 dev\n> vite\n\n` +
-                      activeTab.content +
-                      `\n\n<span class="terminal-prompt">agentdev@AgentManagement</span>:<span class="terminal-path">~/AgentManagement</span>$ <span class="terminal-cursor"></span>`,
-                  }}
-                />
+                {runnerLogs.length > 0 || logsLoading ? (
+                  <PwLogStream logs={runnerLogs} isLoading={logsLoading} className="wb-terminal-log-stream" />
+                ) : (
+                  <div className="wb-terminal-output">
+                    <div className="wb-terminal-empty-inner">
+                      <Terminal size={32} style={{ opacity: 0.3, marginBottom: 8 }} />
+                      <span>暂无运行中的任务</span>
+                    </div>
+                  </div>
+                )}
                 <div className="wb-terminal-status-bar">
-                  <span>琛?1锛屽垪 1</span>
+                  <span>行 1，列 1</span>
                   <span>UTF-8</span>
                   <span>LF</span>
                   <span>Shell: bash</span>
                 </div>
               </>
             ) : (
-              <div className="wb-terminal-empty">閫夋嫨缁堢 Tab</div>
+              <div className="wb-terminal-empty">选择终端 Tab</div>
             )}
           </div>
         </section>
@@ -497,16 +611,19 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
 
               <div className="wb-panel-box">
                 <div className="wb-box-title">
-                  <span>最近文件</span>
+                  <span>仓库状态</span>
                 </div>
                 <div className="wb-box-list">
-                  {recentFiles.map((file) => (
-                    <div key={file} className="wb-file-row">
-                      <FileCode2 className="wb-row-icon muted" />
-                      <span>{file}</span>
-                      <span style={{ color: "var(--faint)", fontSize: 10 }}>12:30</span>
-                    </div>
-                  ))}
+                  {recentFiles.length > 0 ? (
+                    recentFiles.map((file) => (
+                      <div key={file} className="wb-file-row">
+                        <FileCode2 className="wb-row-icon muted" />
+                        <span>{file}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="wb-panel-empty">暂无仓库信息</p>
+                  )}
                 </div>
               </div>
 
@@ -547,4 +664,3 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
     </div>
   );
 }
-

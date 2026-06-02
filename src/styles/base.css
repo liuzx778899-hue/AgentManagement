@@ -406,6 +406,19 @@
   place-items: center;
   height: 100%;
 }
+.wb-terminal-empty-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted, #6e7681);
+  font-size: 13px;
+  padding: 24px;
+}
+.wb-terminal-log-stream {
+  flex: 1;
+  min-height: 0;
+}
 
 /* ===== RIGHT PANEL ===== */
 .wb-right-panel {
