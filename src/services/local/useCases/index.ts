@@ -47,3 +47,41 @@ export {
   type ImportProjectConfig,
   type UpdateProjectConfig,
 } from './projectUseCase';
+export {
+  createTask,
+  createTasksFromWorkflow,
+  updateTask,
+  deleteTask,
+  listTasks,
+  listTasksByProject,
+  getTask,
+  type CreateTaskInput,
+  type CreateTasksFromWorkflowInput,
+  type UpdateTaskInput,
+} from './taskUseCase';
+export {
+  getSettings,
+  saveSettings,
+  getModelProviders,
+  saveModelProviders,
+  type ModelProvidersConfig,
+} from './settingsUseCase';
+export {
+  listMemories,
+  getMemory,
+  createMemory,
+  updateMemory,
+  deleteMemory,
+  searchMemories,
+  type CreateMemoryInput,
+  type UpdateMemoryInput,
+} from './memoryUseCase';
+export {
+  sendAiChat,
+  streamAiChat,
+  validateApiKey,
+  listAvailableModels,
+  type AiChatInput,
+  type AiChatResponse,
+  type AiStreamResponse,
+} from './aiUseCase';
