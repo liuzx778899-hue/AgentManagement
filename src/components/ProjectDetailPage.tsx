@@ -200,6 +200,7 @@ export function ProjectDetailPage({ data, projectId, onBack, onEnterWorkbench }:
 
   const getTaskPriority = (taskId: string): TaskPriority => {
     if (taskPriorityOverrides[taskId]) return taskPriorityOverrides[taskId];
+    // Fallback: index in projectTasks array
     const taskIndex = projectTasks.findIndex((t) => t.id === taskId);
     const safeIndex = taskIndex >= 0 ? taskIndex : 0;
     return TASK_PRIORITY_OPTIONS[safeIndex % TASK_PRIORITY_OPTIONS.length];
@@ -216,6 +217,30 @@ export function ProjectDetailPage({ data, projectId, onBack, onEnterWorkbench }:
     if (!project?.workflowTemplateId) return null;
     return data.workflowTemplates.find((t) => t.id === project.workflowTemplateId);
   }, [data.workflowTemplates, project?.workflowTemplateId]);
+
+  // Compute task IDs sorted by workflow step order (shared by getTaskPriority and render functions)
+  const sortedTaskIds = useMemo(() => {
+    const stepOrderMap = template?.steps
+      ? new Map(template.steps.map((s, i) => [s.id, i]))
+      : new Map<string, number>();
+    return [...projectTasks]
+      .sort((a, b) => {
+        const aStepId = template?.steps?.find(s => a.roleAssignment?.[s.id])?.id;
+        const bStepId = template?.steps?.find(s => b.roleAssignment?.[s.id])?.id;
+        const aOrder = aStepId ? (stepOrderMap.get(aStepId) ?? 999) : 999;
+        const bOrder = bStepId ? (stepOrderMap.get(bStepId) ?? 999) : 999;
+        return aOrder - bOrder;
+      })
+      .map(t => t.id);
+  }, [projectTasks, template]);
+
+  // Override getTaskPriority to use sorted order
+  const getTaskPriorityWithSort = (taskId: string): TaskPriority => {
+    if (taskPriorityOverrides[taskId]) return taskPriorityOverrides[taskId];
+    const taskIndex = sortedTaskIds.indexOf(taskId);
+    const safeIndex = taskIndex >= 0 ? taskIndex : 0;
+    return TASK_PRIORITY_OPTIONS[safeIndex % TASK_PRIORITY_OPTIONS.length];
+  };
 
   // Handlers
   const handleCheckProgress = () => {
@@ -726,7 +751,7 @@ export function ProjectDetailPage({ data, projectId, onBack, onEnterWorkbench }:
           <div className="pd-panel-body">
             <div className="pd-plan-row"><span>优先级</span><span>任务</span><span>状态</span><span>负责人</span><span>进度</span></div>
             {overviewTasks.length > 0 ? overviewTasks.map((task) => {
-              const priority = getTaskPriority(task.id);
+              const priority = getTaskPriorityWithSort(task.id);
               const statusLabel = task.status === "running" ? "推进中"
                 : task.status === "done" ? "完成"
                 : task.status === "gate" ? "等待决策"
@@ -776,20 +801,13 @@ export function ProjectDetailPage({ data, projectId, onBack, onEnterWorkbench }:
   }
 
   function renderPlanTabDesign() {
-    // Sort tasks by workflow step order
-    const stepOrder = template?.steps
-      ? new Map(template.steps.map((s, i) => [s.id, i]))
-      : new Map<string, number>();
-    const sortedTasks = [...projectTasks].sort((a, b) => {
-      const aStepId = template?.steps?.find(s => a.roleAssignment?.[s.id])?.id;
-      const bStepId = template?.steps?.find(s => b.roleAssignment?.[s.id])?.id;
-      const aOrder = aStepId ? (stepOrder.get(aStepId) ?? 999) : 999;
-      const bOrder = bStepId ? (stepOrder.get(bStepId) ?? 999) : 999;
-      return aOrder - bOrder;
-    });
+    // Use pre-computed sorted order
+    const sortedTasks = sortedTaskIds
+      .map(id => projectTasks.find(t => t.id === id))
+      .filter((t): t is NonNullable<typeof t> => t != null);
 
     const planRows = sortedTasks.map((task) => {
-      const priority = getTaskPriority(task.id);
+      const priority = getTaskPriorityWithSort(task.id);
       const roleNames = Object.values(task.roleAssignment ?? {}).map((rid) =>
         data.roles.find((r) => r.id === rid)?.name ?? rid
       ).join("、") || "未分配";
@@ -862,17 +880,10 @@ export function ProjectDetailPage({ data, projectId, onBack, onEnterWorkbench }:
 
   function renderProgressTabDesign() {
     const days = phases.length > 0 ? phases : ["阶段1", "阶段2", "阶段3", "阶段4"];
-    // Sort tasks by workflow step order (same logic as renderPlanTabDesign)
-    const stepOrderMap = template?.steps
-      ? new Map(template.steps.map((s, i) => [s.id, i]))
-      : new Map<string, number>();
-    const sortedForGantt = [...projectTasks].sort((a, b) => {
-      const aStepId = template?.steps?.find(s => a.roleAssignment?.[s.id])?.id;
-      const bStepId = template?.steps?.find(s => b.roleAssignment?.[s.id])?.id;
-      const aOrder = aStepId ? (stepOrderMap.get(aStepId) ?? 999) : 999;
-      const bOrder = bStepId ? (stepOrderMap.get(bStepId) ?? 999) : 999;
-      return aOrder - bOrder;
-    });
+    // Use pre-computed sorted order
+    const sortedForGantt = sortedTaskIds
+      .map(id => projectTasks.find(t => t.id === id))
+      .filter((t): t is NonNullable<typeof t> => t != null);
     const ganttRows = sortedForGantt.map((task, i) => {
       const roleNames = Object.values(task.roleAssignment ?? {}).map((rid) =>
         data.roles.find((r) => r.id === rid)?.name ?? rid
@@ -887,7 +898,7 @@ export function ProjectDetailPage({ data, projectId, onBack, onEnterWorkbench }:
       const spanPct = Math.round(80 / totalSteps);
       return {
         id: task.id,
-        task: `${getTaskPriority(task.id)} ${task.goal}`,
+        task: `${getTaskPriorityWithSort(task.id)} ${task.goal}`,
         role: roleNames,
         className,
         start: startPct,
@@ -1259,7 +1270,7 @@ export function ProjectDetailPage({ data, projectId, onBack, onEnterWorkbench }:
     if (selected.type === "task") {
       const task = projectTasks.find((t) => t.id === selected.id);
       const taskGate = projectGates.find((g) => g.taskId === selected.id);
-      const priority = task ? getTaskPriority(task.id) : "P2";
+      const priority = task ? getTaskPriorityWithSort(task.id) : "P2";
       const priorityMeta = taskPriorityMeta[priority];
       const taskStatus = task?.status as string | undefined;
       const statusLabel = taskStatus === "running" ? "推进中" : taskStatus === "done" ? "已完成" : taskStatus === "gate" ? "等待决策" : taskStatus === "queued" ? "已排队" : taskStatus === "draft" ? "草稿" : "未知";
@@ -1813,7 +1824,7 @@ export function ProjectDetailPage({ data, projectId, onBack, onEnterWorkbench }:
             <div className="pd-priority-modal-body">
               {priorityModalTask ? (
                 TASK_PRIORITY_OPTIONS.map((priority) => {
-                  const active = getTaskPriority(priorityModalTask.id) === priority;
+                  const active = getTaskPriorityWithSort(priorityModalTask.id) === priority;
                   return (
                     <button
                       key={priority}
