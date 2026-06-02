@@ -776,7 +776,19 @@ export function ProjectDetailPage({ data, projectId, onBack, onEnterWorkbench }:
   }
 
   function renderPlanTabDesign() {
-    const planRows = projectTasks.map((task) => {
+    // Sort tasks by workflow step order
+    const stepOrder = template?.steps
+      ? new Map(template.steps.map((s, i) => [s.id, i]))
+      : new Map<string, number>();
+    const sortedTasks = [...projectTasks].sort((a, b) => {
+      const aStepId = template?.steps?.find(s => a.roleAssignment?.[s.id])?.id;
+      const bStepId = template?.steps?.find(s => b.roleAssignment?.[s.id])?.id;
+      const aOrder = aStepId ? (stepOrder.get(aStepId) ?? 999) : 999;
+      const bOrder = bStepId ? (stepOrder.get(bStepId) ?? 999) : 999;
+      return aOrder - bOrder;
+    });
+
+    const planRows = sortedTasks.map((task) => {
       const priority = getTaskPriority(task.id);
       const roleNames = Object.values(task.roleAssignment ?? {}).map((rid) =>
         data.roles.find((r) => r.id === rid)?.name ?? rid
