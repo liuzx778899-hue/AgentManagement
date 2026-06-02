@@ -136,8 +136,17 @@ describe('workflowExecutionUseCase', () => {
         triggeredBy: 'user-001',
       });
 
-      const run = runResult.data!;
+      let run = runResult.data!;
 
+      // 先完成 step-1
+      const result1 = await advanceWorkflowStep({
+        run,
+        workflow: mockWorkflow,
+        completedStepId: 'step-1',
+      });
+      run = result1.data!;
+
+      // 再完成 step-2，到达 gate
       const advanceResult = await advanceWorkflowStep({
         run,
         workflow: mockWorkflow,
@@ -155,7 +164,14 @@ describe('workflowExecutionUseCase', () => {
         triggeredBy: 'user-001',
       });
 
-      const run = runResult.data!;
+      let run = runResult.data!;
+
+      const result1 = await advanceWorkflowStep({
+        run,
+        workflow: mockWorkflow,
+        completedStepId: 'step-1',
+      });
+      run = result1.data!;
 
       const gateResult = await advanceWorkflowStep({
         run,
@@ -184,7 +200,14 @@ describe('workflowExecutionUseCase', () => {
         triggeredBy: 'user-001',
       });
 
-      const run = runResult.data!;
+      let run = runResult.data!;
+
+      const result1 = await advanceWorkflowStep({
+        run,
+        workflow: mockWorkflow,
+        completedStepId: 'step-1',
+      });
+      run = result1.data!;
 
       const gateResult = await advanceWorkflowStep({
         run,
@@ -672,7 +695,14 @@ describe('workflowExecutionUseCase', () => {
         triggeredBy: 'user-001',
       });
 
-      const run = runResult.data!;
+      let run = runResult.data!;
+
+      const result1 = await advanceWorkflowStep({
+        run,
+        workflow: mockWorkflow,
+        completedStepId: 'step-1',
+      });
+      run = result1.data!;
 
       // 推进到 gate 步骤
       const gateResult = await advanceWorkflowStep({
@@ -701,7 +731,14 @@ describe('workflowExecutionUseCase', () => {
         triggeredBy: 'user-001',
       });
 
-      const run = runResult.data!;
+      let run = runResult.data!;
+
+      const result1 = await advanceWorkflowStep({
+        run,
+        workflow: mockWorkflow,
+        completedStepId: 'step-1',
+      });
+      run = result1.data!;
 
       const gateResult = await advanceWorkflowStep({
         run,
@@ -727,11 +764,9 @@ describe('workflowExecutionUseCase', () => {
   // ============================================
   // BUG 检测测试
   // ============================================
-  describe('BUG: handleWorkflowGate skips gate step', () => {
-    it('BUG: gate step should not be skipped when approving', async () => {
-      // 这个测试暴露一个 BUG：
-      // handleWorkflowGate 在 approve 时，应该先完成当前 gate 步骤
-      // 但代码直接跳到了下一步，没有正确处理 gate 步骤本身
+  describe('handleWorkflowGate - gate step completion', () => {
+    it('gate step should be marked completed when approving', async () => {
+      // 回归测试：gate 通过后步骤状态应为 completed
 
       const runResult = await createWorkflowRun({
         workflow: mockWorkflow,
@@ -739,7 +774,15 @@ describe('workflowExecutionUseCase', () => {
         triggeredBy: 'user-001',
       });
 
-      const run = runResult.data!;
+      let run = runResult.data!;
+
+      // 先完成 step-1
+      const result1 = await advanceWorkflowStep({
+        run,
+        workflow: mockWorkflow,
+        completedStepId: 'step-1',
+      });
+      run = result1.data!;
 
       // 推进到 gate 步骤 (step-3 是 manual gate)
       const gateResult = await advanceWorkflowStep({
@@ -761,19 +804,16 @@ describe('workflowExecutionUseCase', () => {
         decidedBy: 'reviewer-001',
       });
 
-      // BUG: gate 步骤 (step-3) 的状态应该是 completed
-      // 但实际上可能没有正确设置
+      // gate 步骤 (step-3) 的状态应该是 completed
       const gateStep = approveResult.data?.steps[2];
       expect(gateStep?.state).toBe('completed'); // 这可能失败
       expect(gateStep?.gateDecision).toBe('approve');
     });
   });
 
-  describe('BUG: advanceWorkflowStep does not validate step order', () => {
-    it('BUG: should not allow advancing to wrong step', async () => {
-      // 这个测试暴露一个潜在的 BUG：
-      // advanceWorkflowStep 应该验证 completedStepId 是否是当前步骤
-      // 但代码没有这个验证，允许跳过步骤
+  describe('advanceWorkflowStep - step order validation', () => {
+    it('should reject completing a step that is not the current step', async () => {
+      // 回归测试：不允许跳过步骤
 
       const runResult = await createWorkflowRun({
         workflow: mockWorkflow,
@@ -790,13 +830,13 @@ describe('workflowExecutionUseCase', () => {
         completedStepId: 'step-2', // 跳过 step-1
       });
 
-      // 理想情况下应该失败，但当前代码可能允许
-      // 这是一个逻辑 BUG
-      expect(result.ok).toBe(false); // 期望失败，但可能通过
+      expect(result.ok).toBe(false);
+      expect(result.error?.code).toBe('INVALID_STEP_ORDER');
+      expect(result.error?.message).toContain('步骤顺序错误');
     });
   });
 
-  describe('BUG: Memory leak - workflowRuns Map never cleared', () => {
+  describe('workflowRuns Map - cleanup behavior', () => {
     it('should clear completed runs to prevent memory leak', async () => {
       // 这个测试暴露一个设计问题：
       // workflowRuns Map 永远不会被清理，导致内存泄漏
@@ -832,10 +872,9 @@ describe('workflowExecutionUseCase', () => {
     });
   });
 
-  describe('BUG: Race condition in concurrent operations', () => {
+  describe('concurrent state changes - race condition protection', () => {
     it('should handle concurrent state changes safely', async () => {
-      // 这个测试暴露并发问题：
-      // Map 操作不是原子的，并发操作可能导致状态不一致
+      // 回归测试：并发状态变更只应有一个成功
 
       const runResult = await createWorkflowRun({
         workflow: mockWorkflow,
@@ -857,9 +896,9 @@ describe('workflowExecutionUseCase', () => {
     });
   });
 
-  describe('BUG: handleWorkflowGate missing inputArtifacts for next step', () => {
+  describe('handleWorkflowGate - artifact passing after gate approval', () => {
     it('should pass artifacts to next step after gate approval', async () => {
-      // 这个测试检查 gate 通过后是否正确传递 artifacts
+      // 回归测试：gate 通过后下一步应收到累积的 artifacts
 
       const runResult = await createWorkflowRun({
         workflow: mockWorkflow,
@@ -878,7 +917,7 @@ describe('workflowExecutionUseCase', () => {
       });
       currentRun = result1.data!;
 
-      // Step 2: 产生更多 artifacts
+      // Step 2: 产生更多 artifacts，到达 gate
       const result2 = await advanceWorkflowStep({
         run: currentRun,
         workflow: mockWorkflow,

@@ -35,7 +35,9 @@ export type LocalErrorCode =
   | 'UNKNOWN'
   | 'BATCH_SAVE_FAILED'
   | 'WORKFLOW_NOT_FOUND'
-  | 'TASK_NOT_FOUND';
+  | 'TASK_NOT_FOUND'
+  | 'INVALID_STEP_ORDER'
+  | 'STATE_CONFLICT';
 
 /**
  * 命令执行配置
