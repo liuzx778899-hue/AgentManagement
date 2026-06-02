@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import request from 'supertest';
 import express from 'express';
+import { join } from 'path';
+import { readdir, unlink } from 'fs/promises';
 import { workflowRouter } from '../../../server/routes/workflow';
 
 // Mock the service factory
@@ -42,8 +44,12 @@ const mockListProjectWorkflowRuns = vi.mocked(listProjectWorkflowRuns);
 describe('Workflow Router', () => {
   let app: express.Express;
   let mockProjectRepository: any;
+  let mockWorkflowRepository: any;
+  let workflowsBeforeTest: string[] = [];
 
-  beforeEach(() => {
+  const workflowsDir = join(process.cwd(), '.agentmanagement', 'workflows');
+
+  beforeEach(async () => {
     vi.clearAllMocks();
     app = express();
     app.use(express.json());
@@ -54,18 +60,46 @@ describe('Workflow Router', () => {
       load: vi.fn(),
     };
 
+    // Mock workflow repository with CRUD methods
+    mockWorkflowRepository = {
+      save: vi.fn().mockResolvedValue({ ok: true, data: {} }),
+      load: vi.fn().mockResolvedValue({ ok: false, error: { code: 'DIRECTORY_NOT_FOUND', message: 'Not found', recoverable: false } }),
+      update: vi.fn().mockResolvedValue({ ok: false, error: { code: 'DIRECTORY_NOT_FOUND', message: 'Not found', recoverable: false } }),
+      delete: vi.fn().mockResolvedValue({ ok: false, error: { code: 'DIRECTORY_NOT_FOUND', message: 'Not found', recoverable: false } }),
+      listAll: vi.fn().mockResolvedValue({ ok: true, data: [] }),
+      listActive: vi.fn().mockResolvedValue({ ok: true, data: [] }),
+    };
+
     // Default mock for getServices
     mockGetServices.mockReturnValue({
       repositories: {
         project: mockProjectRepository,
-        workflow: {},
+        workflow: mockWorkflowRepository,
         memory: {},
       },
     } as any);
+
+    // 记录测试前的文件列表，用于 afterEach 清理
+    try {
+      workflowsBeforeTest = await readdir(workflowsDir);
+    } catch {
+      workflowsBeforeTest = [];
+    }
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     vi.resetAllMocks();
+
+    // 清理测试产生的垃圾文件
+    try {
+      const workflowsAfterTest = await readdir(workflowsDir);
+      const newFiles = workflowsAfterTest.filter(f => !workflowsBeforeTest.includes(f));
+      await Promise.all(
+        newFiles.map(f => unlink(join(workflowsDir, f)).catch(() => {}))
+      );
+    } catch {
+      // 目录不存在则忽略
+    }
   });
 
   describe('POST /api/workflow/run', () => {

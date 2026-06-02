@@ -10,8 +10,6 @@ import {
   listProjectWorkflowRuns,
 } from '../../services/local/useCases';
 import type { Workflow, WorkflowStep } from '../../domain/workflow';
-import { readdir, readFile, writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
 
 export const workflowRouter = Router();
 
@@ -21,28 +19,15 @@ export const workflowRouter = Router();
  */
 workflowRouter.get('/templates', async (_req: Request, res: Response, next: NextFunction) => {
   try {
-    const templates: Workflow[] = [];
-    const templatesDir = join(process.cwd(), '.agentmanagement', 'workflows');
+    const services = getServices();
+    const result = await services.repositories.workflow.listAll();
 
-    try {
-      const files = await readdir(templatesDir);
-      for (const file of files) {
-        if (!file.endsWith('.json')) continue;
-        try {
-          const content = await readFile(join(templatesDir, file), 'utf-8');
-          const template = JSON.parse(content);
-          if (!template.deleted) {
-            templates.push(template);
-          }
-        } catch {
-          // Skip invalid files
-        }
-      }
-    } catch {
-      // Directory doesn't exist
+    if (!result.ok) {
+      res.json({ ok: true, data: [] });
+      return;
     }
 
-    res.json({ ok: true, data: templates });
+    res.json({ ok: true, data: result.data });
   } catch (err) {
     next(err);
   }
@@ -79,13 +64,20 @@ workflowRouter.post('/templates', async (req: Request, res: Response, next: Next
       updatedAt: now,
     };
 
-    // Ensure directory exists
-    const templatesDir = join(process.cwd(), '.agentmanagement', 'workflows');
-    await mkdir(templatesDir, { recursive: true });
+    const services = getServices();
+    const result = await services.repositories.workflow.save(fullTemplate);
 
-    // Write template to file
-    const filePath = join(templatesDir, `${id}.json`);
-    await writeFile(filePath, JSON.stringify(fullTemplate, null, 2), 'utf-8');
+    if (!result.ok) {
+      res.status(500).json({
+        ok: false,
+        error: {
+          code: 'UNKNOWN',
+          message: 'Failed to save template',
+          recoverable: true,
+        },
+      });
+      return;
+    }
 
     res.json({ ok: true, data: fullTemplate });
   } catch (err) {
@@ -114,19 +106,13 @@ workflowRouter.put('/templates/:id', async (req: Request, res: Response, next: N
       return;
     }
 
-    const templatesDir = join(process.cwd(), '.agentmanagement', 'workflows');
-    const filePath = join(templatesDir, `${id}.json`);
+    const services = getServices();
+    const result = await services.repositories.workflow.update({
+      ...updates,
+      id, // Ensure ID doesn't change
+    });
 
-    // Read existing template
-    let existing: Workflow | null = null;
-    try {
-      const content = await readFile(filePath, 'utf-8');
-      existing = JSON.parse(content);
-    } catch {
-      // File doesn't exist
-    }
-
-    if (!existing) {
+    if (!result.ok) {
       res.status(404).json({
         ok: false,
         error: {
@@ -138,17 +124,7 @@ workflowRouter.put('/templates/:id', async (req: Request, res: Response, next: N
       return;
     }
 
-    // Merge updates
-    const updated: Workflow = {
-      ...existing,
-      ...updates,
-      id, // Ensure ID doesn't change
-      updatedAt: new Date().toISOString(),
-    };
-
-    await writeFile(filePath, JSON.stringify(updated, null, 2), 'utf-8');
-
-    res.json({ ok: true, data: updated });
+    res.json({ ok: true, data: result.data });
   } catch (err) {
     next(err);
   }
@@ -174,19 +150,10 @@ workflowRouter.delete('/templates/:id', async (req: Request, res: Response, next
       return;
     }
 
-    const templatesDir = join(process.cwd(), '.agentmanagement', 'workflows');
-    const filePath = join(templatesDir, `${id}.json`);
+    const services = getServices();
+    const result = await services.repositories.workflow.delete(id as string);
 
-    // Read and mark as deleted
-    let existing: Workflow | null = null;
-    try {
-      const content = await readFile(filePath, 'utf-8');
-      existing = JSON.parse(content);
-    } catch {
-      // File doesn't exist
-    }
-
-    if (!existing) {
+    if (!result.ok) {
       res.status(404).json({
         ok: false,
         error: {
@@ -197,10 +164,6 @@ workflowRouter.delete('/templates/:id', async (req: Request, res: Response, next
       });
       return;
     }
-
-    // Soft delete
-    const deleted = { ...existing, deleted: true, deletedAt: new Date().toISOString() };
-    await writeFile(filePath, JSON.stringify(deleted, null, 2), 'utf-8');
 
     res.json({ ok: true });
   } catch (err) {
