@@ -359,6 +359,12 @@ export function workbenchReducer(state: WorkbenchData, action: WorkbenchAction):
     case "SET_TASKS":
       return { ...state, tasks: action.payload };
 
+    case "SET_SETTINGS":
+      return { ...state, settings: action.payload };
+
+    case "UPDATE_SETTINGS":
+      return { ...state, settings: { ...state.settings, ...action.payload } };
+
     case "REFRESH_GIT_STATUS_START":
       // 可以设置 loading 状态
       return state;

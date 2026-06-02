@@ -1808,4 +1808,14 @@ AI 软件项目经理工作台，第一版是个人本地 Web MVP。
   ] as RunnerProfile[],
 
   defaultRunner: "runner-claude-code",
+  settings: {
+    theme: 'system',
+    language: 'zh-CN',
+    notifications: true,
+    autoSave: true,
+    editorFontSize: 14,
+    editorFontFamily: 'monospace',
+    runner: { defaultTimeout: 300000, autoRestart: false },
+    git: { autoFetch: true, fetchInterval: 60000 },
+  },
 };

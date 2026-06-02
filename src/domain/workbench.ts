@@ -36,6 +36,8 @@ export type {
   GitBranch,
 } from "./git";
 export type { RunnerKind, RunnerProfile } from "./runner";
+import type { AppSettings } from "../types/settings";
+export type { AppSettings };
 
 // View type (stays here as it's UI-specific)
 export type WorkbenchView =
@@ -100,4 +102,6 @@ export interface WorkbenchData {
   // CLI Runners
   runnerProfiles: RunnerProfile[];
   defaultRunner?: string;
+  // App Settings
+  settings: AppSettings;
 }

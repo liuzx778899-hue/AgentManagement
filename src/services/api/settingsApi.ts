@@ -22,4 +22,7 @@ export const settingsApi = {
 
   saveModelProviders: (data: ModelProvidersData) =>
     apiCall<void>('PUT', '/settings/model-providers', data),
+
+  testConnection: (params: { providerId: string; apiKey: string; baseUrl: string; apiFormat: string }) =>
+    apiCall<{ success: boolean; message: string }>('POST', '/settings/test-connection', params),
 };

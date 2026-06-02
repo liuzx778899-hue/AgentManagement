@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import type { ModelProvider, ModelInfo } from "../../domain/model";
 import { IconBadge } from "../IconBadge";
+import { settingsApi } from "../../services/api";
 
 interface ModelConfigPanelProps {
   modelProviders: ModelProvider[];
@@ -91,23 +92,17 @@ export function ModelConfigPanel({
     setTestResult(null);
 
     try {
-      const response = await fetch('http://localhost:3001/api/settings/test-connection', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          providerId: editingProviderDetail.providerId,
-          apiKey: editingProviderDetail.apiKey,
-          baseUrl: editingProviderDetail.baseUrl,
-          apiFormat: editingProviderDetail.apiFormat,
-        }),
+      const result = await settingsApi.testConnection({
+        providerId: editingProviderDetail.providerId,
+        apiKey: editingProviderDetail.apiKey,
+        baseUrl: editingProviderDetail.baseUrl,
+        apiFormat: editingProviderDetail.apiFormat,
       });
-
-      const result = await response.json();
 
       if (result.ok && result.data) {
         setTestResult(result.data);
       } else {
-        setTestResult({ success: false, message: result.data?.message || '连接测试失败' });
+        setTestResult({ success: false, message: result.error?.message || '连接测试失败' });
       }
     } catch (error) {
       setTestResult({ success: false, message: '网络错误，请确保后端服务正在运行' });
