@@ -73,6 +73,9 @@ export interface WorkflowRunProgress {
 // 简单的运行实例存储（实际应该持久化）
 const workflowRuns = new Map<string, WorkflowRun>();
 
+// 并发保护：记录正在进行状态变更的 run，防止并发修改
+const mutatingRuns = new Set<string>();
+
 /**
  * 生成运行 ID
  */
@@ -165,6 +168,19 @@ export async function advanceWorkflowStep(
         code: 'INVALID_INPUT',
         message: `步骤不存在: ${completedStepId}`,
         recoverable: false,
+      },
+    };
+  }
+
+  // 验证步骤顺序：只能完成当前步骤
+  if (completedIndex !== run.currentStepIndex) {
+    const currentStepId = run.steps[run.currentStepIndex]?.stepId ?? 'unknown';
+    return {
+      ok: false,
+      error: {
+        code: 'INVALID_STEP_ORDER',
+        message: `步骤顺序错误: 期望完成步骤 ${currentStepId}, 实际完成 ${completedStepId}`,
+        recoverable: true,
       },
     };
   }
@@ -394,38 +410,56 @@ export async function getWorkflowRunStatus(
 export async function pauseWorkflowRun(
   runId: string
 ): Promise<LocalResult<WorkflowRun>> {
-  const run = workflowRuns.get(runId);
-
-  if (!run) {
+  // 并发保护：同步检查并标记，await 让其他并发调用有机会检测到冲突
+  if (mutatingRuns.has(runId)) {
     return {
       ok: false,
       error: {
-        code: 'DIRECTORY_NOT_FOUND',
-        message: `运行实例不存在: ${runId}`,
-        recoverable: false,
+        code: 'STATE_CONFLICT',
+        message: '操作冲突：该运行正在进行其他状态变更',
+        recoverable: true,
       },
     };
   }
+  mutatingRuns.add(runId);
+  await Promise.resolve();
 
-  if (run.state !== 'running') {
-    return {
-      ok: false,
-      error: {
-        code: 'INVALID_INPUT',
-        message: '只能暂停运行中的工作流',
-        recoverable: false,
-      },
+  try {
+    const run = workflowRuns.get(runId);
+
+    if (!run) {
+      return {
+        ok: false,
+        error: {
+          code: 'DIRECTORY_NOT_FOUND',
+          message: `运行实例不存在: ${runId}`,
+          recoverable: false,
+        },
+      } as const;
+    }
+
+    if (run.state !== 'running') {
+      return {
+        ok: false,
+        error: {
+          code: 'INVALID_INPUT',
+          message: '只能暂停运行中的工作流',
+          recoverable: false,
+        },
+      } as const;
+    }
+
+    const pausedRun: WorkflowRun = {
+      ...run,
+      state: 'paused',
     };
+
+    workflowRuns.set(runId, pausedRun);
+
+    return { ok: true, data: pausedRun };
+  } finally {
+    mutatingRuns.delete(runId);
   }
-
-  const pausedRun: WorkflowRun = {
-    ...run,
-    state: 'paused',
-  };
-
-  workflowRuns.set(runId, pausedRun);
-
-  return { ok: true, data: pausedRun };
 }
 
 /**
@@ -434,38 +468,56 @@ export async function pauseWorkflowRun(
 export async function resumeWorkflowRun(
   runId: string
 ): Promise<LocalResult<WorkflowRun>> {
-  const run = workflowRuns.get(runId);
-
-  if (!run) {
+  // 并发保护：同步检查并标记，await 让其他并发调用有机会检测到冲突
+  if (mutatingRuns.has(runId)) {
     return {
       ok: false,
       error: {
-        code: 'DIRECTORY_NOT_FOUND',
-        message: `运行实例不存在: ${runId}`,
-        recoverable: false,
+        code: 'STATE_CONFLICT',
+        message: '操作冲突：该运行正在进行其他状态变更',
+        recoverable: true,
       },
     };
   }
+  mutatingRuns.add(runId);
+  await Promise.resolve();
 
-  if (run.state !== 'paused') {
-    return {
-      ok: false,
-      error: {
-        code: 'INVALID_INPUT',
-        message: '只能恢复暂停的工作流',
-        recoverable: false,
-      },
+  try {
+    const run = workflowRuns.get(runId);
+
+    if (!run) {
+      return {
+        ok: false,
+        error: {
+          code: 'DIRECTORY_NOT_FOUND',
+          message: `运行实例不存在: ${runId}`,
+          recoverable: false,
+        },
+      } as const;
+    }
+
+    if (run.state !== 'paused') {
+      return {
+        ok: false,
+        error: {
+          code: 'INVALID_INPUT',
+          message: '只能恢复暂停的工作流',
+          recoverable: false,
+        },
+      } as const;
+    }
+
+    const resumedRun: WorkflowRun = {
+      ...run,
+      state: 'running',
     };
+
+    workflowRuns.set(runId, resumedRun);
+
+    return { ok: true, data: resumedRun };
+  } finally {
+    mutatingRuns.delete(runId);
   }
-
-  const resumedRun: WorkflowRun = {
-    ...run,
-    state: 'running',
-  };
-
-  workflowRuns.set(runId, resumedRun);
-
-  return { ok: true, data: resumedRun };
 }
 
 /**
@@ -475,44 +527,62 @@ export async function cancelWorkflowRun(
   runId: string,
   reason?: string
 ): Promise<LocalResult<WorkflowRun>> {
-  const run = workflowRuns.get(runId);
-
-  if (!run) {
+  // 并发保护：同步检查并标记，await 让其他并发调用有机会检测到冲突
+  if (mutatingRuns.has(runId)) {
     return {
       ok: false,
       error: {
-        code: 'DIRECTORY_NOT_FOUND',
-        message: `运行实例不存在: ${runId}`,
-        recoverable: false,
+        code: 'STATE_CONFLICT',
+        message: '操作冲突：该运行正在进行其他状态变更',
+        recoverable: true,
       },
     };
   }
+  mutatingRuns.add(runId);
+  await Promise.resolve();
 
-  if (run.state === 'completed' || run.state === 'failed' || run.state === 'cancelled') {
+  try {
+    const run = workflowRuns.get(runId);
+
+    if (!run) {
+      return {
+        ok: false,
+        error: {
+          code: 'DIRECTORY_NOT_FOUND',
+          message: `运行实例不存在: ${runId}`,
+          recoverable: false,
+        },
+      } as const;
+    }
+
+    if (run.state === 'completed' || run.state === 'failed' || run.state === 'cancelled') {
+      return {
+        ok: false,
+        error: {
+          code: 'INVALID_INPUT',
+          message: '已完成/失败/取消的工作流不能再取消',
+          recoverable: false,
+        },
+      } as const;
+    }
+
+    const cancelledRun: WorkflowRun = {
+      ...run,
+      state: 'cancelled',
+      completedAt: new Date().toISOString(),
+      error: reason || '用户取消',
+    };
+
+    workflowRuns.set(runId, cancelledRun);
+
     return {
-      ok: false,
-      error: {
-        code: 'INVALID_INPUT',
-        message: '已完成/失败/取消的工作流不能再取消',
-        recoverable: false,
-      },
+      ok: true,
+      data: cancelledRun,
+      diagnostics: [`取消原因: ${reason || '用户取消'}`],
     };
+  } finally {
+    mutatingRuns.delete(runId);
   }
-
-  const cancelledRun: WorkflowRun = {
-    ...run,
-    state: 'cancelled',
-    completedAt: new Date().toISOString(),
-    error: reason || '用户取消',
-  };
-
-  workflowRuns.set(runId, cancelledRun);
-
-  return {
-    ok: true,
-    data: cancelledRun,
-    diagnostics: [`取消原因: ${reason || '用户取消'}`],
-  };
 }
 
 /**
