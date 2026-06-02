@@ -66,7 +66,10 @@ function taskStatusToStepStatus(
 
 export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHomeProps) {
   const project = data.projects.find((item) => item.id === activeProjectId) ?? data.projects[0];
-  const template = data.workflowTemplates[0];
+  const template = useMemo(
+    () => project?.workflowTemplateId ? data.workflowTemplates.find((t) => t.id === project.workflowTemplateId) ?? null : null,
+    [data.workflowTemplates, project?.workflowTemplateId],
+  );
 
   // --- 构建 tab 列表：每个流程步骤对应一个 tab ---
   const tabs: FlowTab[] = useMemo(() => {
