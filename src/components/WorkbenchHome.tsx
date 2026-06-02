@@ -76,14 +76,23 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
     if (!template) return [];
     return template.steps.map((step) => {
       const role = data.roles.find((item) => item.id === step.roleId);
+      // 从 step.runnerId 查找真实的 Runner 配置
+      const runner = step.runnerId
+        ? data.runnerProfiles.find((r) => r.id === step.runnerId)
+        : null;
+      // 如果步骤没指定 runner，用全局默认 runner
+      const defaultRunner = data.defaultRunner
+        ? data.runnerProfiles.find((r) => r.id === data.defaultRunner)
+        : null;
+      const resolvedRunner = runner ?? defaultRunner;
       return {
         id: `tab-${step.id}`,
         stepId: step.id,
         label: role?.name ?? step.name,
-        runnerLabel: "Claude Code",
+        runnerLabel: resolvedRunner?.displayName ?? resolvedRunner?.kind ?? "未配置",
       };
     });
-  }, [template, data.roles]);
+  }, [template, data.roles, data.runnerProfiles, data.defaultRunner]);
 
   const [activeTabId, setActiveTabId] = useState(tabs[0]?.id ?? "");
   const activeTab = tabs.find((item) => item.id === activeTabId);
@@ -273,6 +282,10 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
   const projectMemories = data.memories.filter((memory) => memory.scope === "project");
   const activeStep = flowSteps.find((step) => `tab-${step.id}` === activeTabId);
   const activeRole = activeStep ? data.roles.find((role) => role.id === activeStep.roleId) : null;
+  // 当前角色的记忆列表
+  const roleMemories = activeRole
+    ? data.memories.filter((m) => m.kind === "role" || m.roleId === activeRole.id)
+    : [];
   const popoverPositionStyle = popoverAnchor
     ? { left: popoverAnchor.left, top: popoverAnchor.bottom + 8, right: "auto", bottom: "auto", display: "block" }
     : undefined;
@@ -339,15 +352,88 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
 
   const renderToolPopover = () => {
     if (!popover || ["project-select", "branch-select", "worktree-select", "phase-select", "top-more"].includes(popover)) return null;
+
+    // --- 从真实数据构建 popover 内容 ---
+    const stepRunner = activeStep?.runnerId
+      ? data.runnerProfiles.find((r) => r.id === activeStep.runnerId)
+      : null;
+    const defaultRunner = data.defaultRunner
+      ? data.runnerProfiles.find((r) => r.id === data.defaultRunner)
+      : null;
+    const resolvedRunner = stepRunner ?? defaultRunner;
+
+    // 当前步骤绑定的 MCP
+    const stepMcps = activeStep
+      ? data.mcpServers.filter(
+          (m) => m.usedByWorkflowStepIds.includes(activeStep.id) || (activeRole && m.usedByRoleIds.includes(activeRole.id)),
+        )
+      : [];
+
+    // 当前角色推荐的 Skills
+    const roleSkills = activeRole
+      ? data.skills.filter((s) => s.recommendedRoleIds.includes(activeRole.id))
+      : [];
+
+    // Git 状态
+    const gitStatus = data.gitStatuses.find((gs) => gs.projectId === project.id);
+    const recentTaskCount = data.tasks.filter((t) => t.projectId === project.id && t.status !== "done").length;
+
     const config: Record<string, { title: string; lines: string[] }> = {
-      context: { title: "步骤上下文", lines: [`当前步骤：${activeTab?.label ?? "-"}`, `Runner：${activeTab?.runnerLabel ?? "-"}`, "最近修改：2 个文件", "待办事项：4 项"] },
-      prompt: { title: "项目提示词", lines: ["目标：保持项目可运行、流程可闭环。", "约束：优先复用现有组件和交互。"] },
-      memory: { title: "角色记忆", lines: ["产品经理：确认验收标准。", "前端工程师：注意工作台右栏布局。"] },
-      mcp: { title: "MCP", lines: ["Browser：已启用", "Local Shell：已启用"] },
-      skills: { title: "Skills", lines: ["ui-ux-pro-max：已启用", "code-simplifier：可选"] },
-      git: { title: "Git", lines: [`当前分支：${project.defaultBranch ?? "main"}`, "状态：已保存"] },
-      shell: { title: "Local Shell", lines: ["PowerShell", "CMD"] },
-      snapshot: { title: "快照", lines: ["创建当前工作区快照。"] },
+      context: {
+        title: "步骤上下文",
+        lines: [
+          `当前步骤：${activeTab?.label ?? "-"}`,
+          `Runner：${resolvedRunner?.displayName ?? resolvedRunner?.kind ?? "未配置"}`,
+          `模型：${activeStep?.modelName ?? "未配置"}`,
+          `待办事项：${recentTaskCount} 项`,
+        ],
+      },
+      prompt: {
+        title: "项目提示词",
+        lines: activeStep?.stepMarkdown
+          ? activeStep.stepMarkdown.split("\n").slice(0, 4)
+          : activeRole?.roleMarkdown
+            ? [`角色：${activeRole.name}`, activeRole.description]
+            : ["未配置步骤提示词"],
+      },
+      memory: {
+        title: "角色记忆",
+        lines: roleMemories.length > 0
+          ? roleMemories.slice(0, 4).map((m) => `${m.title}`)
+          : [activeRole ? `${activeRole.name}：暂无角色记忆` : "未选择角色"],
+      },
+      mcp: {
+        title: "MCP",
+        lines: stepMcps.length > 0
+          ? stepMcps.map((m) => `${m.name}：${m.status === "enabled" ? "已启用" : m.status === "disabled" ? "已禁用" : m.status}`)
+          : ["当前步骤未绑定 MCP"],
+      },
+      skills: {
+        title: "Skills",
+        lines: roleSkills.length > 0
+          ? roleSkills.map((s) => `${s.name}：${s.status === "enabled" ? "已启用" : s.status === "disabled" ? "已禁用" : s.status}`)
+          : ["当前角色未推荐 Skills"],
+      },
+      git: {
+        title: "Git",
+        lines: gitStatus
+          ? [
+              `分支：${gitStatus.branch}${gitStatus.ahead > 0 ? ` (ahead ${gitStatus.ahead})` : ""}${gitStatus.behind > 0 ? ` (behind ${gitStatus.behind})` : ""}`,
+              `变更文件：${gitStatus.changedFiles + gitStatus.untracked}`,
+              `最新提交：${gitStatus.lastCommitSha?.slice(0, 7) ?? "-"} ${gitStatus.lastCommitMessage ?? ""}`,
+            ]
+          : [`当前分支：${project.defaultBranch ?? "main"}`, "仓库状态未获取"],
+      },
+      shell: {
+        title: "Local Shell",
+        lines: resolvedRunner
+          ? [`${resolvedRunner.displayName}`, resolvedRunner.command, ...(resolvedRunner.defaultArgs?.map((a) => `  参数：${a}`) ?? [])]
+          : ["未配置 Runner"],
+      },
+      snapshot: {
+        title: "快照",
+        lines: [`项目：${project.name}`, `分支：${project.defaultBranch ?? "main"}`, "点击创建当前工作区快照"],
+      },
     };
     const item = config[popover];
     if (!item) return null;
@@ -443,6 +529,13 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
               const status = task
                 ? taskStatusToStepStatus(task.status)
                 : { cls: "idle", label: "待开始" };
+              // 从 step 配置组装模型显示名
+              const provider = step.modelProviderId
+                ? data.modelProviders.find((p) => p.id === step.modelProviderId)
+                : null;
+              const modelDisplay = step.modelName
+                ? (provider ? `${provider.name} / ${step.modelName}` : step.modelName)
+                : "未配置模型";
               return (
                 <button
                   key={step.id}
@@ -455,9 +548,9 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
                     <strong>{step.name}</strong>
                   </div>
                   <p>{role?.name ?? "未绑定"} Agent</p>
-                  <div className="wb-flow-model">{step.modelName || "DeepSeek / deepseek-v4-pro"}</div>
+                  <div className="wb-flow-model">{modelDisplay}</div>
                   <div className="wb-flow-footer">
-                    <span>{tabs.find((t) => t.stepId === step.id)?.runnerLabel ?? "Claude Code"}</span>
+                    <span>{tabs.find((t) => t.stepId === step.id)?.runnerLabel ?? "未配置"}</span>
                     <b className={`wb-step-state ${status.cls}`}>{status.label}</b>
                   </div>
                 </button>
@@ -607,9 +700,20 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
                 <div className="wb-box-title">
                   <span>当前角色记忆摘要</span>
                 </div>
-                <p style={{ color: "var(--text-secondary)", fontSize: 12, lineHeight: 1.5 }}>
-                  {activeRole?.name ?? "产品经理"}：角色约束已同步，继续关注验收标准、风险确认和执行反馈。
-                </p>
+                {roleMemories.length > 0 ? (
+                  <div className="wb-box-list">
+                    {roleMemories.slice(0, 3).map((m) => (
+                      <div key={m.id} className="wb-memory-row">
+                        <Brain className="wb-row-icon" />
+                        <span>{m.title}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p style={{ color: "var(--text-secondary)", fontSize: 12, lineHeight: 1.5 }}>
+                    {activeRole ? `${activeRole.name}：暂无角色记忆` : "未选择角色"}
+                  </p>
+                )}
               </div>
 
               <div className="wb-panel-box">
