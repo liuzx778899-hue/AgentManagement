@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Brain,
   Camera,
@@ -114,6 +114,37 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
 
   // --- 最近文件列表状态 ---
   const [recentFiles, setRecentFiles] = useState<string[]>([]);
+
+  // --- 流程运行带拖拽滚动 ---
+  const flowScrollRef = useRef<HTMLDivElement | null>(null);
+  const dragState = useRef<{ isDragging: boolean; startX: number; scrollLeft: number }>({
+    isDragging: false,
+    startX: 0,
+    scrollLeft: 0,
+  });
+  const handleFlowMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const el = flowScrollRef.current;
+    if (!el) return;
+    dragState.current = { isDragging: true, startX: e.pageX - el.offsetLeft, scrollLeft: el.scrollLeft };
+    el.style.cursor = "grabbing";
+    el.style.userSelect = "none";
+  }, []);
+  const handleFlowMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const ds = dragState.current;
+    const el = flowScrollRef.current;
+    if (!ds.isDragging || !el) return;
+    e.preventDefault();
+    const x = e.pageX - el.offsetLeft;
+    el.scrollLeft = ds.scrollLeft - (x - ds.startX);
+  }, []);
+  const handleFlowMouseUp = useCallback(() => {
+    const el = flowScrollRef.current;
+    if (el) {
+      el.style.cursor = "";
+      el.style.userSelect = "";
+    }
+    dragState.current.isDragging = false;
+  }, []);
 
   // 同步 tab id（当 tabs 变化时）
   useEffect(() => {
@@ -527,7 +558,14 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
           <div className="wb-flow-title">
             角色流程运行带 <span>{flowSteps.length} 个角色 · {activeStep ? `${String(activeStep.order).padStart(2, "0")} ${activeRole?.name ?? activeStep.name}` : "未选择"} 运行中</span>
           </div>
-          <div className="wb-flow-scroll">
+          <div
+            ref={flowScrollRef}
+            className="wb-flow-scroll"
+            onMouseDown={handleFlowMouseDown}
+            onMouseMove={handleFlowMouseMove}
+            onMouseUp={handleFlowMouseUp}
+            onMouseLeave={handleFlowMouseUp}
+          >
             {flowSteps.map((step) => {
               const role = data.roles.find((item) => item.id === step.roleId);
               // 基于真实任务数据映射步骤状态
