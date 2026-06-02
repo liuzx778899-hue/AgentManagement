@@ -32,7 +32,10 @@ export type LocalErrorCode =
   | 'NETWORK_ERROR'
   | 'PARSE_ERROR'
   | 'API_ERROR'
-  | 'UNKNOWN';
+  | 'UNKNOWN'
+  | 'BATCH_SAVE_FAILED'
+  | 'WORKFLOW_NOT_FOUND'
+  | 'TASK_NOT_FOUND';
 
 /**
  * 命令执行配置

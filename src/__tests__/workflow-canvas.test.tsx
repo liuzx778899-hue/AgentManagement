@@ -11,7 +11,7 @@ function mockProvider(overrides?: Partial<{ updateWorkflowStep: () => void }>) {
     data: workbenchData,
     updateGateStatus: () => {},
     reassignAgentRun: () => {},
-    addMemory: () => {},
+    addMemory: async () => {},
     updateMemory: () => {},
     deleteMemory: () => {},
     createTask: () => {},
@@ -39,6 +39,8 @@ function mockProvider(overrides?: Partial<{ updateWorkflowStep: () => void }>) {
     deleteWorkflowTemplate: () => {},
     updateRunner: () => {},
     setDefaultRunner: () => {},
+    updateSettings: () => {},
+    setTasks: () => {},
     ...overrides,
   };
   function Wrapper({ children }: { children: ReactNode }) {
@@ -55,7 +57,7 @@ describe("Workflow Canvas V2", () => {
     // V2: The mock template cards use static data with the name "软件开发完整流程"
     const templateNames = screen.getAllByText("软件开发完整流程");
     expect(templateNames.length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText("项目角色池")).toBeInTheDocument();
+    expect(screen.getByText("流程角色")).toBeInTheDocument();
   });
 
   it("renders template count and status badges", () => {

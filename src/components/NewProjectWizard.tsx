@@ -5,6 +5,7 @@ import type { AgentRole } from "../domain/role";
 import { useWorkbenchState } from "../App";
 import { useLocalServices } from "../hooks/useLocalServices";
 import type { CreateProjectInput } from "../services/api/projectApi";
+import { taskApi } from "../services/api";
 
 interface NewProjectWizardProps {
   data: WorkbenchData;
@@ -52,7 +53,7 @@ const categoryConfig: Record<TemplateCategory, { label: string; icon: React.Reac
 };
 
 export function NewProjectWizard({ data }: NewProjectWizardProps) {
-  const { addProject } = useWorkbenchState();
+  const { addProject, setTasks } = useWorkbenchState();
   const services = useLocalServices();
   const [step, setStep] = useState<WizardStep>("info");
   const [wizardState, setWizardState] = useState<WizardState>("empty");
@@ -177,7 +178,9 @@ export function NewProjectWizard({ data }: NewProjectWizardProps) {
   };
 
   const handleCreate = async () => {
-    if (!projectInfo.name || !projectInfo.repoPath) return;
+    const trimmedName = projectInfo.name.trim();
+    const trimmedPath = projectInfo.repoPath.trim();
+    if (!trimmedName || !trimmedPath) return;
 
     // Validation
     setWizardState("validation");
@@ -192,8 +195,8 @@ export function NewProjectWizard({ data }: NewProjectWizardProps) {
     setError(null);
 
     const input: CreateProjectInput = {
-      name: projectInfo.name,
-      repoPath: projectInfo.repoPath,
+      name: trimmedName,
+      repoPath: trimmedPath,
       defaultBranch: projectInfo.defaultBranch,
       worktreeRoot: projectInfo.worktreeRoot,
       workflowTemplateId: selectedWorkflowId,
@@ -219,6 +222,25 @@ export function NewProjectWizard({ data }: NewProjectWizardProps) {
           workflowTemplateId: result.data.workflowTemplateId,
           roleOverrides: result.data.roleOverrides,
         });
+
+        // Create initial tasks from workflow template
+        if (selectedWorkflowId) {
+          try {
+            const tasksResult = await taskApi.createFromWorkflow({
+              projectId: result.data.id,
+              workflowTemplateId: selectedWorkflowId,
+            });
+            if (tasksResult.ok && tasksResult.data) {
+              console.log(`[NewProjectWizard] Created ${tasksResult.data.length} initial tasks`);
+              // Sync created tasks to reducer state so ProjectDetailPage can find them
+              setTasks([...data.tasks, ...tasksResult.data]);
+            }
+          } catch (taskError) {
+            console.error('[NewProjectWizard] Failed to create initial tasks:', taskError);
+            // Don't fail the whole project creation if task creation fails
+          }
+        }
+
         setCreating(false);
         setCreated(true);
         setWizardState("success");

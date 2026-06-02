@@ -11,7 +11,7 @@ function mockProvider(overrides?: Record<string, unknown>) {
     data: workbenchData,
     updateGateStatus: () => {},
     reassignAgentRun: () => {},
-    addMemory: () => {},
+    addMemory: async () => {},
     updateMemory: () => {},
     deleteMemory: () => {},
     createTask: () => {},
@@ -39,6 +39,8 @@ function mockProvider(overrides?: Record<string, unknown>) {
     deleteWorkflowTemplate: () => {},
     updateRunner: () => {},
     setDefaultRunner: () => {},
+    updateSettings: () => {},
+    setTasks: () => {},
     ...overrides,
   };
   function Wrapper({ children }: { children: ReactNode }) {

@@ -97,7 +97,7 @@ describe('Memory API', () => {
 
       expect(mockApiCall).toHaveBeenCalledWith(
         'GET',
-        '/memory/search?keyword=test'
+        '/memory/search?q=test'
       );
       expect(result).toEqual({ ok: true, data: [mockMemory] });
     });
@@ -109,7 +109,7 @@ describe('Memory API', () => {
 
       expect(mockApiCall).toHaveBeenCalledWith(
         'GET',
-        '/memory/search?keyword=test&projectId=proj-1'
+        '/memory/search?q=test&projectId=proj-1'
       );
     });
 
@@ -120,7 +120,7 @@ describe('Memory API', () => {
 
       expect(mockApiCall).toHaveBeenCalledWith(
         'GET',
-        '/memory/search?keyword=test%20query%20with%20spaces'
+        '/memory/search?q=test+query+with+spaces'
       );
     });
   });

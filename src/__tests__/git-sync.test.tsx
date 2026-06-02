@@ -38,6 +38,8 @@ const createMockState = () => ({
   deleteWorkflowTemplate: vi.fn(),
   updateRunner: vi.fn(),
   setDefaultRunner: vi.fn(),
+  updateSettings: vi.fn(),
+  setTasks: vi.fn(),
 });
 
 const wrapper = (mockState: ReturnType<typeof createMockState>) => ({

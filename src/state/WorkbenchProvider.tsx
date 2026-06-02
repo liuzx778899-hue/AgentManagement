@@ -49,12 +49,13 @@ import {
   updateWorkflowTemplate as updateWorkflowTemplateAction,
   deleteWorkflowTemplate as deleteWorkflowTemplateAction,
   updateRunner as updateRunnerAction,
+  updateSettings as updateSettingsAction,
   setDefaultRunner as setDefaultRunnerAction,
   setProjects as setProjectsAction,
   setMemories as setMemoriesAction,
 } from "./workbenchActions";
-import { projectApi, memoryApi, settingsApi, checkServerAvailable, workflowApi, rolesApi, capabilitiesApi } from "../services/api";
-import { setModelProviders as setModelProvidersAction, setWorkflowTemplates as setWorkflowTemplatesAction, setRoles as setRolesAction, setCapabilities as setCapabilitiesAction } from "./workbenchActions";
+import { projectApi, memoryApi, settingsApi, checkServerAvailable, workflowApi, rolesApi, capabilitiesApi, taskApi } from "../services/api";
+import { setModelProviders as setModelProvidersAction, setWorkflowTemplates as setWorkflowTemplatesAction, setRoles as setRolesAction, setCapabilities as setCapabilitiesAction, setTasks as setTasksAction, setSettings as setSettingsAction } from "./workbenchActions";
 
 // Default runner profiles - commonly used CLI tools
 const defaultRunnerProfiles: RunnerProfile[] = [
@@ -126,13 +127,23 @@ const emptyData: WorkbenchData = {
   gitBranches: [],
   runnerProfiles: defaultRunnerProfiles,
   defaultRunner: "runner-claude-code",
+  settings: {
+    theme: 'system',
+    language: 'zh-CN',
+    notifications: true,
+    autoSave: true,
+    editorFontSize: 14,
+    editorFontFamily: 'monospace',
+    runner: { defaultTimeout: 300000, autoRestart: false },
+    git: { autoFetch: true, fetchInterval: 60000 },
+  },
 };
 
 // State Context
 interface WorkbenchState {
   data: WorkbenchData;
   updateGateStatus: (gateId: string, status: GateStatus) => void;
-  addMemory: (memory: Omit<MemoryItem, "id" | "createdAt" | "updatedAt">) => void;
+  addMemory: (memory: Omit<MemoryItem, "id" | "createdAt" | "updatedAt">) => Promise<void>;
   updateMemory: (memoryId: string, updates: Partial<Pick<MemoryItem, "title" | "body">>) => void;
   deleteMemory: (memoryId: string) => void;
   createTask: (task: Omit<WorkbenchData["tasks"][0], "id" | "createdAt" | "updatedAt">) => void;
@@ -165,6 +176,8 @@ interface WorkbenchState {
   updateRunner: (runnerId: string, updates: Partial<RunnerProfile>) => void;
   setDefaultRunner: (runnerId: string | undefined) => void;
   addRolesBatch?: (roles: Array<Omit<AgentRole, "id"> & { id?: string }>) => Promise<AgentRole[]>;
+  updateSettings: (updates: Partial<import("../types/settings").AppSettings>) => void;
+  setTasks: (tasks: WorkbenchData["tasks"]) => void;
 }
 
 export const WorkbenchContext = createContext<WorkbenchState | null>(null);
@@ -211,7 +224,7 @@ export function WorkbenchProvider({ children }: WorkbenchProviderProps) {
 
       try {
         // 并行加载所有数据
-        const [projectsResult, memoriesResult, settingsResult, modelProvidersResult, workflowTemplatesResult, rolesResult, capabilitiesResult] = await Promise.all([
+        const [projectsResult, memoriesResult, settingsResult, modelProvidersResult, workflowTemplatesResult, rolesResult, capabilitiesResult, tasksResult] = await Promise.all([
           projectApi.list(),
           memoryApi.list(),
           settingsApi.get(),
@@ -219,6 +232,7 @@ export function WorkbenchProvider({ children }: WorkbenchProviderProps) {
           workflowApi.listTemplates(),
           rolesApi.list(),
           capabilitiesApi.getAll(),
+          taskApi.list(),
         ]);
 
         if (!isMounted.current) return;
@@ -247,9 +261,9 @@ export function WorkbenchProvider({ children }: WorkbenchProviderProps) {
           dispatch(setMemoriesAction(memoryItems));
         }
 
-        // 更新设置（如果有设置相关的 action）
+        // 更新设置
         if (settingsResult.ok && settingsResult.data) {
-          // TODO: 添加设置相关的 action
+          dispatch(setSettingsAction(settingsResult.data));
         }
 
         // 更新模型配置
@@ -275,6 +289,11 @@ export function WorkbenchProvider({ children }: WorkbenchProviderProps) {
           dispatch(setCapabilitiesAction(capabilitiesResult.data));
         }
 
+        // 更新任务列表
+        if (tasksResult.ok && tasksResult.data) {
+          dispatch(setTasksAction(tasksResult.data));
+        }
+
         console.log('[WorkbenchProvider] Loaded data from API:', {
           projects: projectsResult.ok ? projectsResult.data?.length : 'failed',
           memories: memoriesResult.ok ? memoriesResult.data?.length : 'failed',
@@ -282,6 +301,7 @@ export function WorkbenchProvider({ children }: WorkbenchProviderProps) {
           workflowTemplates: workflowTemplatesResult.ok ? workflowTemplatesResult.data?.length : 'failed',
           roles: rolesResult.ok ? rolesResult.data?.length : 'failed',
           capabilities: capabilitiesResult.ok ? 'loaded' : 'failed',
+          tasks: tasksResult.ok ? tasksResult.data?.length : 'failed',
         });
       } catch (error) {
         console.error('[WorkbenchProvider] Failed to load data from API:', error);
@@ -307,15 +327,57 @@ export function WorkbenchProvider({ children }: WorkbenchProviderProps) {
     dispatch(reassignAgentRunAction(runId, newRoleId));
   }, []);
 
-  const addMemory = useCallback((memory: Omit<MemoryItem, "id" | "createdAt" | "updatedAt">) => {
-    dispatch(addMemoryAction(memory));
+  const addMemory = useCallback(async (memory: Omit<MemoryItem, "id" | "createdAt" | "updatedAt">) => {
+    // Persist to server first
+    const result = await memoryApi.create({
+      kind: memory.kind,
+      scope: memory.scope,
+      projectId: memory.projectId,
+      roleId: memory.roleId,
+      taskId: memory.taskId,
+      title: memory.title,
+      body: memory.body,
+    });
+    if (result.ok && result.data) {
+      // Use server-returned data (with id, createdAt, updatedAt)
+      const savedItem: MemoryItem = {
+        id: result.data.id,
+        kind: result.data.kind || memory.kind,
+        scope: result.data.scope || memory.scope,
+        projectId: result.data.projectId || memory.projectId,
+        roleId: result.data.roleId ?? memory.roleId,
+        taskId: result.data.taskId ?? memory.taskId,
+        title: result.data.title,
+        body: result.data.body || result.data.content || memory.body,
+        citation: result.data.citation || [],
+        createdAt: result.data.createdAt,
+        updatedAt: result.data.updatedAt,
+      };
+      dispatch(addMemoryAction(savedItem));
+    } else {
+      console.error('[WorkbenchProvider] Failed to save memory:', result.error);
+      // Fallback: update local state even if API fails (offline support)
+      dispatch(addMemoryAction(memory));
+    }
   }, []);
 
-  const updateMemory = useCallback((memoryId: string, updates: Partial<Pick<MemoryItem, "title" | "body">>) => {
+  const updateMemory = useCallback(async (memoryId: string, updates: Partial<Pick<MemoryItem, "title" | "body">>) => {
+    // Persist to server
+    const result = await memoryApi.update(memoryId, updates);
+    if (!result.ok) {
+      console.error('[WorkbenchProvider] Failed to update memory on server:', result.error);
+    }
+    // Update local state regardless (optimistic)
     dispatch(updateMemoryAction(memoryId, updates));
   }, []);
 
-  const deleteMemory = useCallback((memoryId: string) => {
+  const deleteMemory = useCallback(async (memoryId: string) => {
+    // Persist to server
+    const result = await memoryApi.delete(memoryId);
+    if (!result.ok) {
+      console.error('[WorkbenchProvider] Failed to delete memory from server:', result.error);
+    }
+    // Update local state regardless (optimistic)
     dispatch(deleteMemoryAction(memoryId));
   }, []);
 
@@ -470,6 +532,14 @@ export function WorkbenchProvider({ children }: WorkbenchProviderProps) {
     dispatch(setDefaultRunnerAction(runnerId));
   }, []);
 
+  const updateSettings = useCallback((updates: Partial<import("../types/settings").AppSettings>) => {
+    dispatch(updateSettingsAction(updates));
+  }, []);
+
+  const setTasks = useCallback((tasks: WorkbenchData["tasks"]) => {
+    dispatch(setTasksAction(tasks));
+  }, []);
+
   const state = useMemo(
     () => ({
       data,
@@ -507,6 +577,8 @@ export function WorkbenchProvider({ children }: WorkbenchProviderProps) {
       updateRunner,
       setDefaultRunner,
       addRolesBatch,
+      updateSettings,
+      setTasks,
     }),
     [
       data,
@@ -544,6 +616,8 @@ export function WorkbenchProvider({ children }: WorkbenchProviderProps) {
       updateRunner,
       setDefaultRunner,
       addRolesBatch,
+      updateSettings,
+      setTasks,
     ]
   );
 

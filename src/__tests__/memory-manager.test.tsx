@@ -8,7 +8,7 @@ import { WorkbenchContext } from "../App";
 const mockState = {
   data: workbenchData,
   updateGateStatus: () => {},
-  addMemory: () => {},
+  addMemory: async () => {},
   updateMemory: () => {},
   deleteMemory: () => {},
   createTask: () => {},
@@ -37,6 +37,8 @@ const mockState = {
   deleteWorkflowTemplate: () => {},
   updateRunner: () => {},
   setDefaultRunner: () => {},
+  updateSettings: () => {},
+  setTasks: () => {},
 };
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (

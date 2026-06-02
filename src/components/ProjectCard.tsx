@@ -359,7 +359,7 @@ export function ProjectCard({ project, data, onClick, onGateClick, onDelete, onE
               <button className="pm-v2-btn" onClick={() => { setShowDeleteConfirm(false); setDeleteInput(""); setDeleteError(null); }} type="button">取消</button>
               <button
                 className="pm-v2-btn pm-v2-btn-danger"
-                disabled={deleteInput !== project.name || deleting}
+                disabled={deleteInput.trim() !== project.name.trim() || deleting}
                 onClick={handleDelete}
                 type="button"
               >

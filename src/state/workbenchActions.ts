@@ -19,6 +19,7 @@ import type {
 } from "../domain/workbench";
 import type { RunnerProfile } from "../domain/runner";
 import type { Memory } from "../domain/memory";
+import type { AppSettings } from "../types/settings";
 
 // Action Types
 export type WorkbenchAction =
@@ -63,6 +64,9 @@ export type WorkbenchAction =
   | { type: "SET_WORKFLOW_TEMPLATES"; payload: WorkflowTemplate[] }
   | { type: "SET_ROLES"; payload: AgentRole[] }
   | { type: "SET_CAPABILITIES"; payload: { mcpServers: McpServerCapability[]; skills: SkillCapability[]; plugins: PluginCapability[]; agents: AgentCapability[] } }
+  | { type: "SET_TASKS"; payload: Task[] }
+  | { type: "SET_SETTINGS"; payload: AppSettings }
+  | { type: "UPDATE_SETTINGS"; payload: Partial<AppSettings> }
 
 // Action Creators
 export function updateGateStatus(gateId: string, status: GateStatus): WorkbenchAction {
@@ -234,4 +238,16 @@ export function setCapabilities(payload: {
   agents: AgentCapability[];
 }): WorkbenchAction {
   return { type: "SET_CAPABILITIES", payload };
+}
+
+export function setTasks(tasks: Task[]): WorkbenchAction {
+  return { type: "SET_TASKS", payload: tasks };
+}
+
+export function setSettings(settings: AppSettings): WorkbenchAction {
+  return { type: "SET_SETTINGS", payload: settings };
+}
+
+export function updateSettings(updates: Partial<AppSettings>): WorkbenchAction {
+  return { type: "UPDATE_SETTINGS", payload: updates };
 }

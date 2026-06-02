@@ -31,6 +31,7 @@ export function Settings({ data }: SettingsProps) {
     setDefaultProviderModel,
     updateRunner,
     setDefaultRunner,
+    updateSettings,
   } = useWorkbenchState();
   const services = useLocalServices();
   const [activeTab, setActiveTab] = useState<SettingsTab>("user");
@@ -82,22 +83,7 @@ export function Settings({ data }: SettingsProps) {
       }
 
       // 保存一般设置
-      const settingsResult = await services.saveSettings({
-        theme: 'system',
-        language: 'zh-CN',
-        notifications: true,
-        autoSave: true,
-        editorFontSize: 14,
-        editorFontFamily: 'monospace',
-        runner: {
-          defaultTimeout: 300000,
-          autoRestart: false,
-        },
-        git: {
-          autoFetch: true,
-          fetchInterval: 60000,
-        },
-      });
+      const settingsResult = await services.saveSettings(data.settings);
 
       // 保存模型配置
       const modelProvidersResult = await services.saveModelProviders({
@@ -160,7 +146,12 @@ export function Settings({ data }: SettingsProps) {
         </nav>
 
         <div className="settings-content">
-          {activeTab === "user" && <UserPanel />}
+          {activeTab === "user" && (
+            <UserPanel
+              settings={data.settings}
+              onUpdate={updateSettings}
+            />
+          )}
 
           {activeTab === "project" && (
             <ProjectPanel

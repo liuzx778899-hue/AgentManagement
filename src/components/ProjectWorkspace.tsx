@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import {
   ArrowLeft,
   ChevronDown,
@@ -29,6 +29,7 @@ import { PwProjectMdPanel } from "./PwProjectMdPanel";
 import { PwRunnerPanel } from "./PwRunnerPanel";
 import { PwWorkflowControl } from "./PwWorkflowControl";
 import type { RunnerProfile } from "../domain/runner";
+import { gitApi } from "../services/api";
 
 interface ProjectWorkspaceProps {
   data: WorkbenchData;
@@ -321,10 +322,42 @@ ${project.settings.riskSummary || "尚未评估"}`;
     );
   }, [data.ciPipelines, project?.remoteRepo]);
 
-  // Find git status for current project
-  const gitStatus = useMemo(() => {
+  // Find git status for current project - first check data from provider, then local API state
+  const [localGitStatus, setLocalGitStatus] = useState<import("../domain/git").GitStatus | null>(null);
+  const gitStatusFromProvider = useMemo(() => {
     return data.gitStatuses.find((s) => s.projectId === projectId);
   }, [data.gitStatuses, projectId]);
+  const gitStatus = gitStatusFromProvider ?? localGitStatus;
+
+  // Load git status from API when project is available
+  useEffect(() => {
+    if (!project?.repoPath) return;
+
+    let cancelled = false;
+    gitApi.getStatus(project.repoPath).then((result) => {
+      if (cancelled) return;
+      if (result.ok && result.data) {
+        const apiStatus = result.data;
+        // Map API response to domain GitStatus format
+        setLocalGitStatus({
+          projectId: projectId,
+          branch: apiStatus.branch,
+          ahead: apiStatus.ahead,
+          behind: apiStatus.behind,
+          changedFiles: apiStatus.staged + apiStatus.unstaged,
+          untracked: apiStatus.untracked,
+          lastCommitSha: apiStatus.lastCommitSha ?? "",
+          lastCommitMessage: apiStatus.lastCommitMessage ?? "",
+          lastCommitDate: apiStatus.lastCommitDate ?? "",
+        });
+        setLastSyncAt(apiStatus.fetchedAt);
+      }
+    }).catch(() => {
+      // API not available - status stays null
+    });
+
+    return () => { cancelled = true; };
+  }, [project?.repoPath, projectId]);
 
   // Filter branches for current project
   const projectBranches = useMemo(() => {
@@ -336,27 +369,45 @@ ${project.settings.riskSummary || "尚未评估"}`;
     return data.repoCommits.filter((c) => c.projectId === projectId);
   }, [data.repoCommits, projectId]);
 
-  // Git sync handler
-  const handleSync = () => {
-    if (!project?.remoteRepo?.syncEnabled) return;
+  // Git sync handler - uses real API
+  const handleSync = useCallback(() => {
+    if (!project?.repoPath) return;
     setSyncStatus("syncing");
-    // Simulated sync - in Phase 2 would call real Git API
-    setTimeout(() => {
+
+    gitApi.getStatus(project.repoPath).then((result) => {
       const now = new Date().toISOString();
-      setSyncStatus("success");
-      setLastSyncAt(now);
-      // Update project data via reducer
-      if (project?.remoteRepo) {
-        updateProject(projectId, {
-          remoteRepo: {
-            ...project.remoteRepo,
-            syncStatus: "success",
-            lastSyncAt: now,
-          },
+      if (result.ok && result.data) {
+        const apiStatus = result.data;
+        setSyncStatus("success");
+        setLastSyncAt(now);
+        setLocalGitStatus({
+          projectId: projectId,
+          branch: apiStatus.branch,
+          ahead: apiStatus.ahead,
+          behind: apiStatus.behind,
+          changedFiles: apiStatus.staged + apiStatus.unstaged,
+          untracked: apiStatus.untracked,
+          lastCommitSha: apiStatus.lastCommitSha ?? "",
+          lastCommitMessage: apiStatus.lastCommitMessage ?? "",
+          lastCommitDate: apiStatus.lastCommitDate ?? "",
         });
+        // Update project data via reducer
+        if (project?.remoteRepo) {
+          updateProject(projectId, {
+            remoteRepo: {
+              ...project.remoteRepo,
+              syncStatus: "success",
+              lastSyncAt: now,
+            },
+          });
+        }
+      } else {
+        setSyncStatus("failed");
       }
-    }, 1500);
-  };
+    }).catch(() => {
+      setSyncStatus("failed");
+    });
+  }, [project, projectId, updateProject]);
 
   // SVG ring progress - use module-level constants
   const ringOffset = RING_CIRCUMFERENCE - (progressPct / 100) * RING_CIRCUMFERENCE;
@@ -490,7 +541,7 @@ ${project.settings.riskSummary || "尚未评估"}`;
                   <span>CI</span>
                   {project?.remoteRepo && <span className="pw-badge-count">{projectCiPipelines.length}</span>}
                 </button>
-                {project?.remoteRepo?.syncEnabled && (
+                {project?.repoPath && project?.remoteRepo?.syncEnabled !== false && (
                   <>
                     <div className="pw-git-menu-divider" />
                     <button

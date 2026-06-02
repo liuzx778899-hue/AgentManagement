@@ -1,0 +1,18 @@
+{
+  "id": "task-mpvzxtfc-fjv11m",
+  "projectId": "c0a0b799-33de-4dd8-b884-9e5825115b2a",
+  "goal": "自动化构建与部署",
+  "acceptanceCriteria": [],
+  "workflowTemplateId": "workflow-1780222480567-0c8g4",
+  "roleAssignment": {
+    "ai-draft-step-7": "role-7"
+  },
+  "capabilityAuthorization": [],
+  "launchStrategy": "direct",
+  "status": "queued",
+  "activeRunId": null,
+  "createdAt": "2026-06-02T02:06:24.312Z",
+  "updatedAt": "2026-06-02T02:06:24.312Z",
+  "version": "1.0",
+  "persistedAt": "2026-06-02T02:06:24.333Z"
+}
