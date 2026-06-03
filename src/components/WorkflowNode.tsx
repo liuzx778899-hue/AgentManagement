@@ -1,6 +1,8 @@
 import { useMemo } from "react";
-import { GripVertical, ShieldAlert } from "lucide-react";
-import type { WorkflowStep, WorkbenchData, WorkflowTemplate } from "../domain/workbench";
+import { GripVertical, ShieldAlert, Users } from "lucide-react";
+import type { WorkflowStep, WorkbenchData, WorkflowTemplate, WorkflowAssignment } from "../domain/workbench";
+import type { WorkflowRole } from "../domain/workflow";
+import { getPrimaryAssignment } from "../domain/workflow";
 
 interface WorkflowNodeProps {
   step: WorkflowStep;
@@ -8,6 +10,7 @@ interface WorkflowNodeProps {
   onDoubleClick: () => void;
   data: WorkbenchData;
   template: WorkflowTemplate;
+  flowRoles?: WorkflowRole[];
   isLast: boolean;
   isDragging?: boolean;
   isDropTarget?: boolean;
@@ -25,6 +28,7 @@ export function WorkflowNode({
   onDoubleClick,
   data,
   template: _template,
+  flowRoles,
   isLast,
   isDragging = false,
   isDropTarget = false,
@@ -35,10 +39,29 @@ export function WorkflowNode({
   onDragOver,
   onDrop,
 }: WorkflowNodeProps) {
-  const role = useMemo(() => data.roles.find((r) => r.id === step.roleId), [data.roles, step.roleId]);
+  // Get role info from flow roles or global roles
+  const getRoleInfo = (roleId: string): { id: string; name: string } | null => {
+    if (!roleId) return null;
+    const flowRole = flowRoles?.find((r) => r.id === roleId);
+    const globalRole = data.roles.find((r) => r.id === roleId);
+    return flowRole || globalRole || null;
+  };
+
+  // Get assignment role avatars
+  const assignments = step.assignments ?? [];
+  const assignmentRoles = assignments.map((a) => getRoleInfo(a.roleId)).filter((r): r is { id: string; name: string } => r !== null);
+
+  // Legacy: use primary assignment if no assignments array
+  const primaryAssignment = getPrimaryAssignment(step);
+  const primaryRole = primaryAssignment ? getRoleInfo(primaryAssignment.roleId) : null;
+
+  // Use assignments if available, otherwise fall back to legacy roleId
+  const displayRoles: { id: string; name: string }[] = assignmentRoles.length > 0 ? assignmentRoles : primaryRole ? [primaryRole] : [];
+
+  // Get provider info
   const provider = useMemo(
-    () => data.modelProviders.find((p) => p.id === step.modelProviderId),
-    [data.modelProviders, step.modelProviderId]
+    () => data.modelProviders.find((p) => p.id === (step.modelProviderId ?? primaryAssignment?.modelProviderId)),
+    [data.modelProviders, step.modelProviderId, primaryAssignment?.modelProviderId]
   );
 
   const orderLabel = String(index + 1).padStart(2, "0");
@@ -55,11 +78,12 @@ export function WorkflowNode({
     fallback: "回退",
   };
   const failureLabel = failureLabels[step.failureStrategy] ?? step.failureStrategy;
-  const modelLabel = step.modelName.includes("deepseek")
+  const modelName = step.modelName ?? primaryAssignment?.modelName ?? "unknown";
+  const modelLabel = modelName.includes("deepseek")
     ? "v4-pro"
-    : step.modelName.includes("gpt-5.3")
+    : modelName.includes("gpt-5.3")
       ? "gpt-5.3"
-      : step.modelName;
+      : modelName;
 
   const handleDragStart = (e: React.DragEvent) => {
     e.dataTransfer.setData("text/plain", step.id);
@@ -77,6 +101,17 @@ export function WorkflowNode({
     e.preventDefault();
     onDrop(e, index);
   };
+
+  // Color palette for role avatars
+  const avatarColors = [
+    { bg: "#263451", color: "#bdd0ff" },
+    { bg: "#2d2746", color: "#d0bfff" },
+    { bg: "#1d3a2e", color: "#b0e8c8" },
+    { bg: "#3d2a1d", color: "#f5c8a0" },
+    { bg: "#2a1d3d", color: "#d0a0f5" },
+    { bg: "#1d2a3d", color: "#a0d0f5" },
+    { bg: "#3d1d2a", color: "#f5a0c8" },
+  ];
 
   return (
     <div
@@ -114,8 +149,38 @@ export function WorkflowNode({
           <div className="step-info">
             <div className="step-name">{step.name}</div>
             <div className="step-meta">
-              {role && <span className="badge badge-v">{role.name}</span>}
-              {provider && <span className="badge badge-b">{provider.name} {modelLabel}</span>}
+              {/* Display role avatars */}
+              <div className="step-role-avatars">
+                {displayRoles.length > 0 ? (
+                  displayRoles.slice(0, 4).map((role, i) => (
+                    <div
+                      key={role.id}
+                      className="step-role-avatar"
+                      style={{
+                        background: avatarColors[i % avatarColors.length].bg,
+                        color: avatarColors[i % avatarColors.length].color,
+                        zIndex: displayRoles.length - i,
+                        marginLeft: i > 0 ? -8 : 0,
+                      }}
+                      title={role.name}
+                    >
+                      {role.name[0] ?? "?"}
+                    </div>
+                  ))
+                ) : (
+                  <div className="step-role-avatar empty" title="未绑定角色">
+                    ?
+                  </div>
+                )}
+                {displayRoles.length > 4 && (
+                  <span className="step-role-more">+{displayRoles.length - 4}</span>
+                )}
+              </div>
+              {provider && (
+                <span className="badge badge-b">
+                  {provider.name} {modelLabel}
+                </span>
+              )}
               <span className={`badge ${step.gateMode === "manual" ? "badge-o" : "badge-g"}`}>
                 {step.gateMode === "manual" && <ShieldAlert size={10} />}
                 {gateLabel}
@@ -123,6 +188,34 @@ export function WorkflowNode({
             </div>
           </div>
         </div>
+
+        {/* Assignments section - 显示每个 step 下的角色任务 */}
+        {assignments.length > 0 && (
+          <div className="step-assignments-preview">
+            <div className="step-assignments-header">
+              <Users size={12} />
+              <span>{assignments.length} 个角色任务</span>
+            </div>
+            <div className="step-assignments-roles">
+              {assignments.map((assignment: WorkflowAssignment, i: number) => {
+                const role = getRoleInfo(assignment.roleId);
+                return (
+                  <div
+                    key={assignment.id}
+                    className="assignment-role-chip"
+                    style={{
+                      background: avatarColors[i % avatarColors.length].bg,
+                      color: avatarColors[i % avatarColors.length].color,
+                    }}
+                    title={`${role?.name ?? "未绑定"} - ${assignment.taskGoal?.slice(0, 30) ?? ""}`}
+                  >
+                    {role?.name ?? "未绑定"}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -18,9 +18,7 @@
       "gateMode": "manual",
       "gateType": "manual",
       "failureStrategy": "stop",
-      "projectOverride": false,
-      "stepMarkdown": "# 提交方案\n\n**执行角色：** 技术负责人\n**模型：** anthropic / claude-3-sonnet\n\n## 输入\n（无）\n\n## 输出\n- proposal.md\n\n## 失败策略\n停止流程",
-      "runnerId": "runner-claude-code"
+      "projectOverride": false
     },
     {
       "id": "step-review",
@@ -38,9 +36,7 @@
       "gateMode": "manual",
       "gateType": "manual",
       "failureStrategy": "stop",
-      "projectOverride": false,
-      "stepMarkdown": "# 评审会议\n\n**执行角色：** 技术负责人\n**模型：** anthropic / claude-3-sonnet\n\n## 输入\n- proposal.md\n\n## 输出\n- review-notes.md\n\n## 失败策略\n停止流程",
-      "runnerId": "runner-claude-code"
+      "projectOverride": false
     },
     {
       "id": "step-approve",
@@ -56,11 +52,9 @@
       "gateMode": "manual",
       "gateType": "manual",
       "failureStrategy": "stop",
-      "projectOverride": false,
-      "stepMarkdown": "# 批准执行\n\n**执行角色：** 产品经理\n**模型：** anthropic / claude-3-haiku\n\n## 输入\n- review-notes.md\n\n## 输出\n（无）\n\n## 失败策略\n停止流程",
-      "runnerId": "runner-claude-code"
+      "projectOverride": false
     }
   ],
-  "createdAt": "2026-05-30T17:07:53.190Z",
-  "updatedAt": "2026-06-01T03:41:19.265Z"
+  "createdAt": "2026-06-03T13:46:26.158Z",
+  "updatedAt": "2026-06-03T13:46:26.158Z"
 }

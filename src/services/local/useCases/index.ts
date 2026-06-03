@@ -84,3 +84,10 @@ export {
   type AiChatResponse,
   type AiStreamResponse,
 } from './aiUseCase';
+export {
+  executeEventRoute,
+  processEventRoutes,
+  createWorkflowEvent,
+  type WorkflowEvent,
+  type EventRouteResult,
+} from './workflowEventRouter';

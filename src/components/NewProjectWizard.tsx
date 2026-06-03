@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { Check, Loader2, ArrowRight, Search, Code2, FileCheck, Bug, Wrench, Layers, CheckCircle2, User, AlertCircle, FileText } from "lucide-react";
 import type { WorkbenchData } from "../domain/workbench";
 import type { AgentRole } from "../domain/role";
+import { getPrimaryAssignment } from "../domain/workflow";
 import { useWorkbenchState } from "../App";
 import { useLocalServices } from "../hooks/useLocalServices";
 import type { CreateProjectInput } from "../services/api/projectApi";
@@ -166,14 +167,17 @@ export function NewProjectWizard({ data }: NewProjectWizardProps) {
     const template = data.workflowTemplates.find((t) => t.id === workflowId);
     if (!template) return;
 
-    const configs: StepConfig[] = template.steps.map((s) => ({
-      stepId: s.id,
-      roleId: s.roleId,
-      runnerId: data.runnerProfiles.find((r) => r.enabled)?.id,
-      modelProviderId: s.modelProviderId,
-      modelName: s.modelName,
-      capabilities: [],
-    }));
+    const configs: StepConfig[] = template.steps.map((s) => {
+      const assignment = getPrimaryAssignment(s);
+      return {
+        stepId: s.id,
+        roleId: assignment?.roleId || '',
+        runnerId: assignment?.runnerId || data.runnerProfiles.find((r) => r.enabled)?.id,
+        modelProviderId: assignment?.modelProviderId || 'claude',
+        modelName: assignment?.modelName || 'claude-sonnet-4-20250514',
+        capabilities: [],
+      };
+    });
     setStepConfigs(configs);
   };
 

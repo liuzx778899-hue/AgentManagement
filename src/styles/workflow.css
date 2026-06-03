@@ -1590,3 +1590,467 @@
   border-color: transparent;
   color: white;
 }
+
+/* ===== Assignment Editor Styles ===== */
+.assignment-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+}
+
+.assignment-editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #263342;
+}
+
+.assignment-editor-header h4 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #e6edf3;
+}
+
+.assignment-editor-header .btn-add {
+  height: 24px;
+  padding: 0 10px;
+  background: rgba(46, 160, 67, 0.15);
+  border: 1px solid rgba(46, 160, 67, 0.35);
+  border-radius: 6px;
+  color: #3fb950;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.assignment-editor-header .btn-add:hover {
+  background: rgba(46, 160, 67, 0.25);
+  border-color: rgba(46, 160, 67, 0.5);
+}
+
+.assignment-empty {
+  padding: 24px;
+  text-align: center;
+  color: #8b949e;
+  font-size: 12px;
+  background: rgba(13, 17, 23, 0.5);
+  border: 1px dashed #30363d;
+  border-radius: 8px;
+}
+
+.assignment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.assignment-card {
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  background: #161b22;
+  overflow: hidden;
+}
+
+.assignment-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.assignment-card-header:hover {
+  background: #1c2128;
+}
+
+.assignment-card-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.assignment-order {
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 800;
+  color: #3fb950;
+  background: rgba(63, 185, 80, 0.1);
+  border: 1px solid rgba(63, 185, 80, 0.3);
+}
+
+.assignment-role-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.assignment-card-title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.assignment-role-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e6edf3;
+}
+
+.assignment-model-info {
+  font-size: 11px;
+  color: #8b949e;
+}
+
+.assignment-card-header-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.assignment-expand-icon {
+  color: #8b949e;
+}
+
+.assignment-card-body {
+  padding: 12px;
+  border-top: 1px solid #30363d;
+  background: #0d1117;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.assignment-config-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.assignment-config-grid .form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.assignment-config-grid label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #8b949e;
+}
+
+.assignment-config-grid select,
+.assignment-config-grid input,
+.assignment-config-grid textarea {
+  width: 100%;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  background: #161b22;
+  color: #e6edf3;
+  font: inherit;
+  font-size: 12px;
+  padding: 8px 10px;
+  outline: none;
+}
+
+.assignment-config-grid select:focus,
+.assignment-config-grid input:focus,
+.assignment-config-grid textarea:focus {
+  border-color: #2f81f7;
+}
+
+.assignment-section {
+  border: 1px solid #263342;
+  border-radius: 8px;
+  padding: 10px;
+  background: rgba(13, 17, 23, 0.5);
+}
+
+.assignment-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #c1cddd;
+}
+
+.assignment-section-header svg {
+  color: #8b949e;
+}
+
+.assignment-section-count {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(139, 148, 158, 0.15);
+  color: #8b949e;
+}
+
+.btn-link-small {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: #58a6ff;
+  font-size: 11px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.btn-link-small:hover {
+  background: rgba(88, 166, 255, 0.1);
+}
+
+.assignment-dependencies {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.dependency-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: rgba(47, 129, 247, 0.15);
+  border: 1px solid rgba(47, 129, 247, 0.3);
+  color: #8bbcff;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.dependency-tag.notify {
+  background: rgba(137, 87, 229, 0.15);
+  border-color: rgba(137, 87, 229, 0.3);
+  color: #d0bfff;
+}
+
+.tag-remove {
+  background: none;
+  border: none;
+  color: inherit;
+  opacity: 0.6;
+  cursor: pointer;
+  padding: 0;
+  display: inline-flex;
+}
+
+.tag-remove:hover {
+  opacity: 1;
+}
+
+.dependency-add {
+  min-width: 100px;
+  height: 26px;
+  padding: 0 8px;
+  border: 1px dashed #30363d;
+  border-radius: 4px;
+  background: transparent;
+  color: #8b949e;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.dependency-add:hover {
+  border-color: #8b949e;
+  background: rgba(139, 148, 158, 0.05);
+}
+
+.empty-hint {
+  color: #6e7681;
+  font-size: 11px;
+}
+
+.event-routes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.event-route-item {
+  border: 1px solid #263342;
+  border-radius: 6px;
+  background: #161b22;
+  overflow: hidden;
+}
+
+.event-route-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  font-size: 11px;
+}
+
+.event-route-trigger {
+  color: #f0883e;
+  font-weight: 600;
+}
+
+.event-route-arrow {
+  color: #6e7681;
+}
+
+.event-route-action {
+  color: #58a6ff;
+  font-weight: 600;
+}
+
+.event-route-config {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px;
+  border-top: 1px solid #263342;
+  background: #0d1117;
+}
+
+.form-field-inline {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 120px;
+}
+
+.form-field-inline label {
+  font-size: 10px;
+  color: #8b949e;
+  font-weight: 600;
+}
+
+.form-field-inline select {
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  background: #161b22;
+  color: #e6edf3;
+  font-size: 11px;
+}
+
+.btn-icon-small {
+  width: 26px;
+  height: 26px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  background: transparent;
+  color: #8b949e;
+  cursor: pointer;
+  padding: 0;
+}
+
+.btn-icon-small:hover {
+  background: #21262d;
+  color: #e6edf3;
+}
+
+.btn-icon-small.danger {
+  border-color: rgba(255, 118, 112, 0.36);
+  color: #ff8b86;
+}
+
+.btn-icon-small.danger:hover {
+  background: rgba(116, 52, 59, 0.28);
+  border-color: rgba(255, 118, 112, 0.72);
+}
+
+/* Wider step edit panel for assignments */
+.step-edit-panel-wide {
+  width: min(1200px, calc(100vw - 56px));
+  max-height: min(800px, calc(100vh - 56px));
+}
+
+.step-edit-assignments {
+  min-height: 0;
+  overflow: auto;
+  flex: 1;
+  border: 1px solid #263342;
+  border-radius: 8px;
+  padding: 12px;
+  background: rgba(13, 17, 23, 0.5);
+}
+
+/* Step card assignment preview */
+.step-assignments-preview {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #263342;
+}
+
+.step-assignments-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  font-size: 11px;
+  color: #8b949e;
+  font-weight: 600;
+}
+
+.step-assignments-roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.assignment-role-chip {
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* Role avatars in step card */
+.step-role-avatars {
+  display: flex;
+  align-items: center;
+  margin-right: 6px;
+}
+
+.step-role-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 10px;
+  font-weight: 800;
+  border: 2px solid #0d1117;
+}
+
+.step-role-avatar.empty {
+  background: #30363d;
+  color: #8b949e;
+}
+
+.step-role-more {
+  margin-left: 4px;
+  font-size: 10px;
+  color: #8b949e;
+  font-weight: 600;
+}

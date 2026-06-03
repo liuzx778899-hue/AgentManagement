@@ -71,3 +71,85 @@ export function selectMetrics(data: WorkbenchData) {
     totalTasks: data.tasks.length,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Issue #30: 工作台任务分类 Selectors
+// ---------------------------------------------------------------------------
+
+/**
+ * 获取当前角色的待办任务
+ *
+ * @param tasks 所有任务列表
+ * @param currentRoleId 当前角色 ID
+ * @returns 分配给当前角色的未完成任务
+ */
+export function getMyTasks(tasks: Task[], currentRoleId: string): Task[] {
+  return tasks.filter(
+    (task) => task.roleId === currentRoleId && task.status !== "done" && task.status !== "failed"
+  );
+}
+
+/**
+ * 获取等待依赖完成的任务
+ *
+ * 返回状态为 draft 或 queued，但依赖任务未全部完成的任务。
+ * 同时返回每个任务正在等待的任务信息。
+ *
+ * @param tasks 所有任务列表
+ * @returns 等待依赖的任务及等待信息
+ */
+export function getWaitingTasks(tasks: Task[]): Array<{ task: Task; waitingFor: Task[] }> {
+  return tasks
+    .filter((task) => task.status === "draft" || task.status === "queued")
+    .filter((task) => task.dependsOnTaskIds && task.dependsOnTaskIds.length > 0)
+    .map((task) => {
+      const waitingFor = task.dependsOnTaskIds!
+        .map((depId) => tasks.find((t) => t.id === depId))
+        .filter((t): t is Task => t !== undefined && t.status !== "done");
+
+      return { task, waitingFor };
+    })
+    .filter((item) => item.waitingFor.length > 0);
+}
+
+/**
+ * 获取可以开始的任务
+ *
+ * 返回状态为 queued 且依赖全部满足的任务。
+ *
+ * @param tasks 所有任务列表
+ * @returns 可以立即开始的任务
+ */
+export function getReadyTasks(tasks: Task[]): Task[] {
+  return tasks.filter((task) => {
+    if (task.status !== "queued") return false;
+
+    // 检查依赖是否全部满足
+    if (!task.dependsOnTaskIds || task.dependsOnTaskIds.length === 0) {
+      return true;
+    }
+
+    return task.dependsOnTaskIds.every((depId) => {
+      const depTask = tasks.find((t) => t.id === depId);
+      return depTask?.status === "done";
+    });
+  });
+}
+
+/**
+ * 检查任务的依赖是否全部满足
+ *
+ * @param task 要检查的任务
+ * @param tasks 所有任务列表
+ * @returns 依赖是否满足
+ */
+export function checkTaskDependenciesMet(task: Task, tasks: Task[]): boolean {
+  if (!task.dependsOnTaskIds || task.dependsOnTaskIds.length === 0) {
+    return true;
+  }
+
+  return task.dependsOnTaskIds.every((depId) => {
+    const depTask = tasks.find((t) => t.id === depId);
+    return depTask?.status === "done";
+  });
+}

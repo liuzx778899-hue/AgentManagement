@@ -569,10 +569,12 @@ export function ProjectDetailPage({ data, projectId, onBack, onEnterWorkbench }:
     const items: RoleDataItem[] = [];
 
     for (const step of template.steps) {
-      if (seenRoleIds.has(step.roleId)) continue;
-      seenRoleIds.add(step.roleId);
+      const roleId = step.roleId || (step.assignments?.[0]?.roleId);
+      if (!roleId) continue;
+      if (seenRoleIds.has(roleId)) continue;
+      seenRoleIds.add(roleId);
 
-      const role = data.roles.find((r) => r.id === step.roleId);
+      const role = data.roles.find((r) => r.id === roleId);
       if (!role) continue;
 
       const memoryCount = data.memories.filter(
@@ -1131,10 +1133,10 @@ export function ProjectDetailPage({ data, projectId, onBack, onEnterWorkbench }:
                 const stepNum = String(i + 1).padStart(2, "0");
 
                 return (
-                  <div key={step.id} className="pd-step-card" onClick={() => handleSelect("role", step.roleId)}>
+                  <div key={step.id} className="pd-step-card" onClick={() => handleSelect("role", step.roleId || step.assignments?.[0]?.roleId || "")}>
                     <span className="pd-step-num">{stepNum}</span>
                     <strong>{step.name}</strong>
-                    <span className="muted">{role?.name ?? step.roleId}</span>
+                    <span className="muted">{role?.name ?? (step.roleId || step.assignments?.[0]?.roleId || "Unknown")}</span>
                     {/* CLI Runner Info */}
                     <div className="pd-step-runner">
                       <span className="pd-runner-label">Runner:</span>

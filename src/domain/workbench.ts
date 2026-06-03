@@ -1,6 +1,6 @@
 // Re-export all domain types for backward compatibility
 export type { Scope, DesktopIntegrationStatus, PermissionLevel, ProjectSettings, Project } from "./project";
-export type { GateMode, FailureStrategy, WorkflowTemplate, WorkflowStep } from "./workflow";
+export type { GateMode, FailureStrategy, WorkflowTemplate, WorkflowStep, WorkflowAssignment, WorkflowEventRoute, WorkflowEventTrigger, WorkflowEventAction, WorkflowEventTargetType, WorkflowRole } from "./workflow";
 export type { Task, AgentRun } from "./task";
 export type { AgentRole } from "./role";
 export type { GateStatus, ManualGate } from "./gate";

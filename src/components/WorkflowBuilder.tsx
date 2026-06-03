@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Check, ChevronDown, GitBranch, History, List, Paperclip, Plus, Send, Sparkles, Trash2 } from "lucide-react";
 import type { FailureStrategy, WorkbenchData, WorkflowStep, WorkflowTemplate } from "../domain/workbench";
+import { getPrimaryAssignment } from "../domain/workflow";
 import { useWorkbenchState } from "../state";
 import { StepEditModal } from "./StepEditModal";
 
@@ -1105,7 +1106,8 @@ ${runnersContext}
                 ) : (
                   draftSteps.map((step, i) => {
                     const stateClass = i === 0 ? "active" : "idle";
-                    const roleName = getRoleName(step.roleId);
+                    const assignment = getPrimaryAssignment(step);
+                    const roleName = getRoleName(assignment?.roleId || "");
                     return (
                       <div key={i} style={{ display: "flex", alignItems: "center", gap: 0, flexShrink: 0 }}>
                         <div
@@ -1625,14 +1627,17 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
     if (!selectedTemplate) return [];
     const templateRoleMap = new Map((selectedTemplate.roles || []).map(r => [r.id, r]));
     const globalRoleMap = new Map(data.roles.map(r => [r.id, r]));
-    const roleIds = selectedTemplate.steps.map((step) => step.roleId).filter(Boolean);
+    const roleIds = selectedTemplate.steps.map((step) => {
+      const assignment = getPrimaryAssignment(step);
+      return assignment?.roleId;
+    }).filter((id): id is string => Boolean(id));
     const extraRoleIds = templateRoleIds[selectedTemplate.id] ?? [];
     const uniqueRoleIds = Array.from(new Set([...roleIds, ...extraRoleIds]));
     return uniqueRoleIds
       .map((roleId) => {
         // 优先从模板自带 roles 查找，再从全局角色池查找
-        const templateRole = templateRoleMap.get(roleId);
-        const globalRole = globalRoleMap.get(roleId);
+        const templateRole = templateRoleMap.get(roleId || "");
+        const globalRole = globalRoleMap.get(roleId || "");
         const role = templateRole
           ? { id: templateRole.id, name: templateRole.name, description: templateRole.description ?? "", roleMarkdown: templateRole.roleMarkdown ?? "", isBuiltIn: false, defaultCapabilities: [] as string[], projectId: null as string | null }
           : globalRole;

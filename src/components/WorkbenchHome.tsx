@@ -23,7 +23,9 @@ import {
   XCircle,
   Zap,
 } from "lucide-react";
-import type { WorkbenchData, WorkbenchView } from "../domain/workbench";
+import type { WorkbenchData, WorkbenchView, Task } from "../domain/workbench";
+import { getMyTasks, getWaitingTasks, getReadyTasks } from "../state/selectors";
+import { WorkbenchTaskList } from "./WorkbenchTaskList";
 
 interface WorkbenchHomeProps {
   data: WorkbenchData;
@@ -160,6 +162,21 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
   const recentFiles = ["src/components/WorkbenchHome.tsx", "src/styles/base.css", "docs/HANDOFF_NEXT_TASKS.md"];
   const activeStep = flowSteps.find((step) => `tab-${step.id}` === activeTabId);
   const activeRole = activeStep ? data.roles.find((role) => role.id === activeStep.roleId) : null;
+
+  // Issue #30: 计算分类任务
+  // 使用第一个角色的 ID 作为当前角色（演示用）
+  // TODO: 后续需要从用户登录状态或设置中获取实际当前角色
+  const currentRoleId = data.roles[0]?.id ?? "";
+  const projectTasks = data.tasks.filter((task) => task.projectId === project.id);
+
+  const myTasks = useMemo(() => getMyTasks(projectTasks, currentRoleId), [projectTasks, currentRoleId]);
+  const waitingTasks = useMemo(() => getWaitingTasks(projectTasks), [projectTasks]);
+  const readyTasks = useMemo(() => getReadyTasks(projectTasks), [projectTasks]);
+
+  const handleTaskClick = (task: Task) => {
+    // TODO: 实现任务点击处理（如打开任务详情或启动任务）
+    setToast(`点击任务: ${task.goal.slice(0, 30)}`);
+  };
   const popoverPositionStyle = popoverAnchor
     ? { left: popoverAnchor.left, top: popoverAnchor.bottom + 8, right: "auto", bottom: "auto", display: "block" }
     : undefined;
@@ -438,21 +455,14 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
             </div>
 
             <div className="wb-right-content">
-              <div className="wb-panel-box">
-                <div className="wb-box-title">
-                  <span>TODO LIST</span>
-                  <span className="wb-model-pill">{todos.length}</span>
-                </div>
-                <div className="wb-box-list">
-                  {todos.slice(0, 4).map((task) => (
-                    <div key={task.id} className="wb-todo-item">
-                      <span className="wb-todo-check" />
-                      <span>{task.goal}</span>
-                      <span className="wb-prio-pill high">高</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              {/* Issue #30: 工作台任务分类展示 */}
+              <WorkbenchTaskList
+                myTasks={myTasks}
+                waitingTasks={waitingTasks}
+                readyTasks={readyTasks}
+                roles={data.roles}
+                onTaskClick={handleTaskClick}
+              />
 
               <div className="wb-panel-box">
                 <div className="wb-box-title">

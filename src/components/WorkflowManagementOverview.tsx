@@ -16,7 +16,7 @@ import {
   X,
 } from "lucide-react";
 import type { WorkbenchData, WorkbenchView } from "../domain/workbench";
-import { WorkflowCategory as WorkflowCategoryBase } from "../domain/workflow";
+import { WorkflowCategory as WorkflowCategoryBase, getPrimaryAssignment } from "../domain/workflow";
 
 interface WorkflowManagementOverviewProps {
   data: WorkbenchData;
@@ -163,7 +163,17 @@ function workflowTemplateToAsset(template: WorkbenchData["workflowTemplates"][0]
     version: `v${template.version || 1}`,
     stepCount: steps.length,
     steps: steps.slice(0, 5).map((s, i) => ({ no: `${i + 1}`.padStart(2, "0"), name: s.name })),
-    fullSteps: steps.map(s => ({ id: s.id, name: s.name, roleId: s.roleId, modelProviderId: s.modelProviderId, modelName: s.modelName, runnerId: s.runnerId })),
+    fullSteps: steps.map(s => {
+      const assignment = getPrimaryAssignment(s);
+      return {
+        id: s.id,
+        name: s.name,
+        roleId: assignment?.roleId || "",
+        modelProviderId: assignment?.modelProviderId,
+        modelName: assignment?.modelName,
+        runnerId: assignment?.runnerId,
+      };
+    }),
     roleCoverage: roleAvatars.slice(0, 5),
     runnerCoverage: steps.some(s => s.runnerId) ? 85 : 60,
     riskGap: null,

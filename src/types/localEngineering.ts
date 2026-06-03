@@ -37,7 +37,8 @@ export type LocalErrorCode =
   | 'WORKFLOW_NOT_FOUND'
   | 'TASK_NOT_FOUND'
   | 'INVALID_STEP_ORDER'
-  | 'STATE_CONFLICT';
+  | 'STATE_CONFLICT'
+  | 'UNKNOWN_ACTION';
 
 /**
  * 命令执行配置

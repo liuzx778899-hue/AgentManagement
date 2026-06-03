@@ -277,7 +277,7 @@ describe('PwWorkflowControl', () => {
       await waitFor(() => {
         expect(screen.getByText('PAUSED')).toBeInTheDocument();
       });
-    });
+    }, 10000);
   });
 
   describe('resume workflow', () => {

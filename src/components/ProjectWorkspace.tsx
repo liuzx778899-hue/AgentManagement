@@ -713,7 +713,7 @@ ${project.settings.riskSummary || "尚未评估"}`;
                 <div className="pw-todo-list">
                   {template?.steps.map((step) => {
                     const status = getStepStatus(step);
-                    const roleName = getRoleName(step.roleId);
+                    const roleName = getRoleName(step.roleId || step.assignments?.[0]?.roleId || "");
                     return (
                       <div key={step.id} className={`pw-todo-item ${status}`}>
                         <div className={`pw-todo-check ${status === "done" ? "done" : ""}`} />
@@ -753,7 +753,7 @@ ${project.settings.riskSummary || "尚未评估"}`;
                               {status === "done" ? "✓" : String(index + 1).padStart(2, "0")}
                             </div>
                             <div className="pw-step-name">{step.name}</div>
-                            <div className="pw-step-role">{getRoleName(step.roleId)}</div>
+                            <div className="pw-step-role">{getRoleName(step.roleId || step.assignments?.[0]?.roleId || "")}</div>
                             {status === "active" && step.gateMode === "manual" && (
                               <span className="pw-step-gate manual">等待决策</span>
                             )}

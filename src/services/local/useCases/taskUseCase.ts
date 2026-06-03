@@ -1,5 +1,6 @@
 import type { Task } from '../../../domain/task';
 import type { WorkflowTemplate } from '../../../domain/workflow';
+import { getPrimaryAssignment, isLegacyWorkflowStep, migrateWorkflowStep } from '../../../domain/workflow';
 import type { LocalResult } from '../../../types/localEngineering';
 import type { TaskRepository } from '../repositories/taskRepository';
 import type { WorkflowRepository } from '../repositories/workflowRepository';
@@ -116,9 +117,10 @@ export async function createTask(
  *
  * 关键逻辑：
  * 1. 加载工作流模板
- * 2. 为每个 step 创建一个 Task
- * 3. 第一个 step 状态为 "running"，其余为 "queued"
+ * 2. 为每个 assignment 创建一个 Task（注意：assignment 是执行单元，不是 step）
+ * 3. 第一个 assignment 状态为 "running"，其余为 "queued"
  * 4. 批量保存所有任务
+ * 5. 动态优先级：P0 对应第一个 step，P1 对应第二个 step，以此类推
  */
 export async function createTasksFromWorkflow(
   taskRepository: TaskRepository,
@@ -157,18 +159,68 @@ export async function createTasksFromWorkflow(
   const template = templateResult.data!;
   const now = new Date().toISOString();
 
-  // 为每个步骤创建任务
-  const tasks: Task[] = template.steps.map((step, index) => {
-    const taskId = generateTaskId();
+  // 为每个 assignment 创建任务
+  // 展平 steps -> assignments 映射，保留 step index 用于优先级
+  const assignmentsWithPriority: Array<{
+    assignment: import('../../../domain/workflow').WorkflowAssignment;
+    step: import('../../../domain/workflow').WorkflowStep;
+    stepIndex: number;
+  }> = [];
+
+  template.steps.forEach((step, stepIndex) => {
+    // 确保使用迁移后的格式（包含 assignments）
+    const migratedStep = isLegacyWorkflowStep(step) ? migrateWorkflowStep(step) : step;
+
+    if (migratedStep.assignments && migratedStep.assignments.length > 0) {
+      migratedStep.assignments.forEach((assignment) => {
+        assignmentsWithPriority.push({
+          assignment,
+          step: migratedStep,
+          stepIndex,
+        });
+      });
+    }
+  });
+
+  // 创建 Task ID 映射，用于设置依赖关系
+  const assignmentIdToTaskId = new Map<string, string>();
+  assignmentsWithPriority.forEach(({ assignment }) => {
+    assignmentIdToTaskId.set(assignment.id, generateTaskId());
+  });
+
+  // 为每个 assignment 创建任务
+  const tasks: Task[] = assignmentsWithPriority.map(({ assignment, step, stepIndex }, index) => {
+    const taskId = assignmentIdToTaskId.get(assignment.id)!;
+
+    // 动态优先级：P0, P1, P2...
+    const priority = `P${stepIndex}` as import('../../../domain/task').TaskPriority;
+
+    // 转换依赖关系：assignmentId -> taskId
+    const dependsOnTaskIds = assignment.dependsOnAssignmentIds
+      .map(aId => assignmentIdToTaskId.get(aId))
+      .filter((id): id is string => id !== undefined);
+
+    const notifyTaskIds = assignment.notifyAssignmentIds
+      .map(aId => assignmentIdToTaskId.get(aId))
+      .filter((id): id is string => id !== undefined);
 
     return {
       id: taskId,
       projectId,
-      goal: step.name,
-      acceptanceCriteria: [], // 初始为空，后续可以填充
+      goal: assignment.taskGoal || step.name,
+      acceptanceCriteria: assignment.acceptanceCriteria || [],
       workflowTemplateId,
-      roleAssignment: { [step.id]: step.roleId },
-      capabilityAuthorization: [],
+      workflowStepId: step.id,
+      assignmentId: assignment.id,
+      roleId: assignment.roleId,
+      runnerId: assignment.runnerId,
+      modelProviderId: assignment.modelProviderId,
+      modelName: assignment.modelName,
+      priority,
+      dependsOnTaskIds,
+      notifyTaskIds,
+      roleAssignment: { [step.id]: assignment.roleId },
+      capabilityAuthorization: assignment.capabilityAuthorization || [],
       launchStrategy: 'direct',
       // 第一个任务状态为 running，其余为 queued
       status: index === 0 ? 'running' : 'queued',

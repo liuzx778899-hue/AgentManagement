@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Check, Plus } from "lucide-react";
-import type { WorkflowTemplate, WorkflowStep, WorkbenchData } from "../domain/workbench";
+import type { WorkflowTemplate, WorkflowStep, WorkbenchData, WorkflowAssignment } from "../domain/workbench";
 import { useWorkbenchState } from "../App";
 import { WorkflowNode } from "./WorkflowNode";
 import { StepEditModal } from "./StepEditModal";
@@ -23,15 +23,51 @@ export function WorkflowCanvas({ template, data, selectedStepId, onStepClick }: 
 
   const editingStep = sortedSteps.find((s) => s.id === editingStepId) ?? null;
 
+  // Get flow roles from template
+  const flowRoles = useMemo(() => {
+    return template.roles ?? [];
+  }, [template]);
+
+  // Get all assignments from all steps for dependency selection
+  const allAssignments = useMemo(() => {
+    const all: WorkflowAssignment[] = [];
+    template.steps.forEach((s) => {
+      if (s.assignments) {
+        all.push(...s.assignments);
+      }
+    });
+    return all;
+  }, [template.steps]);
+
   const handleAddStep = (afterIndex: number) => {
     const newOrder = afterIndex >= 0 ? afterIndex + 1.5 : sortedSteps.length + 1;
+    const provider = data.modelProviders.find((p) => p.enabled) ?? data.modelProviders[0];
+    const runner = data.runnerProfiles?.find((r) => r.enabled);
+    const role = (flowRoles[0] ?? data.roles[0]);
+
+    // Create default assignment
+    const defaultAssignment: WorkflowAssignment = {
+      id: `step-${Date.now()}-assign-0`,
+      order: 0,
+      roleId: role?.id ?? "",
+      runnerId: runner?.id ?? "runner-claude-code",
+      modelProviderId: provider?.id ?? "",
+      modelName: provider?.defaultModel ?? provider?.models[0]?.name ?? "",
+      taskGoal: "",
+      acceptanceCriteria: [],
+      inputs: [],
+      outputs: [],
+      dependsOnAssignmentIds: [],
+      notifyAssignmentIds: [],
+      eventRoutes: [],
+      capabilityAuthorization: [],
+    };
+
     const newStep: WorkflowStep = {
       id: `step-${Date.now()}`,
       order: newOrder,
       name: "新步骤",
-      roleId: data.roles[0]?.id ?? "",
-      modelProviderId: data.modelProviders.find((p) => p.enabled)?.id ?? "",
-      modelName: data.modelProviders.find((p) => p.enabled)?.models[0]?.name ?? "",
+      assignments: [defaultAssignment],
       inputs: [],
       outputs: [],
       gateMode: "auto",
@@ -100,6 +136,27 @@ export function WorkflowCanvas({ template, data, selectedStepId, onStepClick }: 
     setDropTargetIndex(null);
   };
 
+  // Get role info for bound roles
+  const boundRoles = useMemo(() => {
+    const roleIds = sortedSteps.flatMap((step) => {
+      if (step.assignments) {
+        return step.assignments.map((a) => a.roleId);
+      }
+      // Legacy support
+      return step.roleId ? [step.roleId] : [];
+    }).filter(Boolean);
+
+    const uniqueRoleIds = Array.from(new Set(roleIds));
+    return uniqueRoleIds
+      .map((roleId) => {
+        const flowRole = flowRoles.find((r) => r.id === roleId);
+        const globalRole = data.roles.find((r) => r.id === roleId);
+        const role = flowRole || globalRole;
+        return role ? { id: role.id, name: role.name, description: role.description ?? "", roleMarkdown: role.roleMarkdown ?? "" } : null;
+      })
+      .filter(Boolean) as { id: string; name: string; description: string; roleMarkdown: string }[];
+  }, [sortedSteps, flowRoles, data.roles]);
+
   return (
     <>
       <div className="canvas-body">
@@ -118,6 +175,7 @@ export function WorkflowCanvas({ template, data, selectedStepId, onStepClick }: 
                     index={i}
                     data={data}
                     template={template}
+                    flowRoles={flowRoles}
                     isLast={isLast}
                     isDragging={draggedStepId === step.id}
                     isDropTarget={dropTargetIndex === i}
@@ -175,6 +233,7 @@ export function WorkflowCanvas({ template, data, selectedStepId, onStepClick }: 
           step={editingStep}
           template={template}
           data={data}
+          flowRoles={boundRoles}
           onSave={(updates) => {
             updateWorkflowStep(template.id, editingStep.id, updates);
             setEditingStepId(null);

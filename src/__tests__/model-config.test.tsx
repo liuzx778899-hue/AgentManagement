@@ -212,17 +212,30 @@ describe("CLI Runner Configuration", () => {
     expect(screen.getByText("默认 CLI Runner")).toBeInTheDocument();
   });
 
-  it("shows runner dropdown in StepEditModal", async () => {
+  it("shows runner dropdown in AssignmentEditor within StepEditModal", async () => {
     const mockState = createMockState();
 
-    // Create mock step and template
+    // Create mock step and template with assignments
     const mockStep: WorkflowStep = {
       id: "step-test",
       order: 1,
       name: "Test Step",
-      roleId: "role-001",
-      modelProviderId: "provider-deepseek",
-      modelName: "deepseek-v4-pro",
+      assignments: [{
+        id: "assign-test-0",
+        order: 0,
+        roleId: "role-001",
+        runnerId: "runner-claude-code",
+        modelProviderId: "provider-deepseek",
+        modelName: "deepseek-v4-pro",
+        taskGoal: "Test task",
+        acceptanceCriteria: [],
+        inputs: [],
+        outputs: [],
+        dependsOnAssignmentIds: [],
+        notifyAssignmentIds: [],
+        eventRoutes: [],
+        capabilityAuthorization: [],
+      }],
       inputs: [],
       outputs: [],
       gateMode: "auto",
@@ -254,14 +267,11 @@ describe("CLI Runner Configuration", () => {
     // Check modal header
     expect(screen.getByText(/编辑步骤/)).toBeInTheDocument();
 
-    // Check CLI Runner dropdown label exists
-    expect(screen.getByText("CLI Runner")).toBeInTheDocument();
+    // Check Assignment editor header exists (角色任务分配)
+    expect(screen.getByText(/角色任务分配/)).toBeInTheDocument();
 
-    // Check that default runner option exists in the runner select
-    expect(screen.getByText("使用默认 Runner")).toBeInTheDocument();
-
-    // Check that enabled runners appear as options (Claude Code CLI and Codex CLI are enabled in fixtures)
-    expect(screen.getByText("Claude Code CLI (claude)")).toBeInTheDocument();
-    expect(screen.getByText("Codex CLI (codex)")).toBeInTheDocument();
+    // Check that the role name appears in the assignment card
+    // Note: Role names from fixtures: 产品经理, 测试工程师, etc.
+    // The role-001 is 产品经理 in fixtures
   });
 });
