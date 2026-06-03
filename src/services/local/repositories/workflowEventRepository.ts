@@ -226,10 +226,13 @@ export class WorkflowEventRepository {
     eventType: WorkflowEventType,
     options: EventQueryOptions = {},
   ): Promise<LocalResult<PersistedWorkflowEvent[]>> {
-    const allRuns = await this.listRunIds();
+    const allRunsResult = await this.listRunIds();
+    if (!allRunsResult.ok || !allRunsResult.data) {
+      return { ok: false, error: allRunsResult.error };
+    }
     const matched: PersistedWorkflowEvent[] = [];
 
-    for (const runId of allRuns) {
+    for (const runId of allRunsResult.data) {
       const result = await this.loadByRun(runId);
       if (!result.ok) continue;
 
@@ -388,7 +391,7 @@ export class WorkflowEventRepository {
     for (const runId of listResult.data!) {
       const summaryResult = await this.getSummary(runId);
 
-      if (!summaryResult.ok) continue;
+      if (!summaryResult.ok || !summaryResult.data) continue;
 
       const lastTs = summaryResult.data.lastTimestamp;
       if (lastTs && lastTs < cutoffTimestamp) {

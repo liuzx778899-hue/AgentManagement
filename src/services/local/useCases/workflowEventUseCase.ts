@@ -36,7 +36,8 @@ import {
 import type { Workflow, WorkflowStep } from '../../../domain/workflow';
 import type { Project } from '../../../domain/project';
 import type { Task } from '../../../domain/task';
-import type { ProcessRunnerAdapter, LocalResult } from '../../../types/localEngineering';
+import type { ProcessRunnerAdapter } from '../adapters/processRunnerAdapter';
+import type { LocalResult } from '../../../types/localEngineering';
 import type { RunnerKind } from '../../../domain/runner';
 import {
   createWorkflowRun,

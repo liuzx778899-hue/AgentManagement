@@ -41,6 +41,9 @@ const createMockState = () => ({
   setDefaultRunner: vi.fn(),
   updateSettings: vi.fn(),
   setTasks: vi.fn(),
+  addNotification: vi.fn(),
+  markNotificationRead: vi.fn(),
+  clearNotifications: vi.fn(),
 });
 
 const wrapper = (mockState: ReturnType<typeof createMockState>) => ({

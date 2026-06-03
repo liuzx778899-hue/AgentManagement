@@ -1,6 +1,11 @@
 import type { Workflow, WorkflowStep } from '../../../domain/workflow';
 import type { Project } from '../../../domain/project';
 import type { LocalResult } from '../../../types/localEngineering';
+import {
+  type WorkflowEvent,
+  createEventBase,
+} from '../../../domain/workflowEvent';
+import { workflowEventEmitter } from '../workflowEventEmitter';
 
 /**
  * Workflow 运行状态
@@ -130,6 +135,10 @@ export async function createWorkflowRun(
   // 存储
   workflowRuns.set(runId, run);
 
+  // 发出 RUN_CREATED 和 RUN_STARTED 事件
+  emitRunCreatedEvent(run, triggeredBy, workflow.steps.length);
+  emitRunStartedEvent(run, triggeredBy, workflow.steps[0]);
+
   return {
     ok: true,
     data: run,
@@ -202,8 +211,16 @@ export async function advanceWorkflowStep(
       completedAt: new Date().toISOString(),
     };
     workflowRuns.set(run.id, failedRun);
+    // 发出 STEP_FAILED 和 RUN_FAILED 事件
+    emitStepFailedEvent(failedRun, updatedSteps[completedIndex], completedIndex, error);
+    emitRunFailedEvent(failedRun, completedStepId, updatedSteps[completedIndex].stepName, error);
     return { ok: true, data: failedRun };
   }
+
+  // 发出 STEP_COMPLETED 事件
+  const startTime = run.steps[completedIndex].startedAt ? new Date(run.steps[completedIndex].startedAt!).getTime() : Date.now();
+  const durationMs = Date.now() - startTime;
+  emitStepCompletedEvent(run, updatedSteps[completedIndex], completedIndex, durationMs);
 
   // 检查下一步
   const nextIndex = completedIndex + 1;
@@ -219,6 +236,10 @@ export async function advanceWorkflowStep(
       completedAt: new Date().toISOString(),
     };
     workflowRuns.set(run.id, completedRun);
+    // 发出 RUN_COMPLETED 事件
+    const completedStepsCount = updatedSteps.filter(s => s.state === 'completed').length;
+    const runDurationMs = new Date(completedRun.completedAt!).getTime() - new Date(run.startedAt).getTime();
+    emitRunCompletedEvent(completedRun, completedStepsCount, runDurationMs);
     return { ok: true, data: completedRun };
   }
 
@@ -246,6 +267,13 @@ export async function advanceWorkflowStep(
   };
 
   workflowRuns.set(run.id, advancedRun);
+
+  // 发出 STEP_STARTED 或 GATE_OPENED 事件
+  if (isGate) {
+    emitGateOpenedEvent(advancedRun, nextStep, nextStep.roleId || '');
+  } else {
+    emitStepStartedEvent(advancedRun, nextStep, nextIndex, outputArtifacts || []);
+  }
 
   return {
     ok: true,
@@ -305,10 +333,18 @@ export async function handleWorkflowGate(
       completedAt: new Date().toISOString(),
     };
     workflowRuns.set(run.id, failedRun);
+    // 发出 GATE_REJECTED 和 RUN_FAILED 事件
+    const currentStep = updatedSteps[currentStepIndex];
+    emitGateRejectedEvent(failedRun, currentStep.stepId, currentStep.stepName, decidedBy, reason);
+    emitRunFailedEvent(failedRun, currentStep.stepId, currentStep.stepName, failedRun.error || 'Gate rejected');
     return { ok: true, data: failedRun };
   }
 
   // Gate 通过，继续执行
+  // 发出 GATE_APPROVED 事件
+  const gateStep = updatedSteps[currentStepIndex];
+  emitGateApprovedEvent(run, gateStep.stepId, gateStep.stepName, decidedBy, reason);
+
   // 标记当前步骤完成
   updatedSteps[currentStepIndex].state = 'completed';
 
@@ -330,6 +366,10 @@ export async function handleWorkflowGate(
       completedAt: new Date().toISOString(),
     };
     workflowRuns.set(run.id, completedRun);
+    // 发出 RUN_COMPLETED 事件
+    const completedStepsCount = updatedSteps.filter(s => s.state === 'completed').length;
+    const runDurationMs = new Date(completedRun.completedAt!).getTime() - new Date(run.startedAt).getTime();
+    emitRunCompletedEvent(completedRun, completedStepsCount, runDurationMs);
     return { ok: true, data: completedRun };
   }
 
@@ -355,6 +395,10 @@ export async function handleWorkflowGate(
   };
 
   workflowRuns.set(run.id, continuedRun);
+
+  // 发出 STEP_STARTED 事件
+  const nextStepExec = updatedSteps[nextIndex];
+  emitStepStartedEvent(continuedRun, { id: nextStepExec.stepId, name: nextStepExec.stepName, roleId: nextStepExec.roleId } as WorkflowStep, nextIndex, accumulatedArtifacts);
 
   return {
     ok: true,
@@ -436,6 +480,9 @@ export async function pauseWorkflowRun(
   };
 
   workflowRuns.set(runId, pausedRun);
+
+  // 发出 RUN_PAUSED 事件
+  emitRunPausedEvent(pausedRun);
 
   return { ok: true, data: pausedRun };
 }
@@ -557,4 +604,224 @@ export async function getWorkflowRun(
   }
 
   return { ok: true, data: run };
+}
+
+// ---------------------------------------------------------------------------
+// Event Emission Helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Emit RUN_CREATED event
+ */
+function emitRunCreatedEvent(run: WorkflowRun, triggeredBy: string, totalSteps: number): void {
+  const event: WorkflowEvent = {
+    ...createEventBase('RUN_CREATED', run.id, run.projectId, run.workflowId),
+    type: 'RUN_CREATED',
+    payload: {
+      triggeredBy,
+      totalSteps,
+    },
+  };
+  workflowEventEmitter.emit(event);
+}
+
+/**
+ * Emit RUN_STARTED event
+ */
+function emitRunStartedEvent(run: WorkflowRun, triggeredBy: string, firstStep: WorkflowStep): void {
+  const event: WorkflowEvent = {
+    ...createEventBase('RUN_STARTED', run.id, run.projectId, run.workflowId),
+    type: 'RUN_STARTED',
+    payload: {
+      triggeredBy,
+      firstStepId: firstStep.id,
+      firstStepName: firstStep.name,
+    },
+  };
+  workflowEventEmitter.emit(event);
+}
+
+/**
+ * Emit STEP_STARTED event
+ */
+function emitStepStartedEvent(run: WorkflowRun, step: WorkflowStep, stepIndex: number, inputArtifacts: string[]): void {
+  const event: WorkflowEvent = {
+    ...createEventBase('STEP_STARTED', run.id, run.projectId, run.workflowId),
+    type: 'STEP_STARTED',
+    payload: {
+      stepId: step.id,
+      stepName: step.name,
+      roleId: step.roleId || '',
+      stepIndex,
+      inputArtifacts,
+    },
+  };
+  workflowEventEmitter.emit(event);
+}
+
+/**
+ * Emit STEP_COMPLETED event
+ */
+function emitStepCompletedEvent(run: WorkflowRun, step: StepExecution, stepIndex: number, durationMs: number): void {
+  const event: WorkflowEvent = {
+    ...createEventBase('STEP_COMPLETED', run.id, run.projectId, run.workflowId),
+    type: 'STEP_COMPLETED',
+    payload: {
+      stepId: step.stepId,
+      stepName: step.stepName,
+      roleId: step.roleId,
+      stepIndex,
+      outputArtifacts: step.outputArtifacts,
+      durationMs,
+    },
+  };
+  workflowEventEmitter.emit(event);
+}
+
+/**
+ * Emit STEP_FAILED event
+ */
+function emitStepFailedEvent(run: WorkflowRun, step: StepExecution, stepIndex: number, error: string): void {
+  const event: WorkflowEvent = {
+    ...createEventBase('STEP_FAILED', run.id, run.projectId, run.workflowId),
+    type: 'STEP_FAILED',
+    payload: {
+      stepId: step.stepId,
+      stepName: step.stepName,
+      roleId: step.roleId,
+      stepIndex,
+      error,
+    },
+  };
+  workflowEventEmitter.emit(event);
+}
+
+/**
+ * Emit RUN_COMPLETED event
+ */
+function emitRunCompletedEvent(run: WorkflowRun, completedSteps: number, durationMs: number): void {
+  const event: WorkflowEvent = {
+    ...createEventBase('RUN_COMPLETED', run.id, run.projectId, run.workflowId),
+    type: 'RUN_COMPLETED',
+    payload: {
+      completedSteps,
+      totalSteps: run.steps.length,
+      durationMs,
+    },
+  };
+  workflowEventEmitter.emit(event);
+}
+
+/**
+ * Emit RUN_FAILED event
+ */
+function emitRunFailedEvent(run: WorkflowRun, failedAtStepId: string, failedAtStepName: string, error: string): void {
+  const event: WorkflowEvent = {
+    ...createEventBase('RUN_FAILED', run.id, run.projectId, run.workflowId),
+    type: 'RUN_FAILED',
+    payload: {
+      failedAtStepId,
+      failedAtStepName,
+      error,
+    },
+  };
+  workflowEventEmitter.emit(event);
+}
+
+/**
+ * Emit RUN_PAUSED event
+ */
+function emitRunPausedEvent(run: WorkflowRun): void {
+  const currentStep = run.steps[run.currentStepIndex];
+  const event: WorkflowEvent = {
+    ...createEventBase('RUN_PAUSED', run.id, run.projectId, run.workflowId),
+    type: 'RUN_PAUSED',
+    payload: {
+      pausedAtStepId: currentStep?.stepId || '',
+      pausedAtStepName: currentStep?.stepName || '',
+    },
+  };
+  workflowEventEmitter.emit(event);
+}
+
+/**
+ * Emit RUN_RESUMED event
+ */
+function emitRunResumedEvent(run: WorkflowRun): void {
+  const currentStep = run.steps[run.currentStepIndex];
+  const event: WorkflowEvent = {
+    ...createEventBase('RUN_RESUMED', run.id, run.projectId, run.workflowId),
+    type: 'RUN_RESUMED',
+    payload: {
+      resumedAtStepId: currentStep?.stepId || '',
+      resumedAtStepName: currentStep?.stepName || '',
+    },
+  };
+  workflowEventEmitter.emit(event);
+}
+
+/**
+ * Emit RUN_CANCELLED event
+ */
+function emitRunCancelledEvent(run: WorkflowRun, reason: string, cancelledBy: string): void {
+  const event: WorkflowEvent = {
+    ...createEventBase('RUN_CANCELLED', run.id, run.projectId, run.workflowId),
+    type: 'RUN_CANCELLED',
+    payload: {
+      reason,
+      cancelledBy,
+    },
+  };
+  workflowEventEmitter.emit(event);
+}
+
+/**
+ * Emit GATE_OPENED event
+ */
+function emitGateOpenedEvent(run: WorkflowRun, step: WorkflowStep, requiredDeciderRoleId: string): void {
+  const event: WorkflowEvent = {
+    ...createEventBase('GATE_OPENED', run.id, run.projectId, run.workflowId),
+    type: 'GATE_OPENED',
+    payload: {
+      stepId: step.id,
+      stepName: step.name,
+      gateType: 'manual',
+      requiredDeciderRoleId,
+    },
+  };
+  workflowEventEmitter.emit(event);
+}
+
+/**
+ * Emit GATE_APPROVED event
+ */
+function emitGateApprovedEvent(run: WorkflowRun, stepId: string, stepName: string, decidedBy: string, reason?: string): void {
+  const event: WorkflowEvent = {
+    ...createEventBase('GATE_APPROVED', run.id, run.projectId, run.workflowId),
+    type: 'GATE_APPROVED',
+    payload: {
+      stepId,
+      stepName,
+      decidedBy,
+      reason,
+    },
+  };
+  workflowEventEmitter.emit(event);
+}
+
+/**
+ * Emit GATE_REJECTED event
+ */
+function emitGateRejectedEvent(run: WorkflowRun, stepId: string, stepName: string, decidedBy: string, reason?: string): void {
+  const event: WorkflowEvent = {
+    ...createEventBase('GATE_REJECTED', run.id, run.projectId, run.workflowId),
+    type: 'GATE_REJECTED',
+    payload: {
+      stepId,
+      stepName,
+      decidedBy,
+      reason,
+    },
+  };
+  workflowEventEmitter.emit(event);
 }

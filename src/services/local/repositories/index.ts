@@ -10,3 +10,4 @@ export {
   type EventLogSummary,
   type EventQueryOptions,
 } from './workflowEventRepository';
+export { NotificationRepository } from './notificationRepository';

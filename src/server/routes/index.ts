@@ -10,6 +10,7 @@ import { rolesRouter } from './roles';
 import { capabilitiesRouter } from './capabilities';
 import { tasksRouter } from './tasks';
 import { workbenchRunsRouter } from './workbenchRuns';
+import { notificationsRouter } from './notifications';
 
 export function createRouter(): Router {
   const router = Router();
@@ -29,6 +30,7 @@ export function createRouter(): Router {
   router.use('/capabilities', capabilitiesRouter);
   router.use('/tasks', tasksRouter);
   router.use('/workbench-runs', workbenchRunsRouter);
+  router.use('/notifications', notificationsRouter);
 
   console.log('[Router] Final router stack length:', (router as any).stack?.length);
 

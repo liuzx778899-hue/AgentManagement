@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  AlertCircle,
   Brain,
   Camera,
   CheckCircle2,
   ChevronDown,
+  ChevronRight,
+  Circle,
   CircleCheck,
   CircleDot,
+  Clock,
   Database,
   FileCode2,
   FileText,
@@ -27,12 +31,15 @@ import {
 import type { WorkbenchData, WorkbenchView } from "../domain/workbench";
 import type { LogEntry, ProcessState } from "../types/localEngineering";
 import { useLocalServices } from "../hooks/useLocalServices";
+import { TaskTodoPanel } from "./TaskTodoPanel";
 import { PwLogStream } from "./PwLogStream";
 
 interface WorkbenchHomeProps {
   data: WorkbenchData;
   onNavigate: (view: WorkbenchView) => void;
   activeProjectId?: string;
+  updateTask?: (taskId: string, updates: Partial<WorkbenchData["tasks"][0]>) => void;
+  deleteTask?: (taskId: string) => void;
 }
 
 interface TerminalTab {
@@ -72,7 +79,23 @@ function stepStatus(index: number, gateMode: string) {
 
 const LOG_POLL_INTERVAL = 1500;
 
-export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHomeProps) {
+type TaskStatus = "draft" | "queued" | "running" | "gate" | "done" | "failed";
+
+const statusConfig: Record<TaskStatus, { icon: typeof CheckCircle2; label: string; color: string }> = {
+  draft: { icon: Circle, label: "草稿", color: "var(--text-muted)" },
+  queued: { icon: Clock, label: "排队中", color: "var(--accent-orange)" },
+  running: { icon: Play, label: "运行中", color: "var(--accent-blue)" },
+  gate: { icon: AlertCircle, label: "等待决策", color: "var(--accent-orange)" },
+  done: { icon: CheckCircle2, label: "已完成", color: "var(--accent-green)" },
+  failed: { icon: Square, label: "失败", color: "var(--accent-red)" },
+};
+
+function getWorkflowTemplateName(templateId: string, templates: WorkbenchData["workflowTemplates"]): string {
+  const template = templates.find((t) => t.id === templateId);
+  return template?.name ?? "未关联流程";
+}
+
+export function WorkbenchHome({ data, onNavigate, activeProjectId, updateTask, deleteTask }: WorkbenchHomeProps) {
   const { processRunner } = useLocalServices();
   const project = data.projects.find((item) => item.id === activeProjectId) ?? data.projects[0];
   const template = data.workflowTemplates[0];
@@ -84,6 +107,10 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
   const [popoverAnchor, setPopoverAnchor] = useState<{ left: number; bottom: number } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  // TODO display state
+  const [expanded, setExpanded] = useState(false);
+  const maxVisible = 4;
 
   // Per-tab runner process state
   const [tabStates, setTabStates] = useState<Record<string, TabProcessState>>({});
@@ -282,6 +309,7 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
 
   const flowSteps = template?.steps ?? [];
   const todos = data.tasks.filter((task) => task.status !== "done");
+  const completedTasks = data.tasks.filter((task) => task.status === "done");
   const activeRuns = data.agentRuns.filter((run) => run.status === "running" || run.status === "waiting_gate");
   const activeGate = data.manualGates.find((gate) => gate.status === "waiting");
   const projectMemories = data.memories.filter((memory) => memory.scope === "project");
@@ -291,6 +319,19 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
   const popoverPositionStyle = popoverAnchor
     ? { left: popoverAnchor.left, top: popoverAnchor.bottom + 8, right: "auto", bottom: "auto", display: "block" }
     : undefined;
+
+  // TODO display helpers
+  const visibleTodos = expanded ? todos : todos.slice(0, maxVisible);
+  const hasMore = todos.length > maxVisible;
+
+  const handleToggleExpand = () => setExpanded((prev) => !prev);
+
+  const handleMarkTaskDone = (taskId: string) => {
+    if (updateTask) {
+      updateTask(taskId, { status: "done" });
+      setToast("任务已完成");
+    }
+  };
 
   const renderSelectPopover = () => {
     if (!["project-select", "branch-select", "worktree-select", "phase-select", "top-more"].includes(popover ?? "")) return null;
@@ -629,15 +670,58 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
                 <div className="wb-box-title">
                   <span>TODO LIST</span>
                   <span className="wb-model-pill">{todos.length}</span>
+                  {completedTasks.length > 0 && (
+                    <span className="wb-todo-completed-count">已完成 {completedTasks.length}</span>
+                  )}
                 </div>
-                <div className="wb-box-list">
-                  {todos.slice(0, 4).map((task) => (
-                    <div key={task.id} className="wb-todo-item">
-                      <span className="wb-todo-check" />
-                      <span>{task.goal}</span>
-                      <span className="wb-prio-pill high">高</span>
-                    </div>
-                  ))}
+                <div className="wb-box-list wb-todo-list">
+                  {visibleTodos.length === 0 ? (
+                    <p className="wb-panel-empty">暂无待办任务</p>
+                  ) : (
+                    <>
+                      {visibleTodos.map((task) => {
+                        const status = statusConfig[task.status];
+                        const StatusIcon = status.icon;
+                        const workflowName = getWorkflowTemplateName(task.workflowTemplateId, data.workflowTemplates);
+                        return (
+                          <div key={task.id} className="wb-todo-item-enhanced">
+                            <div className="wb-todo-status">
+                              <StatusIcon size={14} style={{ color: status.color }} />
+                              <span className="wb-todo-status-label">{status.label}</span>
+                            </div>
+                            <div className="wb-todo-content">
+                              <span className="wb-todo-goal">{task.goal}</span>
+                              <span className="wb-todo-meta">{workflowName}</span>
+                            </div>
+                            <div className="wb-todo-actions">
+                              {task.status !== "done" && (
+                                <button
+                                  className="wb-todo-action-btn"
+                                  onClick={() => handleMarkTaskDone(task.id)}
+                                  title="标记完成"
+                                  type="button"
+                                >
+                                  <CheckCircle2 size={12} />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {hasMore && !expanded && (
+                        <button className="wb-todo-expand-btn" onClick={handleToggleExpand} type="button">
+                          <ChevronDown size={14} />
+                          显示更多 ({todos.length - maxVisible} 项)
+                        </button>
+                      )}
+                      {expanded && hasMore && (
+                        <button className="wb-todo-expand-btn" onClick={handleToggleExpand} type="button">
+                          <ChevronRight size={14} />
+                          收起
+                        </button>
+                      )}
+                    </>
+                  )}
                 </div>
               </div>
 

@@ -15,6 +15,7 @@ import type {
   RepoCommit,
   GitBranch,
   RunnerProfile,
+  Notification,
 } from "../domain/workbench";
 
 export function activeGate(data: WorkbenchData): ManualGate | undefined {
@@ -1818,4 +1819,41 @@ AI 软件项目经理工作台，第一版是个人本地 Web MVP。
     runner: { defaultTimeout: 300000, autoRestart: false },
     git: { autoFetch: true, fetchInterval: 60000 },
   },
+
+  notifications: [
+    {
+      id: "notif-001",
+      type: "info",
+      category: "gate",
+      title: "等待人工决策",
+      body: "步骤「代码审查」需要人工审批",
+      createdAt: new Date().toISOString(),
+      read: false,
+      relatedRunId: "run-001",
+      relatedProjectId: "proj-001",
+      relatedStepId: "step-003",
+      relatedTaskId: "task-001",
+    },
+    {
+      id: "notif-002",
+      type: "success",
+      category: "runner",
+      title: "Runner 启动成功",
+      body: "Claude Code CLI 已成功启动",
+      createdAt: new Date().toISOString(),
+      read: true,
+      relatedRunId: "run-001",
+    },
+    {
+      id: "notif-003",
+      type: "warning",
+      category: "task",
+      title: "任务即将超时",
+      body: "任务「前端开发」已运行 45 分钟，即将达到超时阈值",
+      createdAt: new Date().toISOString(),
+      read: false,
+      relatedTaskId: "task-001",
+      relatedProjectId: "proj-001",
+    },
+  ] as Notification[],
 };

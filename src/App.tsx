@@ -83,16 +83,34 @@ function AppContent() {
     }
   }, [view, workspaceProjectId, detailProjectId, activeWorkbenchProjectId, selectedWorkflowTemplateId]);
 
-  // Listen for custom navigate events (used by child components)
+  // Listen for custom navigate events (used by child components, including notifications)
   useEffect(() => {
     const handler = (e: CustomEvent) => {
-      if (e.detail?.view) setView(e.detail.view as WorkbenchView);
+      const detail = e.detail;
+      if (detail?.view) {
+        setView(detail.view as WorkbenchView);
+
+        // Handle additional params from notifications and other sources
+        if (detail.projectId) {
+          if (detail.view === "workbench") {
+            setActiveWorkbenchProjectId(detail.projectId);
+          } else if (detail.view === "project-workspace") {
+            setWorkspaceProjectId(detail.projectId);
+          } else if (detail.view === "project-detail") {
+            setDetailProjectId(detail.projectId);
+          }
+        }
+
+        if (detail.workflowTemplateId) {
+          setSelectedWorkflowTemplateId(detail.workflowTemplateId);
+        }
+      }
     };
     window.addEventListener("navigate", handler as EventListener);
     return () => window.removeEventListener("navigate", handler as EventListener);
   }, []);
 
-  const { data, deleteWorkflowTemplate, updateWorkflowTemplate } = useWorkbenchState();
+  const { data, deleteWorkflowTemplate, updateWorkflowTemplate, updateTask, deleteTask } = useWorkbenchState();
   const fallbackProjectId = data.projects[0]?.id;
   const resolvedDetailProjectId = detailProjectId ?? fallbackProjectId;
 
@@ -113,7 +131,7 @@ function AppContent() {
   return (
     <>
       <AppShell activeView={view} onNavigate={setView}>
-        {view === "workbench" && <WorkbenchHome data={data} onNavigate={setView} activeProjectId={activeWorkbenchProjectId ?? undefined} />}
+        {view === "workbench" && <WorkbenchHome data={data} onNavigate={setView} activeProjectId={activeWorkbenchProjectId ?? undefined} updateTask={updateTask} deleteTask={deleteTask} />}
         {view === "project-management" && (
           <ProjectManagement
             data={data}

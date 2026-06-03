@@ -44,6 +44,7 @@ export type WorkflowEventType =
   | 'STEP_SKIPPED'
 
   // --- Gate lifecycle ---
+  | 'GATE_REQUESTED'
   | 'GATE_OPENED'
   | 'GATE_APPROVED'
   | 'GATE_REJECTED'
@@ -204,6 +205,19 @@ export interface StepSkippedEvent extends WorkflowEventBase {
 }
 
 // --- Gate event payloads ---
+
+export interface GateRequestedEvent extends WorkflowEventBase {
+  type: 'GATE_REQUESTED';
+  payload: {
+    stepId: string;
+    stepName: string;
+    gateType: 'manual' | 'auto';
+    /** Who is requested to make the decision (role ID). */
+    requestedDeciderRoleId: string;
+    /** Optional context for the decision request. */
+    context?: string;
+  };
+}
 
 export interface GateOpenedEvent extends WorkflowEventBase {
   type: 'GATE_OPENED';
@@ -414,6 +428,7 @@ export type WorkflowEvent =
   | StepCompletedEvent
   | StepFailedEvent
   | StepSkippedEvent
+  | GateRequestedEvent
   | GateOpenedEvent
   | GateApprovedEvent
   | GateRejectedEvent

@@ -126,3 +126,18 @@ export {
   getAllEvents,
   resetEventUseCaseState,
 } from './workflowEventUseCase';
+export {
+  createNotification,
+  getNotification,
+  updateNotification,
+  markNotificationAsRead,
+  markAllNotificationsAsRead,
+  deleteNotification,
+  listNotifications,
+  filterNotifications,
+  getUnreadCount,
+  clearAllNotifications,
+  type CreateNotificationConfig,
+  type UpdateNotificationConfig,
+  type NotificationFilterOptions,
+} from './notificationUseCase';

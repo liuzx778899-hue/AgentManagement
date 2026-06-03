@@ -153,9 +153,47 @@ export function NotificationList({ onNavigate }: NotificationListProps) {
   const handleNotificationClick = useCallback(
     (notification: NotificationItem) => {
       markAsRead(notification.id);
-      if (notification.projectId && onNavigate) {
-        onNavigate("project-workspace", { projectId: notification.projectId });
+
+      // Determine navigation target based on notification type and related entities
+      let targetView: string = "workbench";
+      const params: Record<string, string> = {};
+
+      if (notification.projectId) {
+        params.projectId = notification.projectId;
+
+        // Route based on notification type
+        if (notification.type === "gate") {
+          // Gate notifications -> go to workbench to handle the gate
+          targetView = "workbench";
+          if (notification.stepId) {
+            params.stepId = notification.stepId;
+          }
+        } else if (notification.type === "task" || notification.type === "info") {
+          // Task notifications -> go to project detail
+          targetView = "project-detail";
+        } else if (notification.type === "success" || notification.type === "error") {
+          // Step completion/failure -> go to workbench
+          targetView = "workbench";
+          if (notification.stepId) {
+            params.stepId = notification.stepId;
+          }
+          if (notification.runId) {
+            params.runId = notification.runId;
+          }
+        } else if (notification.type === "warning") {
+          // Warning notifications -> go to project detail for investigation
+          targetView = "project-detail";
+        } else {
+          // Default: go to workbench
+          targetView = "workbench";
+        }
       }
+
+      // Dispatch custom navigate event with params
+      if (onNavigate) {
+        onNavigate(targetView, params);
+      }
+
       setIsOpen(false);
     },
     [markAsRead, onNavigate]

@@ -129,6 +129,9 @@ export function workbenchReducer(state: WorkbenchData, action: WorkbenchAction):
         ),
       };
 
+    case "DELETE_TASK":
+      return { ...state, tasks: state.tasks.filter((t) => t.id !== action.taskId) };
+
     case "ADD_PROJECT":
       return {
         ...state,

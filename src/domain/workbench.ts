@@ -54,6 +54,7 @@ export type {
   StepCompletedEvent,
   StepFailedEvent,
   StepSkippedEvent,
+  GateRequestedEvent,
   GateOpenedEvent,
   GateApprovedEvent,
   GateRejectedEvent,
@@ -103,6 +104,7 @@ import type { EngineeringFeedback } from "./engineering";
 import type { ImAdapter, ProjectImBinding } from "./im";
 import type { GitCredential, RepoIssue, RepoPullRequest, CiPipeline, GitStatus, RepoCommit, GitBranch } from "./git";
 import type { RunnerProfile } from "./runner";
+import type { Notification } from "./notification";
 
 export interface WorkbenchData {
   projects: Project[];
@@ -142,4 +144,6 @@ export interface WorkbenchData {
   defaultRunner?: string;
   // App Settings
   settings: AppSettings;
+  // Notifications
+  notifications: Notification[];
 }

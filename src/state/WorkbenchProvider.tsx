@@ -24,6 +24,7 @@ import {
   deleteMemory as deleteMemoryAction,
   createTask as createTaskAction,
   updateTaskAction as updateTaskActionImport,
+  deleteTask as deleteTaskAction,
   addProject as addProjectAction,
   updateProject as updateProjectAction,
   deleteProject as deleteProjectAction,
@@ -54,9 +55,13 @@ import {
   setDefaultRunner as setDefaultRunnerAction,
   setProjects as setProjectsAction,
   setMemories as setMemoriesAction,
+  addNotification as addNotificationAction,
+  markNotificationRead as markNotificationReadAction,
+  clearNotifications as clearNotificationsAction,
 } from "./workbenchActions";
 import { projectApi, memoryApi, settingsApi, checkServerAvailable, workflowApi, rolesApi, capabilitiesApi, taskApi } from "../services/api";
 import { setModelProviders as setModelProvidersAction, setWorkflowTemplates as setWorkflowTemplatesAction, setRoles as setRolesAction, setCapabilities as setCapabilitiesAction, setTasks as setTasksAction, setSettings as setSettingsAction } from "./workbenchActions";
+import type { CreateNotificationInput } from "../domain/notification";
 
 // Default runner profiles - commonly used CLI tools
 const defaultRunnerProfiles: RunnerProfile[] = [
@@ -138,17 +143,20 @@ const emptyData: WorkbenchData = {
     runner: { defaultTimeout: 300000, autoRestart: false },
     git: { autoFetch: true, fetchInterval: 60000 },
   },
+  notifications: [],
 };
 
 // State Context
 interface WorkbenchState {
   data: WorkbenchData;
+  dispatch: React.Dispatch<any>; // Add dispatch to the state interface
   updateGateStatus: (gateId: string, status: GateStatus) => void;
   addMemory: (memory: Omit<MemoryItem, "id" | "createdAt" | "updatedAt">) => Promise<void>;
   updateMemory: (memoryId: string, updates: Partial<Pick<MemoryItem, "title" | "body">>) => void;
   deleteMemory: (memoryId: string) => void;
   createTask: (task: Omit<WorkbenchData["tasks"][0], "id" | "createdAt" | "updatedAt">) => void;
   updateTask: (taskId: string, updates: Partial<WorkbenchData["tasks"][0]>) => void;
+  deleteTask: (taskId: string) => void;
   addProject: (project: Omit<Project, "id" | "createdAt" | "updatedAt">) => void;
   updateProject: (projectId: string, updates: Partial<Project>) => void;
   deleteProject: (projectId: string) => void;
@@ -180,6 +188,9 @@ interface WorkbenchState {
   addRolesBatch?: (roles: Array<Omit<AgentRole, "id"> & { id?: string }>) => Promise<AgentRole[]>;
   updateSettings: (updates: Partial<import("../types/settings").AppSettings>) => void;
   setTasks: (tasks: WorkbenchData["tasks"]) => void;
+  addNotification: (input: CreateNotificationInput) => void;
+  markNotificationRead: (notificationId: string) => void;
+  clearNotifications: () => void;
 }
 
 export const WorkbenchContext = createContext<WorkbenchState | null>(null);
@@ -387,8 +398,24 @@ export function WorkbenchProvider({ children }: WorkbenchProviderProps) {
     dispatch(createTaskAction(task));
   }, []);
 
-  const updateTask = useCallback((taskId: string, updates: Partial<WorkbenchData["tasks"][0]>) => {
+  const updateTask = useCallback(async (taskId: string, updates: Partial<WorkbenchData["tasks"][0]>) => {
+    // Persist to server
+    const result = await taskApi.update(taskId, updates);
+    if (!result.ok) {
+      console.error('[WorkbenchProvider] Failed to update task on server:', result.error);
+    }
+    // Update local state regardless (optimistic)
     dispatch(updateTaskActionImport(taskId, updates));
+  }, []);
+
+  const deleteTask = useCallback(async (taskId: string) => {
+    // Persist to server
+    const result = await taskApi.delete(taskId);
+    if (!result.ok) {
+      console.error('[WorkbenchProvider] Failed to delete task from server:', result.error);
+    }
+    // Update local state regardless (optimistic)
+    dispatch(deleteTaskAction(taskId));
   }, []);
 
   const addProject = useCallback((project: Omit<Project, "id" | "createdAt" | "updatedAt">) => {
@@ -546,15 +573,35 @@ export function WorkbenchProvider({ children }: WorkbenchProviderProps) {
     dispatch(setTasksAction(tasks));
   }, []);
 
+  const addNotification = useCallback((input: CreateNotificationInput) => {
+    const notification = {
+      ...input,
+      id: `notif-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
+      createdAt: new Date().toISOString(),
+      read: false,
+    };
+    dispatch(addNotificationAction(notification));
+  }, []);
+
+  const markNotificationRead = useCallback((notificationId: string) => {
+    dispatch(markNotificationReadAction(notificationId));
+  }, []);
+
+  const clearNotifications = useCallback(() => {
+    dispatch(clearNotificationsAction());
+  }, []);
+
   const state = useMemo(
     () => ({
       data,
+      dispatch,
       updateGateStatus,
       addMemory,
       updateMemory,
       deleteMemory,
       createTask,
       updateTask,
+      deleteTask,
       addProject,
       updateProject,
       deleteProject,
@@ -586,15 +633,20 @@ export function WorkbenchProvider({ children }: WorkbenchProviderProps) {
       addRolesBatch,
       updateSettings,
       setTasks,
+      addNotification,
+      markNotificationRead,
+      clearNotifications,
     }),
     [
       data,
+      dispatch,
       updateGateStatus,
       addMemory,
       updateMemory,
       deleteMemory,
       createTask,
       updateTask,
+      deleteTask,
       addProject,
       updateProject,
       deleteProject,

@@ -16,6 +16,7 @@ import {
   type StepCompletedEvent,
   type StepFailedEvent,
   type StepSkippedEvent,
+  type GateRequestedEvent,
   type GateOpenedEvent,
   type GateApprovedEvent,
   type GateRejectedEvent,
@@ -25,6 +26,14 @@ import {
   type RunnerLogEvent,
   type ArtifactProducedEvent,
   type RunErrorEvent,
+  type TaskCreatedEvent,
+  type TaskQueuedEvent,
+  type TaskStartedEvent,
+  type TaskCompletedEvent,
+  type TaskFailedEvent,
+  type TaskCancelledEvent,
+  type TaskRetriedEvent,
+  type BugReportedEvent,
   createEventBase,
   generateEventId,
   resetEventCounter,
@@ -81,6 +90,7 @@ describe('WorkflowEvent', () => {
         'STEP_COMPLETED',
         'STEP_FAILED',
         'STEP_SKIPPED',
+        'GATE_REQUESTED',
         'GATE_OPENED',
         'GATE_APPROVED',
         'GATE_REJECTED',
@@ -90,11 +100,19 @@ describe('WorkflowEvent', () => {
         'RUNNER_LOG',
         'ARTIFACT_PRODUCED',
         'RUN_ERROR',
+        'TASK_CREATED',
+        'TASK_QUEUED',
+        'TASK_STARTED',
+        'TASK_COMPLETED',
+        'TASK_FAILED',
+        'TASK_CANCELLED',
+        'TASK_RETRIED',
+        'BUG_REPORTED',
       ];
 
-      // 20 distinct event types
-      expect(allTypes).toHaveLength(20);
-      expect(new Set(allTypes).size).toBe(20);
+      // 29 distinct event types
+      expect(allTypes).toHaveLength(29);
+      expect(new Set(allTypes).size).toBe(29);
     });
 
     it('can narrow events by type in a switch', () => {
@@ -349,6 +367,60 @@ describe('WorkflowEvent', () => {
       expect(rejected.payload.reason).toBeUndefined();
     });
 
+    it('GATE_REQUESTED carries gate request details', () => {
+      const gateRequested: GateRequestedEvent = {
+        ...createEventBase('GATE_REQUESTED', 'run-1', 'proj-1', 'wf-1'),
+        type: 'GATE_REQUESTED',
+        payload: {
+          stepId: 's2',
+          stepName: 'Code Review',
+          gateType: 'manual',
+          requestedDeciderRoleId: 'reviewer',
+          context: 'Please review the code changes before merging',
+        },
+      };
+
+      expect(gateRequested.type).toBe('GATE_REQUESTED');
+      expect(gateRequested.payload.stepId).toBe('s2');
+      expect(gateRequested.payload.gateType).toBe('manual');
+      expect(gateRequested.payload.requestedDeciderRoleId).toBe('reviewer');
+      expect(gateRequested.payload.context).toBe('Please review the code changes before merging');
+    });
+
+    it('GATE_REQUESTED can have auto gate type', () => {
+      const autoGate: GateRequestedEvent = {
+        ...createEventBase('GATE_REQUESTED', 'run-1', 'proj-1', 'wf-1'),
+        type: 'GATE_REQUESTED',
+        payload: {
+          stepId: 's1',
+          stepName: 'Validation',
+          gateType: 'auto',
+          requestedDeciderRoleId: 'system',
+        },
+      };
+
+      expect(autoGate.payload.gateType).toBe('auto');
+      expect(autoGate.payload.context).toBeUndefined();
+    });
+
+    it('GATE_REQUESTED can narrow events by type', () => {
+      const event: WorkflowEvent = {
+        ...createEventBase('GATE_REQUESTED', 'run-1', 'proj-1', 'wf-1'),
+        type: 'GATE_REQUESTED',
+        payload: {
+          stepId: 's3',
+          stepName: 'Final Review',
+          gateType: 'manual',
+          requestedDeciderRoleId: 'lead',
+        },
+      };
+
+      if (event.type === 'GATE_REQUESTED') {
+        expect(event.payload.gateType).toBe('manual');
+        expect(event.payload.requestedDeciderRoleId).toBe('lead');
+      }
+    });
+
     it('CHANGE_REQUESTED carries return-to step and requested changes', () => {
       const changeRequested: ChangeRequestedEvent = {
         ...createEventBase('CHANGE_REQUESTED', 'run-1', 'proj-1', 'wf-1'),
@@ -391,6 +463,184 @@ describe('WorkflowEvent', () => {
       if (event.type === 'CHANGE_REQUESTED') {
         expect(event.payload.returnToStepId).toBe('s1');
         expect(event.payload.requestedChanges).toBe('Revise the approach');
+      }
+    });
+  });
+
+  describe('task lifecycle events', () => {
+    it('TASK_CREATED carries goal and workflow template', () => {
+      const taskCreated: TaskCreatedEvent = {
+        ...createEventBase('TASK_CREATED', 'run-1', 'proj-1', 'wf-1'),
+        type: 'TASK_CREATED',
+        payload: {
+          taskId: 'task-1',
+          goal: 'Implement user authentication',
+          workflowTemplateId: 'wf-auth',
+          createdBy: 'user',
+        },
+      };
+
+      expect(taskCreated.type).toBe('TASK_CREATED');
+      expect(taskCreated.payload.taskId).toBe('task-1');
+      expect(taskCreated.payload.goal).toBe('Implement user authentication');
+      expect(taskCreated.payload.workflowTemplateId).toBe('wf-auth');
+    });
+
+    it('TASK_QUEUED carries queue position', () => {
+      const taskQueued: TaskQueuedEvent = {
+        ...createEventBase('TASK_QUEUED', 'run-1', 'proj-1', 'wf-1'),
+        type: 'TASK_QUEUED',
+        payload: {
+          taskId: 'task-1',
+          queuedBy: 'user',
+          queuePosition: 3,
+        },
+      };
+
+      expect(taskQueued.type).toBe('TASK_QUEUED');
+      expect(taskQueued.payload.queuePosition).toBe(3);
+    });
+
+    it('TASK_STARTED links to run', () => {
+      const taskStarted: TaskStartedEvent = {
+        ...createEventBase('TASK_STARTED', 'run-1', 'proj-1', 'wf-1'),
+        type: 'TASK_STARTED',
+        payload: {
+          taskId: 'task-1',
+          runId: 'run-1',
+          startedBy: 'user',
+        },
+      };
+
+      expect(taskStarted.type).toBe('TASK_STARTED');
+      expect(taskStarted.payload.runId).toBe('run-1');
+    });
+
+    it('TASK_COMPLETED carries duration', () => {
+      const taskCompleted: TaskCompletedEvent = {
+        ...createEventBase('TASK_COMPLETED', 'run-1', 'proj-1', 'wf-1'),
+        type: 'TASK_COMPLETED',
+        payload: {
+          taskId: 'task-1',
+          runId: 'run-1',
+          completedBy: 'user',
+          durationMs: 15000,
+        },
+      };
+
+      expect(taskCompleted.type).toBe('TASK_COMPLETED');
+      expect(taskCompleted.payload.durationMs).toBe(15000);
+    });
+
+    it('TASK_FAILED carries error details', () => {
+      const taskFailed: TaskFailedEvent = {
+        ...createEventBase('TASK_FAILED', 'run-1', 'proj-1', 'wf-1'),
+        type: 'TASK_FAILED',
+        payload: {
+          taskId: 'task-1',
+          runId: 'run-1',
+          failedAtStepId: 's2',
+          failedAtStepName: 'Testing',
+          error: 'Test suite failed',
+        },
+      };
+
+      expect(taskFailed.type).toBe('TASK_FAILED');
+      expect(taskFailed.payload.error).toBe('Test suite failed');
+      expect(taskFailed.payload.failedAtStepName).toBe('Testing');
+    });
+
+    it('TASK_CANCELLED carries reason', () => {
+      const taskCancelled: TaskCancelledEvent = {
+        ...createEventBase('TASK_CANCELLED', 'run-1', 'proj-1', 'wf-1'),
+        type: 'TASK_CANCELLED',
+        payload: {
+          taskId: 'task-1',
+          reason: 'Obsolete requirement',
+          cancelledBy: 'user',
+        },
+      };
+
+      expect(taskCancelled.type).toBe('TASK_CANCELLED');
+      expect(taskCancelled.payload.reason).toBe('Obsolete requirement');
+      expect(taskCancelled.payload.runId).toBeUndefined();
+    });
+
+    it('TASK_RETRIED links previous and new runs', () => {
+      const taskRetried: TaskRetriedEvent = {
+        ...createEventBase('TASK_RETRIED', 'run-2', 'proj-1', 'wf-1'),
+        type: 'TASK_RETRIED',
+        payload: {
+          taskId: 'task-1',
+          previousRunId: 'run-1',
+          newRunId: 'run-2',
+          retriedBy: 'user',
+          retryCount: 1,
+        },
+      };
+
+      expect(taskRetried.type).toBe('TASK_RETRIED');
+      expect(taskRetried.payload.previousRunId).toBe('run-1');
+      expect(taskRetried.payload.newRunId).toBe('run-2');
+      expect(taskRetried.payload.retryCount).toBe(1);
+    });
+  });
+
+  describe('bug event', () => {
+    it('BUG_REPORTED carries severity and bug details', () => {
+      const bugReported: BugReportedEvent = {
+        ...createEventBase('BUG_REPORTED', 'run-1', 'proj-1', 'wf-1'),
+        type: 'BUG_REPORTED',
+        payload: {
+          taskId: 'task-1',
+          bugId: 'bug-42',
+          bugTitle: 'Login fails with special characters',
+          severity: 'high',
+          reportedBy: 'tester',
+          description: 'When password contains # symbol, login returns 500',
+        },
+      };
+
+      expect(bugReported.type).toBe('BUG_REPORTED');
+      expect(bugReported.payload.bugId).toBe('bug-42');
+      expect(bugReported.payload.bugTitle).toBe('Login fails with special characters');
+      expect(bugReported.payload.severity).toBe('high');
+      expect(bugReported.payload.reportedBy).toBe('tester');
+      expect(bugReported.payload.description).toBe('When password contains # symbol, login returns 500');
+    });
+
+    it('BUG_REPORTED can have critical severity', () => {
+      const criticalBug: BugReportedEvent = {
+        ...createEventBase('BUG_REPORTED', 'run-1', 'proj-1', 'wf-1'),
+        type: 'BUG_REPORTED',
+        payload: {
+          taskId: 'task-1',
+          bugId: 'bug-100',
+          bugTitle: 'Data loss on save',
+          severity: 'critical',
+          reportedBy: 'user',
+        },
+      };
+
+      expect(criticalBug.payload.severity).toBe('critical');
+      expect(criticalBug.payload.description).toBeUndefined();
+    });
+
+    it('can narrow BUG_REPORTED event by type', () => {
+      const event: WorkflowEvent = {
+        ...createEventBase('BUG_REPORTED', 'run-1', 'proj-1', 'wf-1'),
+        type: 'BUG_REPORTED',
+        payload: {
+          taskId: 'task-1',
+          bugId: 'bug-1',
+          bugTitle: 'Critical bug',
+          severity: 'critical',
+          reportedBy: 'tester',
+        },
+      };
+
+      if (event.type === 'BUG_REPORTED') {
+        expect(event.payload.severity).toBe('critical');
       }
     });
   });

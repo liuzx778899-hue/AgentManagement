@@ -86,9 +86,21 @@ export function AppShell({
           </div>
           <div className="topbar-right">
             <NotificationList
-              onNavigate={(view) => {
-                if (view === "project-workspace" || view === "project-detail") {
-                  onNavigate(view as WorkbenchView);
+              onNavigate={(view, params) => {
+                // Map notification navigation to App's navigation system
+                const targetView = view as WorkbenchView;
+                if (params?.projectId) {
+                  // Use custom event to pass params to App
+                  const event = new CustomEvent("navigate", {
+                    detail: {
+                      view: targetView,
+                      projectId: params.projectId,
+                      ...params
+                    }
+                  });
+                  window.dispatchEvent(event);
+                } else {
+                  onNavigate(targetView);
                 }
               }}
             />

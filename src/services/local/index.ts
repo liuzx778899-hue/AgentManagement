@@ -10,7 +10,7 @@ export { LlmAdapter } from './adapters/llmAdapter';
 export * from './useCases';
 
 // Repositories
-export { ProjectRepository, MemoryRepository, WorkflowRepository, RoleRepository, TaskRepository, AgentRunRepository } from './repositories';
+export { ProjectRepository, MemoryRepository, WorkflowRepository, RoleRepository, TaskRepository, AgentRunRepository, NotificationRepository } from './repositories';
 
 // Security
 export {
@@ -32,7 +32,7 @@ import { GitAdapter } from './adapters/gitAdapter';
 import { FileStoreAdapter } from './adapters/fileStoreAdapter';
 import { ProcessRunnerAdapter } from './adapters/processRunnerAdapter';
 import { LlmAdapter } from './adapters/llmAdapter';
-import { ProjectRepository, MemoryRepository, WorkflowRepository, RoleRepository, TaskRepository, AgentRunRepository } from './repositories';
+import { ProjectRepository, MemoryRepository, WorkflowRepository, RoleRepository, TaskRepository, AgentRunRepository, NotificationRepository } from './repositories';
 import type { AdapterConfig, RunnerProcess, LogEntry } from '../../types/localEngineering';
 import type { RunnerKind } from '../../domain/runner';
 import type { Project } from '../../domain/project';
@@ -53,6 +53,7 @@ export interface LocalEngineeringServices {
     role: RoleRepository;
     task: TaskRepository;
     agentRun: AgentRunRepository;
+    notification: NotificationRepository;
   };
 
   // Runner service methods

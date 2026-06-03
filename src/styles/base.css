@@ -561,6 +561,187 @@
 .wb-progress-line span { display: block; width: 90%; height: 100%; background: linear-gradient(90deg, #4ddc7f, #69d382); border-radius: inherit; }
 .wb-panel-link { color: #78a2ff; font-size: 12px; font-weight: 700; cursor: pointer; background: none; border: none; }
 
+/* Enhanced TODO items */
+.wb-todo-list { position: relative; }
+.wb-todo-item-enhanced {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 8px;
+  align-items: start;
+  padding: 8px;
+  border-radius: 6px;
+  background: rgba(20, 29, 40, 0.62);
+  border: 1px solid transparent;
+  min-width: 0;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.wb-todo-item-enhanced:hover {
+  background: rgba(25, 35, 48, 0.82);
+  border-color: rgba(82, 96, 113, 0.32);
+}
+.wb-todo-status {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.wb-todo-status-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted, #6e7681);
+}
+.wb-todo-content {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.wb-todo-goal {
+  color: var(--text-primary, #e6edf3);
+  font-size: 12px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wb-todo-meta {
+  color: var(--text-muted, #6e7681);
+  font-size: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wb-todo-actions {
+  position: relative;
+  flex-shrink: 0;
+}
+.wb-todo-more-btn {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: none;
+  color: var(--text-muted, #6e7681);
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.wb-todo-more-btn:hover {
+  background: rgba(82, 96, 113, 0.24);
+  color: var(--text-secondary, #8b949e);
+}
+.wb-todo-menu {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  margin-top: 4px;
+  min-width: 140px;
+  background: rgba(15, 23, 32, 0.98);
+  border: 1px solid rgba(82, 96, 113, 0.48);
+  border-radius: 6px;
+  padding: 4px;
+  z-index: 100;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.48);
+}
+.wb-todo-menu button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 10px;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary, #8b949e);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.wb-todo-menu button:hover {
+  background: rgba(82, 96, 113, 0.24);
+  color: var(--text-primary, #e6edf3);
+}
+.wb-todo-menu button.danger {
+  color: #f85149;
+}
+.wb-todo-menu button.danger:hover {
+  background: rgba(248, 81, 73, 0.15);
+  color: #ff7b72;
+}
+.wb-todo-edit-area {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  grid-column: 1 / -1;
+}
+.wb-todo-edit-input {
+  flex: 1;
+  background: rgba(7, 17, 26, 0.82);
+  border: 1px solid rgba(88, 166, 255, 0.48);
+  border-radius: 4px;
+  padding: 4px 8px;
+  color: var(--text-primary, #e6edf3);
+  font-size: 12px;
+  font-family: inherit;
+  outline: none;
+}
+.wb-todo-edit-input:focus {
+  border-color: rgba(88, 166, 255, 0.72);
+}
+.wb-todo-edit-btn {
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background 0.15s ease, opacity 0.15s ease;
+}
+.wb-todo-edit-btn.save {
+  background: rgba(63, 185, 80, 0.2);
+  color: #3fb950;
+  border-color: rgba(63, 185, 80, 0.32);
+}
+.wb-todo-edit-btn.save:hover {
+  background: rgba(63, 185, 80, 0.32);
+}
+.wb-todo-edit-btn.cancel {
+  background: rgba(139, 152, 170, 0.1);
+  color: var(--text-muted, #6e7681);
+}
+.wb-todo-edit-btn.cancel:hover {
+  background: rgba(139, 152, 170, 0.2);
+}
+.wb-todo-expand-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  padding: 6px;
+  background: transparent;
+  border: 1px dashed rgba(82, 96, 113, 0.48);
+  border-radius: 4px;
+  color: var(--text-muted, #6e7681);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.wb-todo-expand-btn:hover {
+  background: rgba(82, 96, 113, 0.1);
+  border-color: rgba(82, 96, 113, 0.72);
+  color: var(--text-secondary, #8b949e);
+}
+.wb-todo-completed-count {
+  font-size: 10px;
+  color: var(--accent-green, #3fb950);
+  font-weight: 600;
+  margin-left: auto;
+}
+
 /* Status panel (right sidebar, session status section) */
 .wb-status-row {
   display: flex;
