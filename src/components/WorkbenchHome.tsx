@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Brain,
   Camera,
@@ -19,11 +19,15 @@ import {
   Puzzle,
   RotateCcw,
   Save,
+  Square,
   Terminal,
   XCircle,
   Zap,
 } from "lucide-react";
 import type { WorkbenchData, WorkbenchView } from "../domain/workbench";
+import type { LogEntry, ProcessState } from "../types/localEngineering";
+import { useLocalServices } from "../hooks/useLocalServices";
+import { PwLogStream } from "./PwLogStream";
 
 interface WorkbenchHomeProps {
   data: WorkbenchData;
@@ -31,42 +35,30 @@ interface WorkbenchHomeProps {
   activeProjectId?: string;
 }
 
-interface MockTab {
+interface TerminalTab {
   id: string;
+  stepId: string;
   label: string;
   runnerLabel: string;
-  content: string;
 }
 
-function mockTabs(data: WorkbenchData): MockTab[] {
+interface TabProcessState {
+  processId: string | null;
+  processState: ProcessState;
+  logs: LogEntry[];
+  error: string | null;
+}
+
+function buildTabs(data: WorkbenchData): TerminalTab[] {
   const template = data.workflowTemplates[0];
   if (!template) return [];
   return template.steps.slice(0, 3).map((step, index) => {
     const role = data.roles.find((item) => item.id === step.roleId);
-    const content =
-      index === 0
-        ? [
-            `<span class="green">RUN</span>  v1.6.0 /home/agentdev/AgentManagement`,
-            `  <span class="green">鉁?/span> src/utils/format.ts (18)`,
-            `  <span class="green">鉁?/span> src/components/__tests__/NavBar.spec.tsx (12)`,
-            `  <span class="green">鉁?/span> src/pages/__tests__/dashboard.spec.tsx (14)`,
-            "",
-            `Test Files  <span class="green">21 passed</span> (21)`,
-            `Tests      <span class="green">99 passed</span> (99)`,
-          ].join("\n")
-        : index === 1
-          ? [
-              `<span class="green">VITE v5.3.2</span>  ready in 362 ms`,
-              `  鉃? Local:   <span class="blue">http://localhost:5173/</span>`,
-              `  鉃? Network: <span class="blue">http://192.168.1.100:5173/</span>`,
-            ].join("\n")
-          : ["On branch main", "Your branch is up to date with 'origin/main'.", "nothing to commit, working tree clean"].join("\n");
-
     return {
       id: `tab-${step.id}`,
+      stepId: step.id,
       label: role?.name ?? step.name,
       runnerLabel: index === 2 ? "Codex CLI" : "Claude Code",
-      content,
     };
   });
 }
@@ -78,10 +70,13 @@ function stepStatus(index: number, gateMode: string) {
   return { cls: "idle", label: "待开始" };
 }
 
+const LOG_POLL_INTERVAL = 1500;
+
 export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHomeProps) {
+  const { processRunner } = useLocalServices();
   const project = data.projects.find((item) => item.id === activeProjectId) ?? data.projects[0];
   const template = data.workflowTemplates[0];
-  const tabs = useMemo(() => mockTabs(data), [data]);
+  const tabs = useMemo(() => buildTabs(data), [data]);
   const [activeTabId, setActiveTabId] = useState(tabs[0]?.id ?? "");
   const activeTab = tabs.find((item) => item.id === activeTabId);
   const [panelVisible, setPanelVisible] = useState(true);
@@ -89,6 +84,139 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
   const [popoverAnchor, setPopoverAnchor] = useState<{ left: number; bottom: number } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  // Per-tab runner process state
+  const [tabStates, setTabStates] = useState<Record<string, TabProcessState>>({});
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const getTabState = useCallback((tabId: string): TabProcessState => {
+    return tabStates[tabId] ?? { processId: null, processState: "idle", logs: [], error: null };
+  }, [tabStates]);
+
+  const updateTabState = useCallback((tabId: string, updates: Partial<TabProcessState>) => {
+    setTabStates((prev) => ({
+      ...prev,
+      [tabId]: { ...(prev[tabId] ?? { processId: null, processState: "idle", logs: [], error: null }), ...updates },
+    }));
+  }, []);
+
+  // Start a runner process for the given tab
+  const handleStartRunner = useCallback(async (tab: TerminalTab) => {
+    if (!project?.repoPath) return;
+    const tabId = tab.id;
+
+    // Duplicate start guard: if this tab already has a running or starting
+    // process, do not spawn a second one.
+    const currentState = tabStates[tabId];
+    if (currentState && (currentState.processState === "running" || currentState.processState === "starting")) {
+      return;
+    }
+
+    // If there is an existing processId (from a stopped/failed run) but the
+    // process state is not running, clear it before restarting.
+    updateTabState(tabId, { processState: "starting", error: null, processId: null });
+
+    const runnerProfile = data.runnerProfiles.find((r) =>
+      tab.runnerLabel === "Codex CLI" ? r.command.includes("codex") : r.command.includes("claude")
+    );
+
+    const command = runnerProfile?.command ?? "npm";
+    const args = runnerProfile?.defaultArgs ?? ["run", "dev"];
+    const env = runnerProfile?.envVars;
+
+    const result = await processRunner.start({
+      runnerId: runnerProfile?.id ?? tab.stepId,
+      command,
+      args,
+      cwd: project.repoPath,
+      env,
+    });
+
+    if (!result.ok || !result.data) {
+      updateTabState(tabId, {
+        processState: "failed",
+        error: result.error?.message ?? "Failed to start process",
+      });
+      return;
+    }
+
+    updateTabState(tabId, {
+      processId: result.data.id,
+      processState: "running",
+      logs: result.data.logs ?? [],
+    });
+  }, [project?.repoPath, data.runnerProfiles, processRunner, updateTabState, tabStates]);
+
+  // Stop the runner process for the given tab
+  const handleStopRunner = useCallback(async (tabId: string) => {
+    const state = tabStates[tabId];
+    if (!state?.processId) return;
+
+    updateTabState(tabId, { processState: "stopping" });
+
+    const result = await processRunner.stop(state.processId);
+    if (result.ok) {
+      updateTabState(tabId, {
+        processState: "stopped",
+        processId: null,
+      });
+    } else {
+      updateTabState(tabId, {
+        processState: "failed",
+        error: result.error?.message ?? "Failed to stop process",
+      });
+    }
+  }, [tabStates, processRunner, updateTabState]);
+
+  // Poll for logs on all running processes
+  useEffect(() => {
+    const runningTabs = Object.entries(tabStates).filter(
+      ([, state]) => state.processState === "running" && state.processId
+    );
+
+    if (runningTabs.length === 0) {
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+      return;
+    }
+
+    if (pollRef.current) clearInterval(pollRef.current);
+
+    pollRef.current = setInterval(async () => {
+      const updates = await Promise.all(
+        runningTabs.map(async ([tabId, state]) => {
+          if (!state.processId) return null;
+          const logResult = await processRunner.getLogs(state.processId);
+          if (logResult.ok && logResult.data) {
+            return { tabId, logs: logResult.data };
+          }
+          return null;
+        })
+      );
+
+      // Batch state updates
+      setTabStates((prev) => {
+        const next = { ...prev };
+        for (const update of updates) {
+          if (!update) continue;
+          next[update.tabId] = {
+            ...(next[update.tabId] ?? { processId: null, processState: "idle" as ProcessState, logs: [], error: null }),
+            logs: update.logs,
+          };
+        }
+        return next;
+      });
+    }, LOG_POLL_INTERVAL);
+
+    return () => {
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+    };
+  }, [tabStates, processRunner]);
 
   useEffect(() => {
     if (!tabs.some((tab) => tab.id === activeTabId)) {
@@ -397,25 +525,84 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
           <div className="wb-terminal-content">
             {activeTab ? (
               <>
-                <div
-                  className="wb-terminal-output"
-                  dangerouslySetInnerHTML={{
-                    __html:
-                      `<span class="terminal-prompt">agentdev@AgentManagement</span>:<span class="terminal-path">~/AgentManagement</span>$ npm run dev\n\n` +
-                      `> agentmanagement@0.1.0 dev\n> vite\n\n` +
-                      activeTab.content +
-                      `\n\n<span class="terminal-prompt">agentdev@AgentManagement</span>:<span class="terminal-path">~/AgentManagement</span>$ <span class="terminal-cursor"></span>`,
-                  }}
-                />
+                <div className="wb-terminal-prompt-line">
+                  <span className="terminal-prompt">agentdev@{project?.name ?? "AgentManagement"}</span>
+                  <span>:</span>
+                  <span className="terminal-path">~/{project?.name ?? "AgentManagement"}</span>
+                  <span>$ </span>
+                </div>
+                {(() => {
+                  const tabState = getTabState(activeTab.id);
+                  const isRunning = tabState.processState === "running";
+                  const isStarting = tabState.processState === "starting";
+                  const isIdle = tabState.processState === "idle";
+                  const isStopped = tabState.processState === "stopped" || tabState.processState === "failed";
+
+                  return (
+                    <div className="wb-terminal-runner-area">
+                      {/* Runner controls */}
+                      <div className="wb-terminal-controls">
+                        {isIdle || isStopped ? (
+                          <button
+                            className="wb-runner-inline-btn start"
+                            onClick={() => handleStartRunner(activeTab)}
+                            disabled={isStarting}
+                            type="button"
+                          >
+                            <Play size={12} />
+                            <span>{isIdle ? "启动 Runner" : "重新启动"}</span>
+                          </button>
+                        ) : null}
+                        {isRunning ? (
+                          <button
+                            className="wb-runner-inline-btn stop"
+                            onClick={() => handleStopRunner(activeTab.id)}
+                            disabled={tabState.processState === "stopping"}
+                            type="button"
+                          >
+                            <Square size={12} />
+                            <span>停止</span>
+                          </button>
+                        ) : null}
+                        <span className={`wb-runner-state ${tabState.processState}`}>
+                          {tabState.processState === "idle" ? "待启动"
+                            : tabState.processState === "starting" ? "启动中..."
+                            : tabState.processState === "running" ? "运行中"
+                            : tabState.processState === "stopping" ? "停止中..."
+                            : tabState.processState === "stopped" ? "已停止"
+                            : tabState.error ?? "失败"}
+                        </span>
+                        {tabState.logs.length > 0 && (
+                          <span className="wb-runner-log-count">{tabState.logs.length} 行日志</span>
+                        )}
+                      </div>
+
+                      {/* Error display */}
+                      {tabState.error && tabState.processState === "failed" && (
+                        <div className="wb-terminal-error">
+                          <span className="wb-error-icon">!</span>
+                          <span>{tabState.error}</span>
+                        </div>
+                      )}
+
+                      {/* Log stream */}
+                      <PwLogStream
+                        logs={tabState.logs}
+                        autoScroll
+                        isLoading={isStarting}
+                        className="wb-terminal-log-stream"
+                      />
+                    </div>
+                  );
+                })()}
                 <div className="wb-terminal-status-bar">
-                  <span>琛?1锛屽垪 1</span>
                   <span>UTF-8</span>
                   <span>LF</span>
-                  <span>Shell: bash</span>
+                  <span>{activeTab.runnerLabel}</span>
                 </div>
               </>
             ) : (
-              <div className="wb-terminal-empty">閫夋嫨缁堢 Tab</div>
+              <div className="wb-terminal-empty">选择终端 Tab</div>
             )}
           </div>
         </section>
@@ -513,16 +700,178 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
               <div className="wb-panel-box">
                 <div className="wb-box-title">
                   <span>会话状态</span>
+                  {(() => {
+                    // Aggregate runner status across all tabs
+                    const allProcessStates = tabs.map((t) => getTabState(t.id).processState);
+                    const hasRunning = allProcessStates.some((s) => s === "running");
+                    const hasStarting = allProcessStates.some((s) => s === "starting");
+                    const anyActive = hasRunning || hasStarting;
+                    const stateCls = hasRunning ? "running" : hasStarting ? "starting" : "idle";
+                    const stateLabel = hasRunning ? "运行中" : hasStarting ? "启动中" : "空闲";
+                    return (
+                      <span className={`wb-status-pill ${stateCls}`}>
+                        <span className={`wb-status-dot ${stateCls}`} />
+                        {stateLabel}
+                      </span>
+                    );
+                  })()}
                 </div>
-                <div className="wb-progress-line">
-                  <span />
-                </div>
-                <p style={{ color: "var(--text-secondary)", fontSize: 11, marginBottom: 6 }}>
-                  正在运行 Agent：{activeRuns.length} | 等待 Gate：{data.manualGates.filter((gate) => gate.status === "waiting").length}
-                </p>
-                <button className="wb-panel-link" onClick={() => handleAction("恢复会话")} type="button">
-                  恢复会话
-                </button>
+
+                {/* Active tab process status */}
+                {activeTab && (() => {
+                  const tabState = getTabState(activeTab.id);
+                  const processState = tabState.processState;
+                  // Find AgentRun for active step
+                  const activeAgentRun = data.agentRuns.find(
+                    (run) => run.currentStepId === activeTab.stepId && (run.status === "running" || run.status === "starting" || run.status === "waiting_gate")
+                  );
+                  // Find task for the active step
+                  const activeTask = data.tasks.find(
+                    (task) => task.status === "running" || task.status === "queued"
+                  );
+                  // Get last log timestamp
+                  const lastLogTime = tabState.logs.length > 0
+                    ? tabState.logs[tabState.logs.length - 1].timestamp
+                    : null;
+                  // Format time helper
+                  const fmtTime = (iso: string | null | undefined) => {
+                    if (!iso) return "-";
+                    try {
+                      const d = new Date(iso);
+                      return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}:${String(d.getSeconds()).padStart(2, "0")}`;
+                    } catch { return "-"; }
+                  };
+                  // Duration since start
+                  const fmtDuration = (startIso: string | null | undefined) => {
+                    if (!startIso) return "-";
+                    try {
+                      const ms = Date.now() - new Date(startIso).getTime();
+                      if (ms < 60000) return `${Math.floor(ms / 1000)}s`;
+                      if (ms < 3600000) return `${Math.floor(ms / 60000)}m ${Math.floor((ms % 60000) / 1000)}s`;
+                      return `${Math.floor(ms / 3600000)}h ${Math.floor((ms % 3600000) / 60000)}m`;
+                    } catch { return "-"; }
+                  };
+                  // Progress: how many steps have a non-idle process
+                  const totalSteps = flowSteps.length || 1;
+                  const completedSteps = flowSteps.filter((_, idx) => {
+                    const stepTabId = `tab-${flowSteps[idx].id}`;
+                    const s = getTabState(stepTabId);
+                    return s.processState === "stopped";
+                  }).length;
+                  const runningSteps = flowSteps.filter((_, idx) => {
+                    const stepTabId = `tab-${flowSteps[idx].id}`;
+                    const s = getTabState(stepTabId);
+                    return s.processState === "running" || s.processState === "starting";
+                  }).length;
+                  const progressPct = totalSteps > 0 ? Math.round(((completedSteps + runningSteps * 0.5) / totalSteps) * 100) : 0;
+                  const progressCls = runningSteps > 0 ? "active" : completedSteps > 0 ? "active" : "idle";
+                  return (
+                    <>
+                      {/* Process state row */}
+                      <div className="wb-status-row">
+                        <span className="wb-status-label">Runner 进程</span>
+                        <span className={`wb-status-pill ${processState}`}>
+                          <span className={`wb-status-dot ${processState}`} />
+                          {processState === "idle" ? "空闲"
+                            : processState === "starting" ? "启动中"
+                            : processState === "running" ? "运行中"
+                            : processState === "stopping" ? "停止中"
+                            : processState === "stopped" ? "已停止"
+                            : processState === "failed" ? "失败"
+                            : processState}
+                        </span>
+                      </div>
+
+                      {/* AgentRun status row */}
+                      {activeAgentRun && (
+                        <div className="wb-status-row">
+                          <span className="wb-status-label">AgentRun</span>
+                          <span className={`wb-status-pill ${activeAgentRun.status}`}>
+                            <span className={`wb-status-dot ${activeAgentRun.status}`} />
+                            {activeAgentRun.status === "starting" ? "启动中"
+                              : activeAgentRun.status === "running" ? "运行中"
+                              : activeAgentRun.status === "waiting_gate" ? "等待 Gate"
+                              : activeAgentRun.status === "done" ? "已完成"
+                              : activeAgentRun.status === "failed" ? "失败"
+                              : activeAgentRun.status === "cancelled" ? "已取消"
+                              : activeAgentRun.status}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Task status row */}
+                      {activeTask && (
+                        <div className="wb-status-row">
+                          <span className="wb-status-label">Task</span>
+                          <span className={`wb-status-pill ${activeTask.status}`}>
+                            <span className={`wb-status-dot ${activeTask.status}`} />
+                            {activeTask.status === "queued" ? "排队中"
+                              : activeTask.status === "running" ? "运行中"
+                              : activeTask.status === "gate" ? "Gate 决策"
+                              : activeTask.status === "done" ? "已完成"
+                              : activeTask.status === "failed" ? "失败"
+                              : activeTask.status === "draft" ? "草稿"
+                              : activeTask.status}
+                          </span>
+                        </div>
+                      )}
+
+                      <div className="wb-status-divider" />
+
+                      {/* Timing rows */}
+                      <div className="wb-status-row">
+                        <span className="wb-status-label">开始时间</span>
+                        <span className="wb-status-value">{fmtTime(activeAgentRun?.startedAt)}</span>
+                      </div>
+                      <div className="wb-status-row">
+                        <span className="wb-status-label">运行时长</span>
+                        <span className="wb-status-value">{fmtDuration(activeAgentRun?.startedAt)}</span>
+                      </div>
+                      <div className="wb-status-row">
+                        <span className="wb-status-label">最近日志</span>
+                        <span className="wb-status-value">{fmtTime(lastLogTime)}</span>
+                      </div>
+                      <div className="wb-status-row">
+                        <span className="wb-status-label">日志行数</span>
+                        <span className="wb-status-value">{tabState.logs.length}</span>
+                      </div>
+
+                      {/* Error display */}
+                      {tabState.error && tabState.processState === "failed" && (
+                        <div className="wb-status-error">{tabState.error}</div>
+                      )}
+
+                      {/* Progress bar */}
+                      <div className="wb-status-progress">
+                        <span className={progressCls} style={{ width: `${progressPct}%` }} />
+                      </div>
+                      <div className="wb-status-row">
+                        <span className="wb-status-label">步骤进度</span>
+                        <span className="wb-status-value">
+                          {completedSteps}/{totalSteps} 完成
+                          {runningSteps > 0 && ` · ${runningSteps} 运行中`}
+                        </span>
+                      </div>
+
+                      {/* Aggregated counts */}
+                      <div className="wb-status-divider" />
+                      <div className="wb-status-row">
+                        <span className="wb-status-label">活跃 Agent</span>
+                        <span className="wb-status-value">{activeRuns.length}</span>
+                      </div>
+                      <div className="wb-status-row">
+                        <span className="wb-status-label">待处理 Gate</span>
+                        <span className="wb-status-value">{data.manualGates.filter((gate) => gate.status === "waiting").length}</span>
+                      </div>
+
+                      <div className="wb-status-actions">
+                        <button className="wb-panel-link" onClick={() => handleAction("恢复会话")} type="button">
+                          恢复会话
+                        </button>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             </div>
           </aside>
