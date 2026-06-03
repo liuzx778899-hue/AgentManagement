@@ -8,13 +8,13 @@ import type {
   Task,
   TaskStatus,
   CreateTaskRequest,
-  UpdateTaskRequest,
   TaskFilter,
-} from '../../domain/agent-service';
-import { taskQueue } from './task-queue';
-import { mockRunnerAdapter } from './mock-runner-adapter';
+} from '../../../domain/task';
+import { taskQueue } from '../queue/task-queue';
+import { mockRunnerAdapter } from '../adapters/mock-runner-adapter';
 import { eventLogService } from './event-log-service';
-import { auditLogService, AuditEventType } from './audit-log-service';
+import { auditLogService } from './audit-log-service';
+import type { AuditEventType } from '../../../domain/audit';
 
 /**
  * Task Service - 任务管理核心服务

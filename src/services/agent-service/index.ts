@@ -12,11 +12,17 @@
  * Issue: #33
  */
 
+// Services
 export * from './services/agent-registry';
 export * from './services/task-service';
-export * from './services/runner-session-service';
 export * from './services/event-log-service';
 export * from './services/audit-log-service';
+
+// Queue
 export * from './queue/task-queue';
+
+// Adapters
 export * from './adapters/mock-runner-adapter';
+
+// Routes
 export * from './routes/index';

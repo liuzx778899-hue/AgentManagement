@@ -9,7 +9,7 @@ import type {
   WorkflowEventType,
   CreateWorkflowEventRequest,
   WorkflowEventFilter,
-} from '../../domain/workflowEvent';
+} from '../../../domain/workflowEvent';
 import * as fs from 'fs';
 import * as path from 'path';
 

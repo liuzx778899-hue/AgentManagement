@@ -12,7 +12,7 @@ import type {
   UpdateAgentRequest,
   AgentFilter,
   AgentRegistryEntry,
-} from '../../domain/agent';
+} from '../../../domain/agent';
 
 /**
  * Agent Registry - 内存 Agent 注册表

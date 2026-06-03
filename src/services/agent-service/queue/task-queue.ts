@@ -10,7 +10,7 @@ import type {
   TaskPriority,
   CreateTaskRequest,
   TaskFilter,
-} from '../../domain/task';
+} from '../../../domain/task';
 
 /**
  * 队列任务项

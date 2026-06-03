@@ -11,8 +11,8 @@ import type {
   RunnerSessionStatus,
   RunnerEvent,
   StartRunnerSessionRequest,
-} from '../../domain/runner';
-import type { Task } from '../../domain/task';
+} from '../../../domain/runner';
+import type { Task } from '../../../domain/task';
 
 /**
  * Mock Runner 配置
