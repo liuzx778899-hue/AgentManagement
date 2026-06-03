@@ -47,7 +47,6 @@ export type WorkflowEventType =
   | 'GATE_OPENED'
   | 'GATE_APPROVED'
   | 'GATE_REJECTED'
-  | 'CHANGE_REQUESTED'
 
   // --- Process / Runner lifecycle ---
   | 'RUNNER_STARTED'
@@ -58,7 +57,22 @@ export type WorkflowEventType =
   | 'ARTIFACT_PRODUCED'
 
   // --- Error / recovery ---
-  | 'RUN_ERROR';
+  | 'RUN_ERROR'
+
+  // --- Task lifecycle ---
+  | 'TASK_CREATED'
+  | 'TASK_QUEUED'
+  | 'TASK_STARTED'
+  | 'TASK_COMPLETED'
+  | 'TASK_FAILED'
+  | 'TASK_CANCELLED'
+  | 'TASK_RETRIED'
+
+  // --- Issue tracking ---
+  | 'BUG_REPORTED'
+
+  // --- Change management ---
+  | 'CHANGE_REQUESTED';
 
 // ---------------------------------------------------------------------------
 // Event Payloads
@@ -294,6 +308,92 @@ export interface RunErrorEvent extends WorkflowEventBase {
   };
 }
 
+// --- Task lifecycle event payloads ---
+
+export interface TaskCreatedEvent extends WorkflowEventBase {
+  type: 'TASK_CREATED';
+  payload: {
+    taskId: string;
+    goal: string;
+    workflowTemplateId: string;
+    createdBy: string;
+  };
+}
+
+export interface TaskQueuedEvent extends WorkflowEventBase {
+  type: 'TASK_QUEUED';
+  payload: {
+    taskId: string;
+    queuedBy: string;
+    queuePosition?: number;
+  };
+}
+
+export interface TaskStartedEvent extends WorkflowEventBase {
+  type: 'TASK_STARTED';
+  payload: {
+    taskId: string;
+    runId: string;
+    startedBy: string;
+  };
+}
+
+export interface TaskCompletedEvent extends WorkflowEventBase {
+  type: 'TASK_COMPLETED';
+  payload: {
+    taskId: string;
+    runId: string;
+    completedBy: string;
+    durationMs: number;
+  };
+}
+
+export interface TaskFailedEvent extends WorkflowEventBase {
+  type: 'TASK_FAILED';
+  payload: {
+    taskId: string;
+    runId: string;
+    failedAtStepId: string;
+    failedAtStepName: string;
+    error: string;
+  };
+}
+
+export interface TaskCancelledEvent extends WorkflowEventBase {
+  type: 'TASK_CANCELLED';
+  payload: {
+    taskId: string;
+    runId?: string;
+    reason: string;
+    cancelledBy: string;
+  };
+}
+
+export interface TaskRetriedEvent extends WorkflowEventBase {
+  type: 'TASK_RETRIED';
+  payload: {
+    taskId: string;
+    previousRunId: string;
+    newRunId: string;
+    retriedBy: string;
+    retryCount: number;
+  };
+}
+
+// --- Bug tracking event payload ---
+
+export interface BugReportedEvent extends WorkflowEventBase {
+  type: 'BUG_REPORTED';
+  payload: {
+    taskId: string;
+    bugId: string;
+    bugTitle: string;
+    severity: 'critical' | 'high' | 'medium' | 'low';
+    reportedBy: string;
+    description?: string;
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Discriminated Union
 // ---------------------------------------------------------------------------
@@ -322,7 +422,15 @@ export type WorkflowEvent =
   | RunnerStoppedEvent
   | RunnerLogEvent
   | ArtifactProducedEvent
-  | RunErrorEvent;
+  | RunErrorEvent
+  | TaskCreatedEvent
+  | TaskQueuedEvent
+  | TaskStartedEvent
+  | TaskCompletedEvent
+  | TaskFailedEvent
+  | TaskCancelledEvent
+  | TaskRetriedEvent
+  | BugReportedEvent;
 
 // ---------------------------------------------------------------------------
 // Event Emitter Interface (reserved)
