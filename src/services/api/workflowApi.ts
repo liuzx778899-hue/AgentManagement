@@ -21,6 +21,9 @@ export const workflowApi = {
   getStatus: (runId: string) =>
     apiCall<WorkflowRun>('GET', `/workflow/status/${runId}`),
 
+  getRun: (runId: string) =>
+    apiCall<WorkflowRun>('GET', `/workflow/run/${runId}`),
+
   listTemplates: () =>
     apiCall<WorkflowTemplate[]>('GET', '/workflow/templates'),
 

@@ -5,6 +5,7 @@ import {
   addMemory,
   deleteMemory,
   createTask,
+  updateTaskAction,
   addProject,
   deleteProject,
   addModelProvider,
@@ -114,6 +115,40 @@ describe("workbenchReducer", () => {
       }));
       expect(state.tasks.length).toBe(initialCount + 1);
       expect(state.tasks[state.tasks.length - 1].goal).toBe("Test task");
+    });
+
+    it("updates a task's activeRunId", () => {
+      const task = initialData.tasks[0];
+      expect(task.activeRunId).toBe("run-001");
+
+      const state = workbenchReducer(initialData, updateTaskAction(task.id, {
+        activeRunId: "run-new-123",
+      }));
+
+      const updatedTask = state.tasks.find(t => t.id === task.id);
+      expect(updatedTask?.activeRunId).toBe("run-new-123");
+      expect(updatedTask?.updatedAt).not.toBe(task.updatedAt);
+    });
+
+    it("updates a task's status", () => {
+      const task = initialData.tasks[0];
+      const state = workbenchReducer(initialData, updateTaskAction(task.id, {
+        status: "done",
+      }));
+
+      const updatedTask = state.tasks.find(t => t.id === task.id);
+      expect(updatedTask?.status).toBe("done");
+    });
+
+    it("does not mutate other tasks when updating one", () => {
+      const task0 = initialData.tasks[0];
+      const task1 = initialData.tasks[1];
+      const state = workbenchReducer(initialData, updateTaskAction(task0.id, {
+        activeRunId: "run-updated",
+      }));
+
+      const unchangedTask = state.tasks.find(t => t.id === task1.id);
+      expect(unchangedTask?.activeRunId).toBe(task1.activeRunId);
     });
   });
 

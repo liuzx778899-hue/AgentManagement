@@ -23,6 +23,7 @@ import {
   updateMemory as updateMemoryAction,
   deleteMemory as deleteMemoryAction,
   createTask as createTaskAction,
+  updateTaskAction as updateTaskActionImport,
   addProject as addProjectAction,
   updateProject as updateProjectAction,
   deleteProject as deleteProjectAction,
@@ -147,6 +148,7 @@ interface WorkbenchState {
   updateMemory: (memoryId: string, updates: Partial<Pick<MemoryItem, "title" | "body">>) => void;
   deleteMemory: (memoryId: string) => void;
   createTask: (task: Omit<WorkbenchData["tasks"][0], "id" | "createdAt" | "updatedAt">) => void;
+  updateTask: (taskId: string, updates: Partial<WorkbenchData["tasks"][0]>) => void;
   addProject: (project: Omit<Project, "id" | "createdAt" | "updatedAt">) => void;
   updateProject: (projectId: string, updates: Partial<Project>) => void;
   deleteProject: (projectId: string) => void;
@@ -385,6 +387,10 @@ export function WorkbenchProvider({ children }: WorkbenchProviderProps) {
     dispatch(createTaskAction(task));
   }, []);
 
+  const updateTask = useCallback((taskId: string, updates: Partial<WorkbenchData["tasks"][0]>) => {
+    dispatch(updateTaskActionImport(taskId, updates));
+  }, []);
+
   const addProject = useCallback((project: Omit<Project, "id" | "createdAt" | "updatedAt">) => {
     dispatch(addProjectAction(project));
   }, []);
@@ -548,6 +554,7 @@ export function WorkbenchProvider({ children }: WorkbenchProviderProps) {
       updateMemory,
       deleteMemory,
       createTask,
+      updateTask,
       addProject,
       updateProject,
       deleteProject,
@@ -587,6 +594,7 @@ export function WorkbenchProvider({ children }: WorkbenchProviderProps) {
       updateMemory,
       deleteMemory,
       createTask,
+      updateTask,
       addProject,
       updateProject,
       deleteProject,

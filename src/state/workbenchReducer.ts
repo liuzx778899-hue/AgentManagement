@@ -121,6 +121,14 @@ export function workbenchReducer(state: WorkbenchData, action: WorkbenchAction):
         ],
       };
 
+    case "UPDATE_TASK":
+      return {
+        ...state,
+        tasks: state.tasks.map((t) =>
+          t.id === action.taskId ? { ...t, ...action.updates, updatedAt: now } : t
+        ),
+      };
+
     case "ADD_PROJECT":
       return {
         ...state,

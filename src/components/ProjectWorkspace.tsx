@@ -29,7 +29,8 @@ import { PwProjectMdPanel } from "./PwProjectMdPanel";
 import { PwRunnerPanel } from "./PwRunnerPanel";
 import { PwWorkflowControl } from "./PwWorkflowControl";
 import type { RunnerProfile } from "../domain/runner";
-import { gitApi } from "../services/api";
+import { gitApi, workflowApi } from "../services/api";
+import type { WorkflowRun } from "../services/local/useCases/workflowExecutionUseCase";
 
 interface ProjectWorkspaceProps {
   data: WorkbenchData;
@@ -168,7 +169,7 @@ const RING_RADIUS = 30;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
 export function ProjectWorkspace({ data, projectId, onBack }: ProjectWorkspaceProps) {
-  const { updateProject } = useWorkbenchState();
+  const { updateProject, updateTask } = useWorkbenchState();
   const [activeAgent, setActiveAgent] = useState<AgentRole>("pm");
   const [chatInput, setChatInput] = useState("");
   const [showGatePanel, setShowGatePanel] = useState(false);
@@ -240,11 +241,47 @@ ${project.settings.riskSummary || "尚未评估"}`;
     );
   }, [data.tasks, projectId]);
 
-  // Find active run
+  // Find active run — fetch WorkflowRun from API when activeRunId is set
+  const [workflowRun, setWorkflowRun] = useState<WorkflowRun | null>(null);
+
+  useEffect(() => {
+    if (!currentTask?.activeRunId) {
+      setWorkflowRun(null);
+      return;
+    }
+
+    let cancelled = false;
+    const runId = currentTask.activeRunId;
+
+    // Fetch workflow run details from API
+    const fetchRun = async () => {
+      const result = await workflowApi.getRun(runId);
+      if (!cancelled && result.ok && result.data) {
+        setWorkflowRun(result.data);
+      }
+    };
+
+    fetchRun();
+    // Poll for updates while the run is active
+    const interval = setInterval(fetchRun, 5000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [currentTask?.activeRunId]);
+
+  // Active run: prefer WorkflowRun from API, fall back to legacy AgentRun in state
   const activeRun = useMemo(() => {
+    if (workflowRun) {
+      return {
+        currentStepId: workflowRun.currentStepId ?? "",
+        id: workflowRun.id,
+      };
+    }
     if (!currentTask?.activeRunId) return null;
-    return data.agentRuns.find((r) => r.id === currentTask.activeRunId);
-  }, [data.agentRuns, currentTask]);
+    return data.agentRuns.find((r) => r.id === currentTask.activeRunId) ?? null;
+  }, [workflowRun, data.agentRuns, currentTask]);
 
   // Get workflow template
   const template = useMemo(() => {
@@ -696,7 +733,12 @@ ${project.settings.riskSummary || "尚未评估"}`;
           <PwWorkflowControl
             projectId={projectId}
             templates={data.workflowTemplates}
-            onRunChange={(runId) => console.log('Workflow run changed:', runId)}
+            currentRunId={currentTask?.activeRunId ?? undefined}
+            onRunChange={(runId) => {
+              if (currentTask) {
+                updateTask(currentTask.id, { activeRunId: runId });
+              }
+            }}
           />
 
           {/* 4-Panel Grid: TODO + Stepper + Docs + Log */}

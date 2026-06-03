@@ -29,6 +29,7 @@ export type WorkbenchAction =
   | { type: "UPDATE_MEMORY"; memoryId: string; updates: Partial<Pick<MemoryItem, "title" | "body">> }
   | { type: "DELETE_MEMORY"; memoryId: string }
   | { type: "CREATE_TASK"; task: Omit<Task, "id" | "createdAt" | "updatedAt"> }
+  | { type: "UPDATE_TASK"; taskId: string; updates: Partial<Task> }
   | { type: "ADD_PROJECT"; project: Omit<Project, "id" | "createdAt" | "updatedAt"> }
   | { type: "UPDATE_PROJECT"; projectId: string; updates: Partial<Project> }
   | { type: "DELETE_PROJECT"; projectId: string }
@@ -91,6 +92,10 @@ export function deleteMemory(memoryId: string): WorkbenchAction {
 
 export function createTask(task: Omit<Task, "id" | "createdAt" | "updatedAt">): WorkbenchAction {
   return { type: "CREATE_TASK", task };
+}
+
+export function updateTaskAction(taskId: string, updates: Partial<Task>): WorkbenchAction {
+  return { type: "UPDATE_TASK", taskId, updates };
 }
 
 export function addProject(project: Omit<Project, "id" | "createdAt" | "updatedAt">): WorkbenchAction {
