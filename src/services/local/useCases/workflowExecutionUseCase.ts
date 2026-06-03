@@ -71,7 +71,7 @@ export interface WorkflowRunProgress {
 }
 
 // 简单的运行实例存储（实际应该持久化）
-const workflowRuns = new Map<string, WorkflowRun>();
+export const workflowRuns = new Map<string, WorkflowRun>();
 
 /**
  * 生成运行 ID
@@ -155,6 +155,18 @@ export async function advanceWorkflowStep(
   config: AdvanceWorkflowStepConfig
 ): Promise<LocalResult<WorkflowRun>> {
   const { run, workflow, completedStepId, outputArtifacts, error } = config;
+
+  // 验证完成的是当前步骤，防止跳步
+  if (run.currentStepId !== completedStepId) {
+    return {
+      ok: false,
+      error: {
+        code: 'INVALID_INPUT',
+        message: `当前步骤是 ${run.currentStepId}，不能完成 ${completedStepId}`,
+        recoverable: false,
+      },
+    };
+  }
 
   // 找到完成的步骤索引
   const completedIndex = run.steps.findIndex(s => s.stepId === completedStepId);

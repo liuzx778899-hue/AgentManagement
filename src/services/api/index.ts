@@ -12,3 +12,12 @@ export { aiApi, type ChatMessage, type ChatResponse } from './aiApi';
 export { rolesApi } from './rolesApi';
 export { capabilitiesApi, type CapabilitiesData } from './capabilitiesApi';
 export { taskApi, type CreateTaskInput, type UpdateTaskInput, type CreateTasksFromWorkflowInput } from './taskApi';
+export {
+  workbenchRunsApi,
+  type WorkbenchRunView,
+  type StepWithProcessInfo,
+  type StartWorkbenchRunParams,
+  type AdvanceStepParams,
+  type GateDecisionParams,
+  type ResumeRunParams,
+} from './workbenchRunsApi';

@@ -37,6 +37,7 @@ function mockProvider(overrides?: Partial<{ updateWorkflowStep: () => void }>) {
     deleteGitCredential: () => {},
     addWorkflowTemplate: async () => null,
     deleteWorkflowTemplate: () => {},
+    updateTask: () => {},
     updateRunner: () => {},
     setDefaultRunner: () => {},
     updateSettings: () => {},

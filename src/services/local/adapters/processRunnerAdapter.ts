@@ -21,6 +21,16 @@ export interface ProcessStartConfig {
 }
 
 /**
+ * Callback signature for process exit events.
+ * Receives the processId, exit code (null if signal-killed), and the updated RunnerProcess.
+ */
+export type ProcessExitCallback = (
+  processId: string,
+  exitCode: number | null,
+  process: RunnerProcess,
+) => void;
+
+/**
  * 进程运行器 Adapter
  *
  * 负责启动、停止、监控 CLI agent 子进程
@@ -29,6 +39,7 @@ export class ProcessRunnerAdapter extends BaseAdapter {
   private processes: Map<string, RunnerProcess> = new Map();
   private childProcesses: Map<string, ChildProcess> = new Map();
   private commandWhitelist: Set<string>;
+  private exitCallbacks: ProcessExitCallback[] = [];
 
   constructor(config: AdapterConfig) {
     super(config);
@@ -42,6 +53,18 @@ export class ProcessRunnerAdapter extends BaseAdapter {
       'codex',
       'cursor',
     ]);
+  }
+
+  /**
+   * Register a callback to be invoked when any process exits.
+   * Returns an unsubscribe function.
+   */
+  onProcessExit(callback: ProcessExitCallback): () => void {
+    this.exitCallbacks.push(callback);
+    return () => {
+      const idx = this.exitCallbacks.indexOf(callback);
+      if (idx >= 0) this.exitCallbacks.splice(idx, 1);
+    };
   }
 
   /**
@@ -131,6 +154,10 @@ export class ProcessRunnerAdapter extends BaseAdapter {
         runnerProcess.stoppedAt = new Date().toISOString();
         runnerProcess.exitCode = code ?? 1;
         this.childProcesses.delete(processId);
+        // Notify exit listeners
+        for (const cb of this.exitCallbacks) {
+          try { cb(processId, code, { ...runnerProcess }); } catch { /* swallow callback errors */ }
+        }
       });
 
       proc.on('error', (err) => {
@@ -179,6 +206,11 @@ export class ProcessRunnerAdapter extends BaseAdapter {
     if (this.isMockEnabled) {
       runnerProcess.state = 'stopped';
       runnerProcess.stoppedAt = new Date().toISOString();
+      runnerProcess.exitCode = 0;
+      // Notify exit listeners in mock mode too
+      for (const cb of this.exitCallbacks) {
+        try { cb(processId, 0, { ...runnerProcess }); } catch { /* swallow callback errors */ }
+      }
       return this.ok(runnerProcess);
     }
 
@@ -187,6 +219,12 @@ export class ProcessRunnerAdapter extends BaseAdapter {
       childProcess.kill('SIGTERM');
       runnerProcess.state = 'stopped';
       runnerProcess.stoppedAt = new Date().toISOString();
+      runnerProcess.exitCode = 0;
+      this.childProcesses.delete(processId);
+      // Notify exit listeners on explicit stop
+      for (const cb of this.exitCallbacks) {
+        try { cb(processId, 0, { ...runnerProcess }); } catch { /* swallow callback errors */ }
+      }
     }
 
     return this.ok(runnerProcess);

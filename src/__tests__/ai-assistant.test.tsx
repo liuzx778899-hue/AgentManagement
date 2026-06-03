@@ -39,6 +39,7 @@ function mockProvider(overrides?: Record<string, unknown>) {
     addWorkflowTemplate: vi.fn().mockResolvedValue(null),
     deleteWorkflowTemplate: vi.fn(),
     updateRunner: vi.fn(),
+    updateTask: vi.fn(),
     setDefaultRunner: vi.fn(),
     updateSettings: vi.fn(),
     setTasks: vi.fn(),

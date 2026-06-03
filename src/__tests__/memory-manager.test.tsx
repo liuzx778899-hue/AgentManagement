@@ -35,6 +35,7 @@ const mockState = {
   deleteGitCredential: () => {},
   addWorkflowTemplate: async () => null,
   deleteWorkflowTemplate: () => {},
+  updateTask: () => {},
   updateRunner: () => {},
   setDefaultRunner: () => {},
   updateSettings: () => {},
