@@ -47,6 +47,7 @@ export type WorkflowEventType =
   | 'GATE_OPENED'
   | 'GATE_APPROVED'
   | 'GATE_REJECTED'
+  | 'CHANGE_REQUESTED'
 
   // --- Process / Runner lifecycle ---
   | 'RUNNER_STARTED'
@@ -221,6 +222,22 @@ export interface GateRejectedEvent extends WorkflowEventBase {
   };
 }
 
+export interface ChangeRequestedEvent extends WorkflowEventBase {
+  type: 'CHANGE_REQUESTED';
+  payload: {
+    stepId: string;
+    stepName: string;
+    decidedBy: string;
+    /** The step index to return to for modifications. */
+    returnToStepId: string;
+    returnToStepName: string;
+    returnToStepIndex: number;
+    /** Specific feedback on what needs to change. */
+    requestedChanges: string;
+    reason?: string;
+  };
+}
+
 // --- Runner / Process event payloads ---
 
 export interface RunnerStartedEvent extends WorkflowEventBase {
@@ -300,6 +317,7 @@ export type WorkflowEvent =
   | GateOpenedEvent
   | GateApprovedEvent
   | GateRejectedEvent
+  | ChangeRequestedEvent
   | RunnerStartedEvent
   | RunnerStoppedEvent
   | RunnerLogEvent
