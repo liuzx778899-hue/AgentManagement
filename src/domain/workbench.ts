@@ -1,7 +1,8 @@
 // Re-export all domain types for backward compatibility
 export type { Scope, DesktopIntegrationStatus, PermissionLevel, ProjectSettings, Project } from "./project";
 export type { GateMode, FailureStrategy, WorkflowTemplate, WorkflowStep } from "./workflow";
-export type { Task, AgentRun } from "./task";
+export type { Task } from "./task";
+export type { AgentRun, AgentRunStatus, CreateAgentRunInput, AgentRunUpdate } from "./agentRun";
 export type { AgentRole } from "./role";
 export type { GateStatus, ManualGate } from "./gate";
 export type { MemoryKind, MemoryScope, MemoryItem } from "./memory";
@@ -36,6 +37,32 @@ export type {
   GitBranch,
 } from "./git";
 export type { RunnerKind, RunnerProfile } from "./runner";
+export type {
+  WorkflowEventType,
+  WorkflowEvent,
+  WorkflowEventBase,
+  WorkflowEventHandler,
+  WorkflowEventEmitter,
+  RunCreatedEvent,
+  RunStartedEvent,
+  RunPausedEvent,
+  RunResumedEvent,
+  RunCompletedEvent,
+  RunFailedEvent,
+  RunCancelledEvent,
+  StepStartedEvent,
+  StepCompletedEvent,
+  StepFailedEvent,
+  StepSkippedEvent,
+  GateOpenedEvent,
+  GateApprovedEvent,
+  GateRejectedEvent,
+  RunnerStartedEvent,
+  RunnerStoppedEvent,
+  RunnerLogEvent,
+  ArtifactProducedEvent,
+  RunErrorEvent,
+} from "./workflowEvent";
 import type { AppSettings } from "../types/settings";
 export type { AppSettings };
 
@@ -54,7 +81,8 @@ export type WorkbenchView =
 
 // Aggregate data type
 import type { Project } from "./project";
-import type { Task, AgentRun } from "./task";
+import type { Task } from "./task";
+import type { AgentRun } from "./agentRun";
 import type { WorkflowTemplate } from "./workflow";
 import type { AgentRole } from "./role";
 import type { ManualGate } from "./gate";

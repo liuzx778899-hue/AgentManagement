@@ -13,15 +13,6 @@ export interface Task {
   updatedAt: string;
 }
 
-export interface AgentRun {
-  id: string;
-  taskId: string;
-  roleId: string;
-  modelProviderId: string;
-  modelName: string;
-  currentStepId: string;
-  status: "starting" | "running" | "waiting_gate" | "done" | "failed";
-  log: string[];
-  startedAt: string;
-  finishedAt: string | null;
-}
+// AgentRun has been extracted to its own domain file.
+// Re-export for backward compatibility with existing imports.
+export type { AgentRun, AgentRunStatus, CreateAgentRunInput, AgentRunUpdate } from "./agentRun";
