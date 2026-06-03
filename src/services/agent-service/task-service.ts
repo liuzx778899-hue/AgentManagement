@@ -14,7 +14,7 @@ type TaskStatus = Task['status'];
 type AgentRunStatus = AgentRun['status'];
 
 /**
- * 创建任务
+ * 创建任务（入队）
  */
 export function createTask(input: {
   projectId: string;
@@ -34,7 +34,7 @@ export function createTask(input: {
     roleAssignment: {},
     capabilityAuthorization: [],
     launchStrategy: 'direct',
-    status: 'draft',
+    status: 'queued',  // 初始状态为 queued，表示已入队
     activeRunId: null,
     createdAt: now,
     updatedAt: now,

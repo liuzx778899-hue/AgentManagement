@@ -9,6 +9,7 @@ import { aiRouter } from './ai';
 import { rolesRouter } from './roles';
 import { capabilitiesRouter } from './capabilities';
 import { tasksRouter } from './tasks';
+import { agentServiceRouter } from './agent-service';
 
 export function createRouter(): Router {
   const router = Router();
@@ -27,6 +28,9 @@ export function createRouter(): Router {
   router.use('/roles', rolesRouter);
   router.use('/capabilities', capabilitiesRouter);
   router.use('/tasks', tasksRouter);
+
+  // Agent Service API (v1)
+  router.use('/v1', agentServiceRouter);
 
   console.log('[Router] Final router stack length:', (router as any).stack?.length);
 
