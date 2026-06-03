@@ -6,6 +6,7 @@ dist/
 .playwright-screenshots/
 .superpowers/
 .agents/
+.codegraph/
 .claude/skills/
 .claude/worktrees/
 .worktrees/

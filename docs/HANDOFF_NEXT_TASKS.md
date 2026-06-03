@@ -1,5 +1,32 @@
 # Handoff: Next Tasks
 
+## 2026-06-03 主线与 SDK 分支边界
+
+本节是后续多 Agent 协同的最新入口，优先级高于后面的历史任务段落。
+
+核心结论：
+
+- `#27` / `#28` / `#30` 属于 `main` 产品主线，继续按管理平台、流程编排、工作台、Runner、WorkflowEvent、通知流转方向开发。
+- `#32` / `#33` / `#34` 属于 SDK / Agent Service 接入层，暂时作为独立分支和 PR 推进。
+- SDK / Agent Service 不能替代 `main` 主线能力，只能在主线模型稳定后进行封装和集成。
+
+集成门槛：
+
+1. `#27` 完成：流程模型统一为 `WorkflowStep + WorkflowAssignment`，生产代码不再依赖旧 `WorkflowStep.roleId`。
+2. `#28` 完成：工作台通过 `workbenchRunApi/useCase` 启动真实 Runner，`AgentRun.processId` 绑定 `RunnerProcess.id`，Terminal 读取真实日志。
+3. `#30` 完成：WorkflowEvent、通知状态、任务路由和工作台事件展示形成闭环。
+4. Owner 明确批准 SDK / Agent Service 分支进入主线集成阶段。
+
+开发前必须读取：
+
+- `docs/engineering/DEVELOPMENT_BRANCH_BOUNDARY.md`
+
+禁止事项：
+
+- 不允许在 SDK 分支里验收或关闭 `#27/#28/#30`。
+- 不允许用 SDK 的模拟任务运行替代工作台真实 Runner 运行态。
+- 不允许在 `#32/#33/#34` PR 中顺手重写主线流程模型、工作台 Runner 或 WorkflowEvent，除非 PR 明确声明为集成 PR 且 Owner 批准。
+
 ## 2026-06-01 协同状态同步与清理基线
 
 本节记录当前 main 清理后的最新协作边界。

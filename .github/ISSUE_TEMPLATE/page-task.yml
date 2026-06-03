@@ -20,6 +20,8 @@ body:
         - 项目详情
         - 记忆管理
         - 设置中心
+        - main 主线能力
+        - SDK / Agent Service
         - 跨页面
     validations:
       required: true
@@ -31,6 +33,26 @@ body:
       placeholder: 例如：项目详情页顶部布局调整，保持右侧详情面板样式不回退。
     validations:
       required: true
+  - type: dropdown
+    id: track
+    attributes:
+      label: 开发轨道
+      description: 先确认本任务属于产品主线还是 SDK 接入层，避免混线开发。
+      options:
+        - main 产品主线：管理平台 / 流程编排 / 工作台 / Runner / WorkflowEvent / 通知流转
+        - SDK / Agent Service：外部 API / SDK / Agent 服务封装
+        - 文档 / 测试 / 仓库维护
+    validations:
+      required: true
+  - type: checkboxes
+    id: boundary
+    attributes:
+      label: 主线与 SDK 边界
+      options:
+        - label: 我已阅读 `docs/engineering/DEVELOPMENT_BRANCH_BOUNDARY.md`。
+          required: true
+        - label: 如果本任务属于 SDK / Agent Service，我确认不会用它替代 main 主线的流程模型、工作台 Runner 或 WorkflowEvent。
+          required: false
   - type: textarea
     id: acceptance
     attributes:
@@ -50,4 +72,5 @@ body:
           required: true
         - label: 我确认不会直接在 main 上开发。
           required: true
-
+        - label: 我确认 PR 会说明影响范围和是否修改主线模型。
+          required: true
