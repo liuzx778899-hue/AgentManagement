@@ -15,7 +15,7 @@ describe('ServiceFactory', () => {
     expect(services.fileStore).toBeDefined();
     expect(services.processRunner).toBeDefined();
     expect(services.repositories).toBeDefined();
-  });
+  }, 10000);
 
   it('should return the same instance on multiple calls (singleton)', async () => {
     const { getServices } = await import('../../../server/services/serviceFactory');

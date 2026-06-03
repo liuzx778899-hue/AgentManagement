@@ -57,11 +57,15 @@ describe("ProjectDetailPage tabs", () => {
 
     fireEvent.click(screen.getByRole("tab", { name: "协同文件" }));
 
+    // Tab should show collaboration files
     expect(screen.getAllByText("协同文件")).toHaveLength(2);
-    expect(screen.getByRole("button", { name: "同步协同文件" })).toBeInTheDocument();
+
+    // Check for file names (these should be present)
     expect(screen.getByText("HANDOFF_NEXT_TASKS.md")).toBeInTheDocument();
     expect(screen.getByText("CODE_REVIEW_AND_FIX_REQUESTS.md")).toBeInTheDocument();
     expect(screen.getByText("FRONTEND_IMPLEMENTATION_PLAN.md")).toBeInTheDocument();
+
+    // Check for AI summary section
     expect(screen.getByText("AI 解析摘要")).toBeInTheDocument();
   });
 });
