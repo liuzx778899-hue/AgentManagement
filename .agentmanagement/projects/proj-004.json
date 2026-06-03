@@ -1,0 +1,45 @@
+{
+  "id": "proj-004",
+  "name": "Internal CLI Tools",
+  "repoPath": "D:/work/vibecode/InternalCLI",
+  "defaultBranch": "main",
+  "worktreeRoot": ".claude/worktrees",
+  "scope": "team",
+  "desktopIntegrationStatus": "deferred",
+  "permissions": {
+    "permissionLevel": "admin"
+  },
+  "settings": {
+    "installCommand": "npm install -g",
+    "testCommand": "npm test",
+    "buildCommand": "npm run build",
+    "previewCommand": "",
+    "detectedStack": "Node.js + Commander.js + TypeScript",
+    "riskSummary": "内部 CLI 工具集，涉及团队工作流自动化，Phase 0 概念验证阶段，需要明确需求范围。"
+  },
+  "workflowTemplateId": "software-dev-v1",
+  "remoteRepo": {
+    "platform": "gitlab",
+    "credentialId": "git-gl-company",
+    "repoOwner": "internal-tools",
+    "repoName": "cli-toolkit",
+    "defaultBranch": "main",
+    "syncEnabled": true,
+    "syncStatus": "syncing",
+    "lastSyncAt": "2026-05-17T08:00:00.000Z"
+  },
+  "sourceType": "generic",
+  "phase": "Phase 0 概念验证",
+  "healthScore": 45,
+  "riskLevel": "high",
+  "currentMilestone": "CLI 框架搭建",
+  "nextCheckpoint": "首个命令原型完成",
+  "lastCheckAt": "2026-05-17T09:00:00.000Z",
+  "discoveryChanges": 8,
+  "runStatus": "paused",
+  "projectMarkdown": "# Internal CLI Tools\n\n## 项目概述\n内部命令行工具集，用于自动化团队日常工作流。\n\n## 技术栈\n- 运行时：Node.js\n- CLI 框架：Commander.js\n- 语言：TypeScript\n\n## 进度\n- 42% 完成\n- 当前阶段：Phase 0 概念验证\n- 高风险：需求范围未明确，可能返工",
+  "createdAt": "2026-05-01T06:00:00.000Z",
+  "updatedAt": "2026-05-17T08:30:00.000Z",
+  "version": "1.0",
+  "persistedAt": "2026-06-03T02:31:38.525Z"
+}

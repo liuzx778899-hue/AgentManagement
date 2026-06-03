@@ -1,0 +1,45 @@
+{
+  "id": "proj-002",
+  "name": "智能客服平台",
+  "repoPath": "D:/work/vibecode/SmartCS",
+  "defaultBranch": "develop",
+  "worktreeRoot": ".claude/worktrees",
+  "scope": "team",
+  "desktopIntegrationStatus": "deferred",
+  "permissions": {
+    "permissionLevel": "admin"
+  },
+  "settings": {
+    "installCommand": "pnpm install",
+    "testCommand": "pnpm test",
+    "buildCommand": "pnpm build",
+    "previewCommand": "pnpm dev",
+    "detectedStack": "Next.js + tRPC + Prisma",
+    "riskSummary": "团队项目，涉及后端 API 和数据库，需要团队权限和 CI/CD 配置。"
+  },
+  "workflowTemplateId": "software-dev-v1",
+  "remoteRepo": {
+    "platform": "github",
+    "credentialId": "git-gh-company",
+    "repoOwner": "company",
+    "repoName": "smart-cs-platform",
+    "defaultBranch": "main",
+    "syncEnabled": true,
+    "syncStatus": "syncing",
+    "lastSyncAt": "2026-05-17T09:15:00.000Z"
+  },
+  "sourceType": "generic",
+  "phase": "Phase 2 核心功能",
+  "healthScore": 62,
+  "riskLevel": "high",
+  "currentMilestone": "API 网关联调",
+  "nextCheckpoint": "端到端集成测试",
+  "lastCheckAt": "2026-05-17T07:30:00.000Z",
+  "discoveryChanges": 12,
+  "runStatus": "paused",
+  "projectMarkdown": "# 智能客服平台\n\n## 项目概述\n面向企业客户的智能客服 SaaS 平台。\n\n## 技术栈\n- 前端：Next.js + TailwindCSS\n- 后端：tRPC + Prisma + PostgreSQL\n- 集成：飞书、钉钉、企业微信",
+  "createdAt": "2026-04-20T03:00:00.000Z",
+  "updatedAt": "2026-05-16T14:00:00.000Z",
+  "version": "1.0",
+  "persistedAt": "2026-06-03T02:31:38.522Z"
+}

@@ -19,6 +19,7 @@ import {
   type GateOpenedEvent,
   type GateApprovedEvent,
   type GateRejectedEvent,
+  type ChangeRequestedEvent,
   type RunnerStartedEvent,
   type RunnerStoppedEvent,
   type RunnerLogEvent,
@@ -83,6 +84,7 @@ describe('WorkflowEvent', () => {
         'GATE_OPENED',
         'GATE_APPROVED',
         'GATE_REJECTED',
+        'CHANGE_REQUESTED',
         'RUNNER_STARTED',
         'RUNNER_STOPPED',
         'RUNNER_LOG',
@@ -90,9 +92,9 @@ describe('WorkflowEvent', () => {
         'RUN_ERROR',
       ];
 
-      // 19 distinct event types
-      expect(allTypes).toHaveLength(19);
-      expect(new Set(allTypes).size).toBe(19);
+      // 20 distinct event types
+      expect(allTypes).toHaveLength(20);
+      expect(new Set(allTypes).size).toBe(20);
     });
 
     it('can narrow events by type in a switch', () => {
@@ -345,6 +347,51 @@ describe('WorkflowEvent', () => {
       };
 
       expect(rejected.payload.reason).toBeUndefined();
+    });
+
+    it('CHANGE_REQUESTED carries return-to step and requested changes', () => {
+      const changeRequested: ChangeRequestedEvent = {
+        ...createEventBase('CHANGE_REQUESTED', 'run-1', 'proj-1', 'wf-1'),
+        type: 'CHANGE_REQUESTED',
+        payload: {
+          stepId: 's3',
+          stepName: 'Code Review',
+          decidedBy: 'reviewer',
+          returnToStepId: 's2',
+          returnToStepName: 'Implementation',
+          returnToStepIndex: 1,
+          requestedChanges: 'Add unit tests for the authentication module',
+          reason: 'Missing test coverage',
+        },
+      };
+
+      expect(changeRequested.type).toBe('CHANGE_REQUESTED');
+      expect(changeRequested.payload.returnToStepId).toBe('s2');
+      expect(changeRequested.payload.returnToStepName).toBe('Implementation');
+      expect(changeRequested.payload.returnToStepIndex).toBe(1);
+      expect(changeRequested.payload.requestedChanges).toBe('Add unit tests for the authentication module');
+      expect(changeRequested.payload.reason).toBe('Missing test coverage');
+    });
+
+    it('CHANGE_REQUESTED can narrow events by type', () => {
+      const event: WorkflowEvent = {
+        ...createEventBase('CHANGE_REQUESTED', 'run-1', 'proj-1', 'wf-1'),
+        type: 'CHANGE_REQUESTED',
+        payload: {
+          stepId: 's3',
+          stepName: 'Review',
+          decidedBy: 'lead',
+          returnToStepId: 's1',
+          returnToStepName: 'Plan',
+          returnToStepIndex: 0,
+          requestedChanges: 'Revise the approach',
+        },
+      };
+
+      if (event.type === 'CHANGE_REQUESTED') {
+        expect(event.payload.returnToStepId).toBe('s1');
+        expect(event.payload.requestedChanges).toBe('Revise the approach');
+      }
     });
   });
 

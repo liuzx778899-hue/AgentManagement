@@ -396,6 +396,26 @@ export function workbenchReducer(state: WorkbenchData, action: WorkbenchAction):
       };
     }
 
+    case "ADD_NOTIFICATION":
+      return {
+        ...state,
+        notifications: [...state.notifications, action.payload],
+      };
+
+    case "MARK_NOTIFICATION_READ":
+      return {
+        ...state,
+        notifications: state.notifications.map((n) =>
+          n.id === action.payload.notificationId ? { ...n, read: true } : n
+        ),
+      };
+
+    case "CLEAR_NOTIFICATIONS":
+      return { ...state, notifications: [] };
+
+    case "SET_NOTIFICATIONS":
+      return { ...state, notifications: action.payload };
+
     default:
       return state;
   }

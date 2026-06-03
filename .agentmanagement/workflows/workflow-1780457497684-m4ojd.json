@@ -1,0 +1,23 @@
+{
+  "name": "New Workflow Template",
+  "version": "1.0",
+  "status": "draft",
+  "steps": [
+    {
+      "id": "step-1",
+      "name": "Planning",
+      "order": 1,
+      "roleId": "role-pm",
+      "modelProviderId": "anthropic",
+      "modelName": "claude-3",
+      "inputs": [],
+      "outputs": [],
+      "gateMode": "auto",
+      "failureStrategy": "stop",
+      "projectOverride": false
+    }
+  ],
+  "id": "workflow-1780457497684-m4ojd",
+  "createdAt": "2026-06-03T03:31:37.684Z",
+  "updatedAt": "2026-06-03T03:31:37.684Z"
+}

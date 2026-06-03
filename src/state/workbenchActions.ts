@@ -20,6 +20,7 @@ import type {
 import type { RunnerProfile } from "../domain/runner";
 import type { Memory } from "../domain/memory";
 import type { AppSettings } from "../types/settings";
+import type { Notification, CreateNotificationInput } from "../domain/notification";
 
 // Action Types
 export type WorkbenchAction =
@@ -68,6 +69,10 @@ export type WorkbenchAction =
   | { type: "SET_TASKS"; payload: Task[] }
   | { type: "SET_SETTINGS"; payload: AppSettings }
   | { type: "UPDATE_SETTINGS"; payload: Partial<AppSettings> }
+  | { type: "ADD_NOTIFICATION"; payload: Notification }
+  | { type: "MARK_NOTIFICATION_READ"; payload: { notificationId: string } }
+  | { type: "CLEAR_NOTIFICATIONS" }
+  | { type: "SET_NOTIFICATIONS"; payload: Notification[] }
 
 // Action Creators
 export function updateGateStatus(gateId: string, status: GateStatus): WorkbenchAction {
@@ -255,4 +260,21 @@ export function setSettings(settings: AppSettings): WorkbenchAction {
 
 export function updateSettings(updates: Partial<AppSettings>): WorkbenchAction {
   return { type: "UPDATE_SETTINGS", payload: updates };
+}
+
+// Notification Actions
+export function addNotification(input: CreateNotificationInput & { id: string; createdAt: string }): WorkbenchAction {
+  return { type: "ADD_NOTIFICATION", payload: { ...input, read: false } };
+}
+
+export function markNotificationRead(notificationId: string): WorkbenchAction {
+  return { type: "MARK_NOTIFICATION_READ", payload: { notificationId } };
+}
+
+export function clearNotifications(): WorkbenchAction {
+  return { type: "CLEAR_NOTIFICATIONS" };
+}
+
+export function setNotifications(notifications: Notification[]): WorkbenchAction {
+  return { type: "SET_NOTIFICATIONS", payload: notifications };
 }

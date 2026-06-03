@@ -1,0 +1,20 @@
+{
+  "id": "mem-002",
+  "kind": "role",
+  "scope": "project",
+  "projectId": "proj-001",
+  "roleId": "role-001",
+  "taskId": null,
+  "title": "产品经理角色约束",
+  "body": "产品经理负责需求分析和验收标准定义，不参与代码实现。高风险操作需要经过人工决策确认。",
+  "citation": [
+    {
+      "source": "角色定义配置",
+      "timestamp": "2026-05-15T06:00:00.000Z"
+    }
+  ],
+  "createdAt": "2026-05-15T06:00:00.000Z",
+  "updatedAt": "2026-05-15T06:00:00.000Z",
+  "version": "1.0",
+  "persistedAt": "2026-06-03T02:31:38.545Z"
+}

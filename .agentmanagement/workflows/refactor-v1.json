@@ -1,0 +1,125 @@
+{
+  "id": "refactor-v1",
+  "name": "代码重构流程",
+  "version": 1,
+  "status": "enabled",
+  "category": "dev",
+  "steps": [
+    {
+      "id": "rf-step-001",
+      "order": 1,
+      "name": "重构分析",
+      "assignments": [
+        {
+          "id": "rf-step-001-assignment-0",
+          "order": 0,
+          "roleId": "role-004",
+          "runnerId": "runner-claude-code",
+          "modelProviderId": "provider-deepseek",
+          "modelName": "deepseek-v4-pro",
+          "taskGoal": "重构分析",
+          "acceptanceCriteria": ["重构建议明确"],
+          "inputs": ["代码库"],
+          "outputs": ["重构建议"],
+          "dependsOnAssignmentIds": [],
+          "notifyAssignmentIds": ["rf-step-002-assignment-0"],
+          "eventRoutes": [],
+          "capabilityAuthorization": ["github", "local-shell"]
+        }
+      ],
+      "inputs": ["代码库"],
+      "outputs": ["重构建议"],
+      "gateMode": "manual",
+      "failureStrategy": "stop",
+      "projectOverride": false
+    },
+    {
+      "id": "rf-step-002",
+      "order": 2,
+      "name": "重构计划",
+      "assignments": [
+        {
+          "id": "rf-step-002-assignment-0",
+          "order": 0,
+          "roleId": "role-003",
+          "runnerId": "runner-claude-code",
+          "modelProviderId": "provider-deepseek",
+          "modelName": "deepseek-v4-pro",
+          "taskGoal": "重构计划",
+          "acceptanceCriteria": ["重构计划可执行"],
+          "inputs": ["重构建议"],
+          "outputs": ["重构计划"],
+          "dependsOnAssignmentIds": ["rf-step-001-assignment-0"],
+          "notifyAssignmentIds": ["rf-step-003-assignment-0"],
+          "eventRoutes": [],
+          "capabilityAuthorization": ["github", "local-shell"]
+        }
+      ],
+      "inputs": ["重构建议"],
+      "outputs": ["重构计划"],
+      "gateMode": "manual",
+      "failureStrategy": "stop",
+      "projectOverride": false
+    },
+    {
+      "id": "rf-step-003",
+      "order": 3,
+      "name": "执行重构",
+      "assignments": [
+        {
+          "id": "rf-step-003-assignment-0",
+          "order": 0,
+          "roleId": "role-003",
+          "runnerId": "runner-claude-code",
+          "modelProviderId": "provider-openai",
+          "modelName": "gpt-5.3-codex",
+          "taskGoal": "执行重构",
+          "acceptanceCriteria": ["重构后代码可运行"],
+          "inputs": ["重构计划"],
+          "outputs": ["重构后代码"],
+          "dependsOnAssignmentIds": ["rf-step-002-assignment-0"],
+          "notifyAssignmentIds": ["rf-step-004-assignment-0"],
+          "eventRoutes": [],
+          "capabilityAuthorization": ["browser", "github", "local-shell"]
+        }
+      ],
+      "inputs": ["重构计划"],
+      "outputs": ["重构后代码"],
+      "gateMode": "auto",
+      "failureStrategy": "retry",
+      "projectOverride": false
+    },
+    {
+      "id": "rf-step-004",
+      "order": 4,
+      "name": "重构验证",
+      "assignments": [
+        {
+          "id": "rf-step-004-assignment-0",
+          "order": 0,
+          "roleId": "role-005",
+          "runnerId": "runner-claude-code",
+          "modelProviderId": "provider-deepseek",
+          "modelName": "deepseek-v4-pro",
+          "taskGoal": "重构验证",
+          "acceptanceCriteria": ["验证报告完整", "所有测试通过"],
+          "inputs": ["重构后代码"],
+          "outputs": ["验证报告"],
+          "dependsOnAssignmentIds": ["rf-step-003-assignment-0"],
+          "notifyAssignmentIds": [],
+          "eventRoutes": [],
+          "capabilityAuthorization": ["browser", "github", "local-shell"]
+        }
+      ],
+      "inputs": ["重构后代码"],
+      "outputs": ["验证报告"],
+      "gateMode": "manual",
+      "failureStrategy": "stop",
+      "projectOverride": false
+    }
+  ],
+  "workflowMarkdown": "# 代码重构流程\n\n分析重构点 → 制定计划 → 执行重构 → 验证",
+  "versions": [],
+  "createdAt": "2026-05-18T06:00:00.000Z",
+  "updatedAt": "2026-05-18T06:00:00.000Z"
+}

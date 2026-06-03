@@ -57,12 +57,22 @@ export type {
   GateOpenedEvent,
   GateApprovedEvent,
   GateRejectedEvent,
+  ChangeRequestedEvent,
   RunnerStartedEvent,
   RunnerStoppedEvent,
   RunnerLogEvent,
   ArtifactProducedEvent,
   RunErrorEvent,
+  TaskCreatedEvent,
+  TaskQueuedEvent,
+  TaskStartedEvent,
+  TaskCompletedEvent,
+  TaskFailedEvent,
+  TaskCancelledEvent,
+  TaskRetriedEvent,
+  BugReportedEvent,
 } from "./workflowEvent";
+export type { Notification, NotificationType, NotificationCategory, CreateNotificationInput } from "./notification";
 import type { AppSettings } from "../types/settings";
 export type { AppSettings };
 

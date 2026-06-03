@@ -1,0 +1,20 @@
+{
+  "id": "mem-001",
+  "kind": "project",
+  "scope": "project",
+  "projectId": "proj-001",
+  "roleId": null,
+  "taskId": null,
+  "title": "AgentManagement 项目背景",
+  "body": "AI 软件项目经理工作台，第一版是个人本地 Web MVP，采用 Vite + React + TypeScript 技术栈。",
+  "citation": [
+    {
+      "source": "产品路线文档",
+      "timestamp": "2026-05-15T06:00:00.000Z"
+    }
+  ],
+  "createdAt": "2026-05-15T06:00:00.000Z",
+  "updatedAt": "2026-05-15T06:00:00.000Z",
+  "version": "1.0",
+  "persistedAt": "2026-06-03T02:31:38.543Z"
+}

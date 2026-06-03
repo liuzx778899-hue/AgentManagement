@@ -1,0 +1,45 @@
+{
+  "id": "proj-003",
+  "name": "Docs Automation",
+  "repoPath": "D:/work/vibecode/DocsAutomation",
+  "defaultBranch": "main",
+  "worktreeRoot": ".claude/worktrees",
+  "scope": "personal",
+  "desktopIntegrationStatus": "deferred",
+  "permissions": {
+    "permissionLevel": "owner"
+  },
+  "settings": {
+    "installCommand": "npm install",
+    "testCommand": "npm test",
+    "buildCommand": "npm run build",
+    "previewCommand": "npm run dev",
+    "detectedStack": "Node.js + Markdown + Mermaid",
+    "riskSummary": "文档自动化工具，从代码仓库自动生成 API 文档和变更日志，风险较低。"
+  },
+  "workflowTemplateId": "software-dev-v1",
+  "remoteRepo": {
+    "platform": "github",
+    "credentialId": "git-gh-personal",
+    "repoOwner": "user",
+    "repoName": "docs-automation",
+    "defaultBranch": "main",
+    "syncEnabled": true,
+    "syncStatus": "idle",
+    "lastSyncAt": "2026-05-17T06:00:00.000Z"
+  },
+  "sourceType": "generic",
+  "phase": "Phase 1 基础功能",
+  "healthScore": 72,
+  "riskLevel": "low",
+  "currentMilestone": "Markdown 渲染引擎完成",
+  "nextCheckpoint": "API 文档自动生成",
+  "lastCheckAt": "2026-05-16T12:00:00.000Z",
+  "discoveryChanges": 2,
+  "runStatus": "running",
+  "projectMarkdown": "# Docs Automation\n\n## 项目概述\n自动化文档生成工具，从源代码提取注释和类型定义自动生成 API 文档。\n\n## 技术栈\n- 运行时：Node.js\n- 文档格式：Markdown + Mermaid 图表\n- 集成：GitHub Actions 自动生成\n\n## 进度\n- 18% 完成\n- Markdown 渲染引擎开发中",
+  "createdAt": "2026-05-10T02:00:00.000Z",
+  "updatedAt": "2026-05-16T10:00:00.000Z",
+  "version": "1.0",
+  "persistedAt": "2026-06-03T02:31:38.523Z"
+}

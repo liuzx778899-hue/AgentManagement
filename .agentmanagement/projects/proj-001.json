@@ -1,0 +1,45 @@
+{
+  "id": "proj-001",
+  "name": "AgentManagement",
+  "repoPath": "D:/work/vibecode/AgentManagement",
+  "defaultBranch": "main",
+  "worktreeRoot": ".claude/worktrees",
+  "scope": "personal",
+  "desktopIntegrationStatus": "deferred",
+  "permissions": {
+    "permissionLevel": "owner"
+  },
+  "settings": {
+    "installCommand": "npm install",
+    "testCommand": "npm test",
+    "buildCommand": "npm run build",
+    "previewCommand": "npm run dev",
+    "detectedStack": "Vite + React + TypeScript",
+    "riskSummary": "个人本地 MVP，暂不接入后端、真实 runner、团队权限或桌面客户端。"
+  },
+  "workflowTemplateId": "software-dev-v1",
+  "remoteRepo": {
+    "platform": "github",
+    "credentialId": "git-gh-personal",
+    "repoOwner": "anthropics",
+    "repoName": "claude-code",
+    "defaultBranch": "main",
+    "syncEnabled": true,
+    "syncStatus": "idle",
+    "lastSyncAt": "2026-05-15T10:30:00.000Z"
+  },
+  "sourceType": "claude-code",
+  "phase": "Phase 1 Web MVP",
+  "healthScore": 76,
+  "riskLevel": "medium",
+  "currentMilestone": "Phase 1 Web MVP 收尾",
+  "nextCheckpoint": "浏览器全流程验收",
+  "lastCheckAt": "2026-05-17T08:00:00.000Z",
+  "discoveryChanges": 5,
+  "runStatus": "running",
+  "projectMarkdown": "# AgentManagement 项目背景\n\n## 项目概述\nAI 软件项目经理工作台，第一版是个人本地 Web MVP。\n\n## 技术栈\n- 前端：Vite + React + TypeScript\n- 设计：CSS Variables + 暗色主题\n- 后端：暂不接入（MVP 阶段）\n\n## 约束\n1. 仅使用前端本地状态和 fixtures 数据\n2. 不接入真实 runner、多 Agent 调度、团队权限或桌面客户端\n3. 所有页面完成产品闭环验证即可",
+  "createdAt": "2026-05-15T06:00:00.000Z",
+  "updatedAt": "2026-05-15T06:00:00.000Z",
+  "version": "1.0",
+  "persistedAt": "2026-06-03T02:31:38.517Z"
+}

@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import type { WorkbenchView } from "../domain/workbench";
 import { PRODUCT_NAME } from "../config/product";
+import { NotificationList } from "./NotificationList";
 
 const NAV_ITEMS: {
   view: WorkbenchView;
@@ -84,6 +85,13 @@ export function AppShell({
             </span>
           </div>
           <div className="topbar-right">
+            <NotificationList
+              onNavigate={(view) => {
+                if (view === "project-workspace" || view === "project-detail") {
+                  onNavigate(view as WorkbenchView);
+                }
+              }}
+            />
             <span className="topbar-status">个人本地版</span>
           </div>
         </header>

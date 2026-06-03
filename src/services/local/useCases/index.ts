@@ -108,3 +108,21 @@ export {
   type HandleWorkbenchGateConfig,
   type StopWorkbenchRunConfig,
 } from './workbenchRunUseCase';
+export {
+  getWorkflowEventEmitter,
+  resetWorkflowEventEmitter,
+  createEventedWorkflowRun,
+  startEventedWorkbenchRun,
+  advanceEventedStep,
+  handleEventedGate,
+  pauseEventedRun,
+  resumeEventedRun,
+  cancelEventedRun,
+  emitRunnerLogEvent,
+  emitRunnerStoppedEvent,
+  emitRunErrorEvent,
+  emitStepSkippedEvent,
+  getRunEvents,
+  getAllEvents,
+  resetEventUseCaseState,
+} from './workflowEventUseCase';

@@ -1,0 +1,20 @@
+{
+  "id": "mem-003",
+  "kind": "task",
+  "scope": "task",
+  "projectId": "proj-001",
+  "roleId": null,
+  "taskId": "task-001",
+  "title": "V1 产品闭环任务记录",
+  "body": "本次任务需要完成项目接入、新建任务、工作流、人工决策和记忆管理五个核心页面。",
+  "citation": [
+    {
+      "source": "任务创建记录",
+      "timestamp": "2026-05-15T06:00:00.000Z"
+    }
+  ],
+  "createdAt": "2026-05-15T06:00:00.000Z",
+  "updatedAt": "2026-05-15T06:00:00.000Z",
+  "version": "1.0",
+  "persistedAt": "2026-06-03T02:31:38.547Z"
+}
