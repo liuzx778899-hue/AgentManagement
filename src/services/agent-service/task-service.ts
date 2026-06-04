@@ -41,7 +41,7 @@ export function createTask(input: {
     roleAssignment: {},
     capabilityAuthorization: [],
     launchStrategy: 'direct',
-    status: 'draft',
+    status: 'queued',
     activeRunId: null,
     createdAt: now,
     updatedAt: now,

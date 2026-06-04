@@ -12,3 +12,7 @@
  */
 
 export * from './task-service';
+export * from './event-log';
+export * from './audit-log';
+export * from './resultStore';
+export * from './runnerAdapter';
