@@ -138,6 +138,7 @@ describe('resolveHandoffTarget', () => {
   const assignments: WorkflowAssignment[] = [
     {
       id: 'asgn-1',
+      workflowTemplateId: 'wf-1',
       workflowStepId: 'step-1',
       roleId: 'role-dev',
       runnerId: 'runner-1',
@@ -151,6 +152,7 @@ describe('resolveHandoffTarget', () => {
     },
     {
       id: 'asgn-2',
+      workflowTemplateId: 'wf-1',
       workflowStepId: 'step-2',
       roleId: 'role-qa',
       runnerId: 'runner-1',
@@ -210,6 +212,7 @@ describe('resolveAllRoutes', () => {
     const assignments: WorkflowAssignment[] = [
       {
         id: 'asgn-1',
+        workflowTemplateId: 'wf-1',
         workflowStepId: 'step-1',
         roleId: 'role-dev',
         runnerId: 'runner-1',
@@ -226,6 +229,7 @@ describe('resolveAllRoutes', () => {
       },
       {
         id: 'asgn-2',
+        workflowTemplateId: 'wf-1',
         workflowStepId: 'step-2',
         roleId: 'role-qa',
         runnerId: 'runner-1',
@@ -251,6 +255,7 @@ describe('resolveAllRoutes', () => {
     const assignments: WorkflowAssignment[] = [
       {
         id: 'asgn-1',
+        workflowTemplateId: 'wf-1',
         workflowStepId: 'step-1',
         roleId: 'role-dev',
         runnerId: 'runner-1',
@@ -272,6 +277,7 @@ describe('resolveAllRoutes', () => {
     const assignments: WorkflowAssignment[] = [
       {
         id: 'asgn-1',
+        workflowTemplateId: 'wf-1',
         workflowStepId: 'step-1',
         roleId: 'role-dev',
         runnerId: 'runner-1',
@@ -287,6 +293,7 @@ describe('resolveAllRoutes', () => {
       },
       {
         id: 'asgn-2',
+        workflowTemplateId: 'wf-1',
         workflowStepId: 'step-2',
         roleId: 'role-qa',
         runnerId: 'runner-1',

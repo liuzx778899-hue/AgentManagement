@@ -77,6 +77,32 @@ export async function listByWorkflow(stepIds: string[]): Promise<LocalResult<Wor
 }
 
 /**
+ * 按 workflowTemplateId 列出所有 Assignments
+ */
+export async function listByWorkflowTemplate(workflowTemplateId: string): Promise<LocalResult<WorkflowAssignment[]>> {
+  const result = Array.from(assignments.values()).filter(
+    a => a.workflowTemplateId === workflowTemplateId
+  );
+
+  return {
+    ok: true,
+    data: result,
+    diagnostics: [`Workflow ${workflowTemplateId} 有 ${result.length} 个 Assignments`],
+  };
+}
+
+/**
+ * 获取所有 Assignments
+ */
+export async function listAll(): Promise<LocalResult<WorkflowAssignment[]>> {
+  return {
+    ok: true,
+    data: Array.from(assignments.values()),
+    diagnostics: [`共 ${assignments.size} 个 Assignments`],
+  };
+}
+
+/**
  * 批量保存 Assignments
  */
 export async function saveBatch(items: WorkflowAssignment[]): Promise<LocalResult<WorkflowAssignment[]>> {

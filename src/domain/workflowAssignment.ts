@@ -9,6 +9,8 @@
 
 export interface WorkflowAssignment {
   id: string;
+  /** 所属 workflow template */
+  workflowTemplateId: string;
   /** 所属 step */
   workflowStepId: string;
   /** 角色引用 */

@@ -33,6 +33,8 @@ export interface EmitEventInput {
   sourceTaskId?: string;
   trigger: WorkflowEventTrigger;
   payload: Record<string, unknown>;
+  /** 外部注入的 task 数据（路由层负责加载） */
+  tasks?: Task[];
 }
 
 /**
@@ -51,14 +53,19 @@ export async function emitEvent(input: EmitEventInput): Promise<LocalResult<Proc
   const eventId = `evt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const now = new Date().toISOString();
 
-  // 加载所有 assignments（简化实现，实际应按 workflow 过滤）
-  const allAssignmentsResult = await assignmentRepo.listByWorkflow([]);
-  const allAssignments = allAssignmentsResult.ok ? allAssignmentsResult.data! : [];
+  // 按 workflowTemplateId 加载该工作流的所有 assignments
+  const assignmentsResult = await assignmentRepo.listByWorkflowTemplate(input.workflowId);
+  const allAssignments = assignmentsResult.ok ? assignmentsResult.data! : [];
+
+  // 使用外部注入的 task 数据
+  const tasks: Task[] = input.tasks ?? [];
 
   // 构建依赖上下文
   const depCtx = {
-    completedTaskIds: new Set<string>(),
-    tasks: [] as Task[],
+    completedTaskIds: new Set<string>(
+      tasks.filter(t => t.status === 'done').map(t => t.id)
+    ),
+    tasks,
   };
 
   // 解析路由
@@ -100,6 +107,7 @@ export async function emitEvent(input: EmitEventInput): Promise<LocalResult<Proc
       `事件已发射: ${eventId}`,
       `触发器: ${input.trigger}`,
       `路由数: ${routes.length}`,
+      `Assignments: ${allAssignments.length}`,
     ],
   };
 }

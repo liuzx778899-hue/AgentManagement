@@ -2,6 +2,13 @@
  * Workflow Event API client
  *
  * Issue: #27 #28 #30
+ *
+ * Endpoints:
+ *   POST   /api/workflow-events                        — emit event
+ *   POST   /api/workflow-events/:id/process            — process event routes
+ *   GET    /api/workflow-events/workflow/:workflowId    — get workflow events
+ *   GET    /api/workflow-events/notifications/:roleId   — get role notifications
+ *   PATCH  /api/workflow-events/notifications/:id/status — update notification status
  */
 
 import { apiCall, type ApiResponse } from './client';
@@ -21,25 +28,31 @@ export interface EmitEventInput {
 
 export const workflowEventApi = {
   /**
-   * 获取工作流事件列表
+   * Emit a new workflow event
    */
-  getWorkflowEvents: (workflowId: string) =>
-    apiCall<WorkflowEvent[]>('GET', `/workflow-events/${encodeURIComponent(workflowId)}`),
+  emitEvent: (input: EmitEventInput) =>
+    apiCall<{ event: WorkflowEvent; results: unknown[]; notifications: string[] }>('POST', '/workflow-events', input),
 
   /**
-   * 获取角色通知列表
+   * Process routes for an existing event
+   */
+  processEventRoutes: (eventId: string, event: WorkflowEvent) =>
+    apiCall<unknown>('POST', `/workflow-events/${encodeURIComponent(eventId)}/process`, { event }),
+
+  /**
+   * Get all events for a workflow
+   */
+  getWorkflowEvents: (workflowId: string) =>
+    apiCall<WorkflowEvent[]>('GET', `/workflow-events/workflow/${encodeURIComponent(workflowId)}`),
+
+  /**
+   * Get notifications for a role
    */
   getNotificationsByRole: (roleId: string) =>
     apiCall<WorkflowNotification[]>('GET', `/workflow-events/notifications/${encodeURIComponent(roleId)}`),
 
   /**
-   * 发射新事件
-   */
-  emitEvent: (input: EmitEventInput) =>
-    apiCall<{ event: WorkflowEvent; results: unknown[]; notifications: string[] }>('POST', '/workflow-events/emit', input),
-
-  /**
-   * 更新通知状态
+   * Update notification status
    */
   updateNotificationStatus: (id: string, status: NotificationStatus) =>
     apiCall<WorkflowNotification>('POST', `/workflow-events/notifications/${encodeURIComponent(id)}/status`, { status }),
