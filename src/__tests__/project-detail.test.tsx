@@ -57,11 +57,10 @@ describe("ProjectDetailPage tabs", () => {
 
     fireEvent.click(screen.getByRole("tab", { name: "协同文件" }));
 
+    // 当前协同文件功能开发中，显示占位信息
     expect(screen.getAllByText("协同文件")).toHaveLength(2);
-    expect(screen.getByRole("button", { name: "同步协同文件" })).toBeInTheDocument();
-    expect(screen.getByText("HANDOFF_NEXT_TASKS.md")).toBeInTheDocument();
-    expect(screen.getByText("CODE_REVIEW_AND_FIX_REQUESTS.md")).toBeInTheDocument();
-    expect(screen.getByText("FRONTEND_IMPLEMENTATION_PLAN.md")).toBeInTheDocument();
+    expect(screen.getByText("暂无协同文件")).toBeInTheDocument();
+    expect(screen.getByText("功能开发中")).toBeInTheDocument();
     expect(screen.getByText("AI 解析摘要")).toBeInTheDocument();
   });
 });

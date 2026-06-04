@@ -15,15 +15,23 @@ export interface Task {
 
 export interface AgentRun {
   id: string;
+  projectId: string;
   taskId: string;
+  workflowTemplateId: string;
+  workflowStepId?: string;
+  assignmentId?: string;
   roleId: string;
+  runnerId: string;
+  processId: string;
   modelProviderId: string;
   modelName: string;
   currentStepId: string;
-  status: "starting" | "running" | "waiting_gate" | "done" | "failed";
+  status: "starting" | "running" | "waiting_gate" | "stopped" | "done" | "failed" | "stale";
   log: string[];
   startedAt: string;
   finishedAt: string | null;
+  exitCode?: number;
+  errorMessage?: string;
 }
 
 export type TaskStatus = Task['status'];
