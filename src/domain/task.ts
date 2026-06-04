@@ -25,3 +25,28 @@ export interface AgentRun {
   startedAt: string;
   finishedAt: string | null;
 }
+
+export type TaskStatus = Task['status'];
+
+export interface EventLog {
+  id: string;
+  taskId: string;
+  runId?: string;
+  type: 'task_created' | 'task_started' | 'task_completed' | 'task_failed' | 'task_cancelled' |
+        'run_started' | 'run_completed' | 'run_failed' |
+        'gate_requested' | 'gate_passed' | 'gate_failed';
+  payload?: Record<string, unknown>;
+  timestamp: string;
+}
+
+export interface AuditEntry {
+  id: string;
+  action: 'create_task' | 'start_task' | 'cancel_task' | 'update_status' |
+          'create_run' | 'stop_run' |
+          'pass_gate' | 'fail_gate';
+  resourceId: string;
+  resourceType: 'task' | 'run' | 'gate';
+  actor?: string;
+  details?: Record<string, unknown>;
+  timestamp: string;
+}
