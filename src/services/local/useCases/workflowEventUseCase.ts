@@ -126,6 +126,12 @@ export async function processEventRoutes(
   for (const route of event.routes) {
     const updatedRoute = { ...route };
 
+    // 幂等：跳过已处理过的 route
+    if (route.status !== 'pending') {
+      updatedRoutes.push(updatedRoute);
+      continue;
+    }
+
     try {
       switch (route.action) {
         case 'create_task':

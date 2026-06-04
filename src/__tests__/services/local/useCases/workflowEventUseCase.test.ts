@@ -225,6 +225,31 @@ describe('emitEvent integration', () => {
     expect(processResult.data!.results.length).toBeGreaterThan(0);
   });
 
+  it('should not duplicate notifications when processEventById is called on already-processed event', async () => {
+    await seedAssignments();
+
+    // Emit creates event + processes routes (1 notification for task_failed)
+    const emitResult = await emitEvent({
+      workflowId: 'wf-ci',
+      sourceAssignmentId: 'asgn-dev',
+      sourceStepId: 'step-dev',
+      trigger: 'task_failed',
+      payload: {},
+      tasks: makeTasks(),
+    });
+
+    expect(emitResult.data!.notifications).toHaveLength(1);
+
+    // Calling processEventById again should skip completed routes
+    const reprocessResult = await processEventById(emitResult.data!.event.id);
+    expect(reprocessResult.ok).toBe(true);
+    expect(reprocessResult.data!.notifications).toHaveLength(0);
+
+    // Verify no duplicate in notification store
+    const notifs = await getRoleNotifications('role-pm');
+    expect(notifs.data!).toHaveLength(1);
+  });
+
   it('should fail processEventById for nonexistent event', async () => {
     const result = await processEventById('evt-nonexistent');
     expect(result.ok).toBe(false);
