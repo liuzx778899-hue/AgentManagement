@@ -10,12 +10,11 @@ import { rolesRouter } from './roles';
 import { capabilitiesRouter } from './capabilities';
 import { tasksRouter } from './tasks';
 import { workflowEventsRouter } from './workflowEvents';
+import { createAgentServiceRouter } from './agent-service';
+import { requestTracing } from '../middleware/requestTracing';
 
 export function createRouter(): Router {
   const router = Router();
-
-  console.log('[Router] Importing routes...');
-  console.log('[Router] aiRouter type:', typeof aiRouter, 'stack:', (aiRouter as any).stack?.length);
 
   // Mount all route handlers
   router.use('/runner', runnerRouter);
@@ -30,7 +29,8 @@ export function createRouter(): Router {
   router.use('/tasks', tasksRouter);
   router.use('/workflow-events', workflowEventsRouter);
 
-  console.log('[Router] Final router stack length:', (router as any).stack?.length);
+  // Agent Service API (v1) with request tracing
+  router.use('/v1', requestTracing, createAgentServiceRouter());
 
   return router;
 }

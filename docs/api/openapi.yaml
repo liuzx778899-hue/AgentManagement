@@ -1,0 +1,672 @@
+openapi: 3.1.0
+info:
+  title: AgentManagement Agent Service API
+  version: 1.0.0
+  description: |
+    Agent Service 是 AgentManagement 的后端运行时，负责：
+    - 任务队列与任务状态管理
+    - Agent 执行会话生命周期
+    - 事件投递与审计日志
+
+servers:
+  - url: http://localhost:3001/api/v1
+    description: 本地开发服务器
+
+tags:
+  - name: Tasks
+    description: 任务管理
+  - name: Sessions
+    description: Runner 会话管理
+  - name: Agents
+    description: Agent 注册与管理
+
+paths:
+  /tasks:
+    post:
+      tags: [Tasks]
+      summary: 创建任务
+      operationId: createTask
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTaskRequest'
+      responses:
+        '201':
+          description: 任务创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponse'
+    get:
+      tags: [Tasks]
+      summary: 列出任务
+      operationId: listTasks
+      parameters:
+        - name: projectId
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, queued, running, gate, done, failed]
+      responses:
+        '200':
+          description: 任务列表
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskListResponse'
+
+  /tasks/{taskId}:
+    get:
+      tags: [Tasks]
+      summary: 获取任务详情
+      operationId: getTask
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 任务详情
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponse'
+        '404':
+          description: 任务不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /tasks/{taskId}/start:
+    post:
+      tags: [Tasks]
+      summary: 启动任务
+      operationId: startTask
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 任务已启动
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponse'
+
+  /tasks/{taskId}/cancel:
+    post:
+      tags: [Tasks]
+      summary: 取消任务
+      operationId: cancelTask
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 任务已取消
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponse'
+
+  /tasks/{taskId}/logs:
+    get:
+      tags: [Tasks]
+      summary: 获取任务日志
+      operationId: getTaskLogs
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 任务日志
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskLogsResponse'
+
+  /tasks/{taskId}/events:
+    get:
+      tags: [Tasks]
+      summary: 获取任务事件
+      operationId: getTaskEvents
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 任务事件列表
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskEventsResponse'
+
+  /tasks/{taskId}/result:
+    get:
+      tags: [Tasks]
+      summary: 获取任务结果
+      operationId: getTaskResult
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 任务结果
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResultResponse'
+
+  /tasks/{taskId}/audit:
+    get:
+      tags: [Tasks]
+      summary: 获取任务审计日志
+      operationId: getTaskAudit
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 任务审计日志
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskAuditResponse'
+
+  /events:
+    get:
+      tags: [Events]
+      summary: 获取所有事件
+      operationId: getAllEvents
+      responses:
+        '200':
+          description: 所有事件列表
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventsResponse'
+
+  /audit:
+    get:
+      tags: [Audit]
+      summary: 获取所有审计日志
+      operationId: getAllAudit
+      responses:
+        '200':
+          description: 所有审计日志
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditListResponse'
+
+  /sessions/{sessionId}:
+    get:
+      tags: [Sessions]
+      summary: 获取会话详情
+      operationId: getSession
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 会话详情
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentRun'
+        '404':
+          description: 会话不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /sessions/{sessionId}/input:
+    post:
+      tags: [Sessions]
+      summary: 发送输入到会话
+      operationId: sendSessionInput
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                input:
+                  type: string
+      responses:
+        '200':
+          description: 输入已接收
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /sessions/{sessionId}/stop:
+    post:
+      tags: [Sessions]
+      summary: 停止会话
+      operationId: stopSession
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 会话已停止
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionStopResponse'
+
+  /agents:
+    get:
+      tags: [Agents]
+      summary: 列出 Agents
+      operationId: listAgents
+      responses:
+        '200':
+          description: Agent 列表
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentListResponse'
+
+  /statistics:
+    get:
+      tags: [Statistics]
+      summary: 获取系统统计
+      operationId: getStatistics
+      responses:
+        '200':
+          description: 系统统计
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatisticsResponse'
+
+  /health:
+    get:
+      summary: 健康检查
+      operationId: healthCheck
+      responses:
+        '200':
+          description: 服务健康
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+components:
+  schemas:
+    Task:
+      type: object
+      required: [id, projectId, goal, status]
+      properties:
+        id:
+          type: string
+        projectId:
+          type: string
+        goal:
+          type: string
+        acceptanceCriteria:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [draft, queued, running, gate, done, failed]
+        activeRunId:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateTaskRequest:
+      type: object
+      required: [projectId, goal]
+      properties:
+        projectId:
+          type: string
+        goal:
+          type: string
+        acceptanceCriteria:
+          type: array
+          items:
+            type: string
+
+    TaskResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/Task'
+
+    TaskListResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Task'
+        total:
+          type: integer
+
+    AgentRun:
+      type: object
+      required: [id, taskId, status]
+      properties:
+        id:
+          type: string
+        taskId:
+          type: string
+        roleId:
+          type: string
+        modelProviderId:
+          type: string
+        modelName:
+          type: string
+        currentStepId:
+          type: string
+        status:
+          type: string
+          enum: [starting, running, waiting_gate, done, failed]
+        log:
+          type: array
+          items:
+            type: string
+        startedAt:
+          type: string
+          format: date-time
+        finishedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    EventLog:
+      type: object
+      required: [id, taskId, type, timestamp]
+      properties:
+        id:
+          type: string
+        taskId:
+          type: string
+        runId:
+          type: string
+        type:
+          type: string
+          enum:
+            - task_created
+            - task_started
+            - task_completed
+            - task_failed
+            - task_cancelled
+            - run_started
+            - run_completed
+            - run_failed
+            - gate_requested
+            - gate_passed
+            - gate_failed
+        payload:
+          type: object
+          additionalProperties: true
+        timestamp:
+          type: string
+          format: date-time
+
+    AuditEntry:
+      type: object
+      required: [id, action, resourceId, resourceType, timestamp]
+      properties:
+        id:
+          type: string
+        action:
+          type: string
+          enum: [create_task, start_task, cancel_task, update_status, create_run, stop_run, pass_gate, fail_gate]
+        resourceId:
+          type: string
+        resourceType:
+          type: string
+          enum: [task, run, gate]
+        actor:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+        timestamp:
+          type: string
+          format: date-time
+
+    Artifact:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+        path:
+          type: string
+        size:
+          type: integer
+
+    TaskResult:
+      type: object
+      properties:
+        status:
+          type: string
+        artifacts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Artifact'
+        output:
+          type: object
+          additionalProperties: true
+
+    Agent:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        roleId:
+          type: string
+        runnerProviderId:
+          type: string
+        enabled:
+          type: boolean
+        status:
+          type: string
+          enum: [idle, busy, error]
+
+    TaskLogsResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        logs:
+          type: array
+          items:
+            $ref: '#/components/schemas/EventLog'
+
+    TaskEventsResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/EventLog'
+
+    TaskResultResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/TaskResult'
+
+    TaskAuditResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        audit:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditEntry'
+
+    EventsResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/EventLog'
+        total:
+          type: integer
+
+    AuditListResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        audit:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditEntry'
+        total:
+          type: integer
+
+    AgentListResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        agents:
+          type: array
+          items:
+            $ref: '#/components/schemas/Agent'
+
+    Statistics:
+      type: object
+      properties:
+        tasks:
+          type: object
+          properties:
+            total:
+              type: integer
+        runs:
+          type: object
+          properties:
+            total:
+              type: integer
+            active:
+              type: integer
+            completed:
+              type: integer
+
+    StatisticsResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/Statistics'
+
+    HealthResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        status:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        version:
+          type: string
+
+    SuccessResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        message:
+          type: string
+
+    SessionStopResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/AgentRun'
+        message:
+          type: string
+
+    ErrorResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        error:
+          type: string
+
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+
+security:
+  - ApiKeyAuth: []
