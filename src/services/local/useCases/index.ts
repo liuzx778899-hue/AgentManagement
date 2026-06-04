@@ -87,6 +87,7 @@ export {
 export {
   emitEvent,
   processEventRoutes,
+  processEventById,
   getWorkflowEvents,
   getRoleNotifications,
   updateNotificationStatus,

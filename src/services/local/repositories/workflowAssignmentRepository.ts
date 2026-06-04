@@ -135,3 +135,10 @@ export async function saveBatch(items: WorkflowAssignment[]): Promise<LocalResul
     diagnostics: [`成功保存 ${results.length} 个 Assignments`],
   };
 }
+
+/**
+ * 清空所有 Assignments（仅用于测试）
+ */
+export function clear(): void {
+  assignments.clear();
+}

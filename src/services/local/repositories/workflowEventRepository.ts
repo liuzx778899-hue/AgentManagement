@@ -54,3 +54,33 @@ export async function getAllEvents(): Promise<LocalResult<WorkflowEvent[]>> {
     data: Array.from(events.values()),
   };
 }
+
+/**
+ * 按 ID 加载单个事件
+ */
+export async function getEventById(eventId: string): Promise<LocalResult<WorkflowEvent>> {
+  const event = events.get(eventId);
+
+  if (!event) {
+    return {
+      ok: false,
+      error: {
+        code: 'EVENT_NOT_FOUND',
+        message: `事件不存在: ${eventId}`,
+        recoverable: false,
+      },
+    };
+  }
+
+  return {
+    ok: true,
+    data: event,
+  };
+}
+
+/**
+ * 清空所有事件（仅用于测试）
+ */
+export function clear(): void {
+  events.clear();
+}

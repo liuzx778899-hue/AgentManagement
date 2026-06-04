@@ -34,10 +34,10 @@ export const workflowEventApi = {
     apiCall<{ event: WorkflowEvent; results: unknown[]; notifications: string[] }>('POST', '/workflow-events', input),
 
   /**
-   * Process routes for an existing event
+   * Re-process routes for an existing event by id
    */
-  processEventRoutes: (eventId: string, event: WorkflowEvent) =>
-    apiCall<unknown>('POST', `/workflow-events/${encodeURIComponent(eventId)}/process`, { event }),
+  processEventById: (eventId: string) =>
+    apiCall<unknown>('POST', `/workflow-events/${encodeURIComponent(eventId)}/process`),
 
   /**
    * Get all events for a workflow

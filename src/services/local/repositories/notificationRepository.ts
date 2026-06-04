@@ -135,3 +135,10 @@ export async function update(
     diagnostics: [`通知状态已更新: ${notificationId} -> ${status}`],
   };
 }
+
+/**
+ * 清空所有通知（仅用于测试）
+ */
+export function clear(): void {
+  notifications.clear();
+}

@@ -8,12 +8,13 @@
  *   POST   /api/workflow-events/:id/process            — process event routes
  *   GET    /api/workflow-events/workflow/:workflowId    — get workflow events
  *   GET    /api/workflow-events/notifications/:roleId   — get role notifications
- *   POST   /api/workflow-events/notifications/:id/status — update notification status
+ *   POST  /api/workflow-events/notifications/:id/status — update notification status
  */
 
 import { Router, Request, Response, NextFunction } from 'express';
 import {
   emitEvent,
+  processEventById,
   getWorkflowEvents,
   getRoleNotifications,
   updateNotificationStatus,
@@ -73,22 +74,13 @@ workflowEventsRouter.post('/', async (req: Request, res: Response, next: NextFun
 
 /**
  * POST /api/workflow-events/:id/process
- * Process routes for an existing event
+ * Re-process routes for an existing event (loaded by id from store)
  */
 workflowEventsRouter.post('/:id/process', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { event } = req.body;
-    if (!event) {
-      res.status(400).json({
-        ok: false,
-        error: { code: 'INVALID_INPUT', message: 'event body is required', recoverable: true },
-      });
-      return;
-    }
-
-    const { processEventRoutes } = await import('../../services/local/useCases/workflowEventUseCase');
-    const result = await processEventRoutes(event, []);
-    res.json({ ok: true, data: result });
+    const eventId = req.params.id as string;
+    const result = await processEventById(eventId);
+    res.json(result);
   } catch (err) {
     next(err);
   }
@@ -123,10 +115,10 @@ workflowEventsRouter.get('/notifications/:roleId', async (req: Request, res: Res
 });
 
 /**
- * PATCH /api/workflow-events/notifications/:id/status
+ * POST /api/workflow-events/notifications/:id/status
  * Update notification status
  */
-workflowEventsRouter.patch('/notifications/:id/status', async (req: Request, res: Response, next: NextFunction) => {
+workflowEventsRouter.post('/notifications/:id/status', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = req.params.id as string;
     const { status } = req.body;

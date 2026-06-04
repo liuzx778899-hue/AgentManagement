@@ -221,6 +221,36 @@ export async function processEventRoutes(
 }
 
 /**
+ * 按 event ID 从仓储加载并重新处理路由
+ */
+export async function processEventById(
+  eventId: string,
+  tasks?: Task[]
+): Promise<LocalResult<ProcessedRoute>> {
+  const eventResult = await eventRepo.getEventById(eventId);
+
+  if (!eventResult.ok) {
+    return {
+      ok: false,
+      error: eventResult.error,
+    };
+  }
+
+  const event = eventResult.data!;
+  const processResult = await processEventRoutes(event, tasks ?? []);
+
+  return {
+    ok: true,
+    data: processResult,
+    diagnostics: [
+      `事件 ${eventId} 已重新处理`,
+      `路由数: ${processResult.results.length}`,
+      `通知数: ${processResult.notifications.length}`,
+    ],
+  };
+}
+
+/**
  * 获取工作流事件
  */
 export async function getWorkflowEvents(

@@ -2,19 +2,26 @@
  * Integration test: emitEvent end-to-end flow
  *
  * Seeds assignments, emits event, verifies routes + notifications
+ * All in-memory stores are cleared between tests.
  */
 import { describe, it, expect, beforeEach } from 'vitest';
 import * as assignmentRepo from '../../../../services/local/repositories/workflowAssignmentRepository';
 import * as notificationRepo from '../../../../services/local/repositories/notificationRepository';
 import * as eventRepo from '../../../../services/local/repositories/workflowEventRepository';
-import { emitEvent, getWorkflowEvents, getRoleNotifications, updateNotificationStatus } from '../../../../services/local/useCases/workflowEventUseCase';
+import {
+  emitEvent,
+  processEventById,
+  getWorkflowEvents,
+  getRoleNotifications,
+  updateNotificationStatus,
+} from '../../../../services/local/useCases/workflowEventUseCase';
 import type { WorkflowAssignment } from '../../../../domain/workflowAssignment';
 import type { Task } from '../../../../domain/task';
 
-// Reset in-memory stores before each test
-beforeEach(async () => {
-  // Re-import modules to reset Map state
-  // Since these are module-level Maps, we clear them via saveBatch with empty then re-seed
+beforeEach(() => {
+  assignmentRepo.clear();
+  notificationRepo.clear();
+  eventRepo.clear();
 });
 
 const seedAssignments = async (): Promise<void> => {
@@ -106,19 +113,19 @@ describe('emitEvent integration', () => {
     });
 
     expect(result.ok).toBe(true);
-    expect(result.data!.results.length).toBeGreaterThanOrEqual(2);
+    // asgn-dev has 2 task_completed routes + asgn-qa has 1 = 3 routes total
+    expect(result.data!.results).toHaveLength(3);
 
-    // Should have unblock_task for role-qa
     const unblock = result.data!.results.find(r => r.action === 'unblock_task');
     expect(unblock).toBeDefined();
 
-    // Should have notify for role-pm
-    const notify = result.data!.results.find(r => r.action === 'notify');
-    expect(notify).toBeDefined();
-    expect(notify!.status).toBe('completed');
+    // 2 notify routes (one from asgn-dev, one from asgn-qa)
+    const notifyRoutes = result.data!.results.filter(r => r.action === 'notify');
+    expect(notifyRoutes).toHaveLength(2);
+    expect(notifyRoutes.every(r => r.status === 'completed')).toBe(true);
 
-    // Notification should be created
-    expect(result.data!.notifications.length).toBeGreaterThanOrEqual(1);
+    // Both notify routes produce notifications
+    expect(result.data!.notifications).toHaveLength(2);
   });
 
   it('should emit task_failed and produce notify route', async () => {
@@ -136,13 +143,14 @@ describe('emitEvent integration', () => {
     });
 
     expect(result.ok).toBe(true);
-    const notify = result.data!.results.find(r => r.action === 'notify');
-    expect(notify).toBeDefined();
-    expect(notify!.status).toBe('completed');
-    expect(result.data!.notifications.length).toBe(1);
+    // Only asgn-dev has task_failed route
+    expect(result.data!.results).toHaveLength(1);
+    expect(result.data!.results[0].action).toBe('notify');
+    expect(result.data!.results[0].status).toBe('completed');
+    expect(result.data!.notifications).toHaveLength(1);
   });
 
-  it('should emit handoff_requested via resolveAllRoutes', async () => {
+  it('should emit gate_failed and produce reassign_task', async () => {
     await seedAssignments();
 
     const result = await emitEvent({
@@ -155,9 +163,9 @@ describe('emitEvent integration', () => {
     });
 
     expect(result.ok).toBe(true);
-    const reassign = result.data!.results.find(r => r.action === 'reassign_task');
-    expect(reassign).toBeDefined();
-    expect(reassign!.targetRoleId).toBe('role-dev');
+    expect(result.data!.results).toHaveLength(1);
+    expect(result.data!.results[0].action).toBe('reassign_task');
+    expect(result.data!.results[0].targetRoleId).toBe('role-dev');
   });
 
   it('should return empty routes when no assignments match workflowId', async () => {
@@ -180,7 +188,7 @@ describe('emitEvent integration', () => {
   it('should retrieve events by workflow after emission', async () => {
     await seedAssignments();
 
-    await emitEvent({
+    const emitResult = await emitEvent({
       workflowId: 'wf-ci',
       sourceAssignmentId: 'asgn-dev',
       sourceStepId: 'step-dev',
@@ -191,8 +199,35 @@ describe('emitEvent integration', () => {
 
     const eventsResult = await getWorkflowEvents('wf-ci');
     expect(eventsResult.ok).toBe(true);
-    expect(eventsResult.data!.length).toBeGreaterThanOrEqual(1);
+    expect(eventsResult.data!).toHaveLength(1);
     expect(eventsResult.data![0].trigger).toBe('task_completed');
+    expect(eventsResult.data![0].id).toBe(emitResult.data!.event.id);
+  });
+
+  it('should process event by id from repository', async () => {
+    await seedAssignments();
+
+    const emitResult = await emitEvent({
+      workflowId: 'wf-ci',
+      sourceAssignmentId: 'asgn-dev',
+      sourceStepId: 'step-dev',
+      trigger: 'task_completed',
+      payload: {},
+      tasks: makeTasks(),
+    });
+
+    const eventId = emitResult.data!.event.id;
+
+    // Process again by id
+    const processResult = await processEventById(eventId);
+    expect(processResult.ok).toBe(true);
+    expect(processResult.data!.event.id).toBe(eventId);
+    expect(processResult.data!.results.length).toBeGreaterThan(0);
+  });
+
+  it('should fail processEventById for nonexistent event', async () => {
+    const result = await processEventById('evt-nonexistent');
+    expect(result.ok).toBe(false);
   });
 
   it('should manage notification lifecycle', async () => {
@@ -202,30 +237,26 @@ describe('emitEvent integration', () => {
       workflowId: 'wf-ci',
       sourceAssignmentId: 'asgn-dev',
       sourceStepId: 'step-dev',
-      trigger: 'task_completed',
+      trigger: 'task_failed',
       payload: {},
       tasks: makeTasks(),
     });
 
-    // Get notifications for role-pm
     const notifsResult = await getRoleNotifications('role-pm');
     expect(notifsResult.ok).toBe(true);
-    expect(notifsResult.data!.length).toBeGreaterThanOrEqual(1);
+    expect(notifsResult.data!).toHaveLength(1);
 
     const notif = notifsResult.data![0];
     expect(notif.status).toBe('unread');
 
-    // Update to delivered
     const updated = await updateNotificationStatus(notif.id, 'delivered');
     expect(updated.ok).toBe(true);
     expect(updated.data!.status).toBe('delivered');
 
-    // Update to consumed
     const consumed = await updateNotificationStatus(notif.id, 'consumed');
     expect(consumed.ok).toBe(true);
     expect(consumed.data!.status).toBe('consumed');
 
-    // Update to resolved
     const resolved = await updateNotificationStatus(notif.id, 'resolved');
     expect(resolved.ok).toBe(true);
     expect(resolved.data!.status).toBe('resolved');
