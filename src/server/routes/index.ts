@@ -10,6 +10,7 @@ import { rolesRouter } from './roles';
 import { capabilitiesRouter } from './capabilities';
 import { tasksRouter } from './tasks';
 import { workflowEventsRouter } from './workflowEvents';
+import { createAgentServiceRouter } from './agent-service';
 
 export function createRouter(): Router {
   const router = Router();
@@ -29,6 +30,9 @@ export function createRouter(): Router {
   router.use('/capabilities', capabilitiesRouter);
   router.use('/tasks', tasksRouter);
   router.use('/workflow-events', workflowEventsRouter);
+
+  // Agent Service API (v1)
+  router.use('/v1', createAgentServiceRouter());
 
   console.log('[Router] Final router stack length:', (router as any).stack?.length);
 
