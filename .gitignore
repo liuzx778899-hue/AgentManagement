@@ -6,6 +6,13 @@ dist/
 .playwright-screenshots/
 .superpowers/
 .agents/
+.codegraph/
+
+# Runtime workflow files
+.agentmanagement/workflows/*.json
+!.agentmanagement/workflows/software-dev-v1.json
+!.agentmanagement/workflows/bug-fix-v1.json
+!.agentmanagement/workflows/design-review-v1.json
 .claude/skills/
 .claude/worktrees/
 .worktrees/
