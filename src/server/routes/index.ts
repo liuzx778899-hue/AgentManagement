@@ -10,6 +10,7 @@ import { rolesRouter } from './roles';
 import { capabilitiesRouter } from './capabilities';
 import { tasksRouter } from './tasks';
 import { createAgentServiceRouter } from './agent-service';
+import { workflowEventsRouter } from './workflowEvents';
 
 export function createRouter(): Router {
   const router = Router();
@@ -28,6 +29,7 @@ export function createRouter(): Router {
   router.use('/roles', rolesRouter);
   router.use('/capabilities', capabilitiesRouter);
   router.use('/tasks', tasksRouter);
+  router.use('/workflow-events', workflowEventsRouter);
 
   // Agent Service API (v1)
   router.use('/v1', createAgentServiceRouter());

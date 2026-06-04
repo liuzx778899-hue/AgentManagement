@@ -39,6 +39,12 @@ export type { RunnerKind, RunnerProfile } from "./runner";
 import type { AppSettings } from "../types/settings";
 export type { AppSettings };
 
+// New domain models for #27/#28/#30
+export type { WorkflowAssignment, WorkflowEventRoute, WorkflowEventTrigger, WorkflowEventRouteAction } from "./workflowAssignment";
+export type { WorkflowEvent, WorkflowEventRouteResult } from "./workflowEvent";
+export type { WorkflowNotification, NotificationStatus, createNotification, markDelivered, markConsumed, markResolved } from "./notification";
+export type { StepViewModel, AssignmentViewModel, WorkbenchViewModel } from "./workbenchViewModel";
+
 // View type (stays here as it's UI-specific)
 export type WorkbenchView =
   | "workbench"

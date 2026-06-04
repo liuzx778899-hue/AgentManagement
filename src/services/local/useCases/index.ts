@@ -84,3 +84,18 @@ export {
   type AiChatResponse,
   type AiStreamResponse,
 } from './aiUseCase';
+export {
+  emitEvent,
+  processEventRoutes,
+  getWorkflowEvents,
+  getRoleNotifications,
+  updateNotificationStatus,
+  type EmitEventInput,
+  type ProcessedRoute,
+} from './workflowEventUseCase';
+export {
+  resolveEventRouteTarget,
+  resolveHandoffTarget,
+  resolveAllRoutes,
+  type DependencyContext,
+} from './resolveEventRouteTarget';
