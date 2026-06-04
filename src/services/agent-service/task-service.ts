@@ -4,7 +4,14 @@
  * Issue: #33
  */
 
-import type { Task, AgentRun } from '../../domain/task';
+import type { Task, AgentRun, EventLog, AuditEntry } from '../../domain/task';
+import { logEvent, getTaskEvents } from './event-log';
+import { logAudit } from './audit-log';
+import { saveResult, getResult, type TaskResult } from './resultStore';
+import { getRunnerAdapter, type RunResult } from './runnerAdapter';
+
+// Re-export for convenience
+export type { TaskResult as StoredTaskResult } from './resultStore';
 
 // 内存存储
 const tasks = new Map<string, Task>();
@@ -34,13 +41,35 @@ export function createTask(input: {
     roleAssignment: {},
     capabilityAuthorization: [],
     launchStrategy: 'direct',
-    status: 'queued',
+    status: 'draft',
     activeRunId: null,
     createdAt: now,
     updatedAt: now,
   };
 
   tasks.set(id, task);
+
+  // 记录审计日志
+  logAudit({
+    action: 'create_task',
+    resourceId: id,
+    resourceType: 'task',
+    details: {
+      projectId: input.projectId,
+      goal: input.goal,
+    },
+  });
+
+  // 记录事件日志
+  logEvent({
+    taskId: id,
+    type: 'task_created',
+    payload: {
+      projectId: input.projectId,
+      goal: input.goal,
+    },
+  });
+
   return task;
 }
 
@@ -54,9 +83,13 @@ export function getTask(id: string): Task | undefined {
 /**
  * 列出任务
  */
-export function listTasks(projectId?: string): Task[] {
+export function listTasks(projectId?: string, status?: TaskStatus): Task[] {
   const all = Array.from(tasks.values());
-  return projectId ? all.filter(t => t.projectId === projectId) : all;
+  let filtered = projectId ? all.filter(t => t.projectId === projectId) : all;
+  if (status) {
+    filtered = filtered.filter(t => t.status === status);
+  }
+  return filtered;
 }
 
 /**
@@ -68,6 +101,18 @@ export function updateTaskStatus(id: string, status: TaskStatus): Task | undefin
 
   const updated = { ...task, status, updatedAt: new Date().toISOString() };
   tasks.set(id, updated);
+
+  // 记录审计日志
+  logAudit({
+    action: 'update_status',
+    resourceId: id,
+    resourceType: 'task',
+    details: {
+      previousStatus: task.status,
+      newStatus: status,
+    },
+  });
+
   return updated;
 }
 
@@ -96,6 +141,7 @@ export function startTask(id: string): { task: Task; run: AgentRun } | undefined
 
   runs.set(runId, run);
 
+  const previousStatus = task.status;
   const updatedTask: Task = {
     ...task,
     status: 'running',
@@ -104,8 +150,51 @@ export function startTask(id: string): { task: Task; run: AgentRun } | undefined
   };
   tasks.set(id, updatedTask);
 
-  // 模拟进度
-  simulateRunProgress(runId);
+  // 记录审计日志 - 启动任务
+  logAudit({
+    action: 'start_task',
+    resourceId: id,
+    resourceType: 'task',
+    details: {
+      previousStatus,
+      runId,
+    },
+  });
+
+  // 记录审计日志 - 创建运行
+  logAudit({
+    action: 'create_run',
+    resourceId: runId,
+    resourceType: 'run',
+    details: {
+      taskId: id,
+    },
+  });
+
+  // 记录事件日志 - 任务启动
+  logEvent({
+    taskId: id,
+    runId,
+    type: 'task_started',
+    payload: {
+      runId,
+    },
+  });
+
+  // 记录事件日志 - 运行启动
+  logEvent({
+    taskId: id,
+    runId,
+    type: 'run_started',
+    payload: {
+      roleId: run.roleId,
+      modelProviderId: run.modelProviderId,
+      modelName: run.modelName,
+    },
+  });
+
+  // 使用 Runner Adapter 启动运行
+  startRunWithAdapter(runId, id);
 
   return { task: updatedTask, run };
 }
@@ -117,16 +206,48 @@ export function cancelTask(id: string): Task | undefined {
   const task = tasks.get(id);
   if (!task) return undefined;
 
-  if (task.activeRunId) {
-    const run = runs.get(task.activeRunId);
+  const runId = task.activeRunId;
+
+  if (runId) {
+    const run = runs.get(runId);
     if (run) {
-      runs.set(task.activeRunId, {
+      runs.set(runId, {
         ...run,
         status: 'failed',
         finishedAt: new Date().toISOString(),
       });
+
+      // 记录审计日志 - 停止运行
+      logAudit({
+        action: 'stop_run',
+        resourceId: runId,
+        resourceType: 'run',
+        details: {
+          reason: 'task_cancelled',
+        },
+      });
     }
   }
+
+  // 记录事件日志
+  logEvent({
+    taskId: id,
+    runId: runId || undefined,
+    type: 'task_cancelled',
+    payload: {
+      previousStatus: task.status,
+    },
+  });
+
+  // 记录审计日志
+  logAudit({
+    action: 'cancel_task',
+    resourceId: id,
+    resourceType: 'task',
+    details: {
+      previousStatus: task.status,
+    },
+  });
 
   return updateTaskStatus(id, 'failed');
 }
@@ -147,54 +268,124 @@ export function listAgentRuns(taskId?: string): AgentRun[] {
 }
 
 /**
- * 模拟 Run 进度
+ * 获取任务日志（从 EventLog）
  */
-async function simulateRunProgress(runId: string): Promise<void> {
-  // 更新为 running
+export function getTaskLogs(taskId: string): EventLog[] {
+  return getTaskEvents(taskId);
+}
+
+/**
+ * 获取任务结果
+ */
+export function getTaskResult(taskId: string): TaskResult | undefined {
+  return getResult(taskId);
+}
+
+/**
+ * 使用 Runner Adapter 启动运行
+ */
+function startRunWithAdapter(runId: string, taskId: string): void {
   const run = runs.get(runId);
-  if (run) {
-    runs.set(runId, { ...run, status: 'running' });
-  }
+  if (!run) return;
 
-  // 添加日志
-  const logs = [
-    `[${new Date().toISOString()}] Starting agent...`,
-    `[${new Date().toISOString()}] Loading config...`,
-    `[${new Date().toISOString()}] Processing task...`,
-    `[${new Date().toISOString()}] Task completed.`,
-  ];
+  const adapter = getRunnerAdapter();
 
-  for (const log of logs) {
-    const currentRun = runs.get(runId);
-    if (currentRun) {
-      runs.set(runId, { ...currentRun, log: [...currentRun.log, log] });
+  adapter.start(
+    runId,
+    taskId,
+    {
+      runnerId: 'mock-runner',
+      roleId: run.roleId,
+      modelProviderId: run.modelProviderId,
+      modelName: run.modelName,
+    },
+    {
+      onLog: (id, log) => {
+        const currentRun = runs.get(id);
+        if (currentRun) {
+          runs.set(id, { ...currentRun, log: [...currentRun.log, log] });
+        }
+      },
+      onStatusChange: (id, status) => {
+        const currentRun = runs.get(id);
+        if (currentRun) {
+          runs.set(id, { ...currentRun, status, finishedAt: status === 'done' ? new Date().toISOString() : null });
+        }
+      },
+      onComplete: (id, _result) => {
+        // Update task status
+        const task = Array.from(tasks.values()).find(t => t.activeRunId === id);
+        if (task) {
+          logEvent({
+            taskId: task.id,
+            runId: id,
+            type: 'task_completed',
+            payload: {},
+          });
+          updateTaskStatus(task.id, 'done');
+        }
+      },
     }
-    await new Promise(r => setTimeout(r, 500));
-  }
-
-  // 完成
-  const finalRun = runs.get(runId);
-  if (finalRun) {
-    runs.set(runId, {
-      ...finalRun,
-      status: 'done',
-      finishedAt: new Date().toISOString(),
-    });
-  }
-
-  // 更新关联任务
-  const task = Array.from(tasks.values()).find(t => t.activeRunId === runId);
-  if (task) {
-    updateTaskStatus(task.id, 'done');
-  }
+  );
 }
 
 /**
  * 获取统计
  */
 export function getStatistics() {
+  const allRuns = Array.from(runs.values());
   return {
     tasks: { total: tasks.size },
-    runs: { total: runs.size },
+    runs: {
+      total: runs.size,
+      active: allRuns.filter(r => r.status === 'running' || r.status === 'starting').length,
+      completed: allRuns.filter(r => r.status === 'done').length,
+    },
   };
+}
+
+/**
+ * 停止运行（会话）
+ */
+export function stopRun(runId: string): AgentRun | undefined {
+  const run = runs.get(runId);
+  if (!run) return undefined;
+
+  // 停止 Runner Adapter
+  const adapter = getRunnerAdapter();
+  adapter.stop(runId);
+
+  const now = new Date().toISOString();
+
+  // 更新 Run 状态
+  const updatedRun: AgentRun = {
+    ...run,
+    status: 'failed',
+    finishedAt: now,
+  };
+  runs.set(runId, updatedRun);
+
+  // 记录事件日志
+  logEvent({
+    taskId: run.taskId,
+    runId,
+    type: 'run_failed',
+    payload: { reason: 'session_stopped' },
+  });
+
+  // 记录审计日志
+  logAudit({
+    action: 'stop_run',
+    resourceId: runId,
+    resourceType: 'run',
+    details: { reason: 'session_stopped' },
+  });
+
+  // 如果关联的任务还在运行，更新为 failed
+  const task = Array.from(tasks.values()).find(t => t.activeRunId === runId);
+  if (task && task.status === 'running') {
+    updateTaskStatus(task.id, 'failed');
+  }
+
+  return updatedRun;
 }

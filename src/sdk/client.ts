@@ -12,6 +12,16 @@ export interface AgentManagementClientConfig {
   apiKey?: string;
   timeout?: number;
   headers?: Record<string, string>;
+  /** 租户 ID（多租户隔离） */
+  tenantId?: string;
+}
+
+/**
+ * 创建任务请求选项
+ */
+export interface CreateTaskOptions {
+  /** 幂等键（防止重复创建） */
+  idempotencyKey?: string;
 }
 
 /**
@@ -22,12 +32,14 @@ export class AgentManagementClient {
   private apiKey?: string;
   private timeout: number;
   private headers: Record<string, string>;
+  private tenantId?: string;
 
   constructor(config: AgentManagementClientConfig) {
     this.baseUrl = config.baseUrl.replace(/\/$/, '');
     this.apiKey = config.apiKey;
     this.timeout = config.timeout || 30000;
     this.headers = config.headers || {};
+    this.tenantId = config.tenantId;
   }
 
   /**
@@ -37,12 +49,20 @@ export class AgentManagementClient {
     /**
      * 创建任务
      */
-    create: async (request: CreateTaskRequest): Promise<Task> => {
+    create: async (
+      request: CreateTaskRequest,
+      options?: CreateTaskOptions
+    ): Promise<Task> => {
+      const headers: Record<string, string> = {};
+      if (options?.idempotencyKey) {
+        headers['X-Idempotency-Key'] = options.idempotencyKey;
+      }
       const response = await this.request('/tasks', {
         method: 'POST',
         body: JSON.stringify(request),
+        headers,
       });
-      return response.data;
+      return this.unwrapResponse(response);
     },
 
     /**
@@ -50,7 +70,7 @@ export class AgentManagementClient {
      */
     get: async (taskId: string): Promise<Task> => {
       const response = await this.request(`/tasks/${taskId}`);
-      return response.data;
+      return this.unwrapResponse(response);
     },
 
     /**
@@ -62,7 +82,7 @@ export class AgentManagementClient {
       if (filter?.status) params.set('status', filter.status);
       const query = params.toString();
       const response = await this.request(`/tasks${query ? '?' + query : ''}`);
-      return response.data;
+      return this.unwrapResponse(response);
     },
 
     /**
@@ -72,7 +92,7 @@ export class AgentManagementClient {
       const response = await this.request(`/tasks/${taskId}/start`, {
         method: 'POST',
       });
-      return response.data;
+      return this.unwrapResponse(response);
     },
 
     /**
@@ -82,14 +102,15 @@ export class AgentManagementClient {
       const response = await this.request(`/tasks/${taskId}/cancel`, {
         method: 'POST',
       });
-      return response.data;
+      return this.unwrapResponse(response);
     },
 
     /**
-     * 获取日志
+     * 获取日志（事件日志）
      */
-    logs: async (taskId: string): Promise<string[]> => {
+    logs: async (taskId: string): Promise<EventLog[]> => {
       const response = await this.request(`/tasks/${taskId}/logs`);
+      // Server returns { ok: true, logs: EventLog[] }
       return response.logs || [];
     },
 
@@ -98,7 +119,8 @@ export class AgentManagementClient {
      */
     result: async (taskId: string): Promise<TaskResult> => {
       const response = await this.request(`/tasks/${taskId}/result`);
-      return response;
+      // Server returns { ok: true, data: TaskResult }
+      return this.unwrapResponse(response);
     },
   };
 
@@ -153,7 +175,8 @@ export class AgentManagementClient {
   statistics = {
     get: async (): Promise<Statistics> => {
       const response = await this.request('/statistics');
-      return response;
+      // Server returns { ok: true, data: Statistics }
+      return this.unwrapResponse(response);
     },
   };
 
@@ -191,8 +214,15 @@ export class AgentManagementClient {
       headers['X-API-Key'] = this.apiKey;
     }
 
-    // 生成 Request ID
-    headers['X-Request-Id'] = this.generateRequestId();
+    // 添加租户 ID
+    if (this.tenantId) {
+      headers['X-Tenant-Id'] = this.tenantId;
+    }
+
+    // 生成或使用用户提供的 Request ID
+    if (!headers['X-Request-Id']) {
+      headers['X-Request-Id'] = this.generateRequestId();
+    }
 
     const response = await fetch(url, {
       method,
@@ -206,6 +236,19 @@ export class AgentManagementClient {
     }
 
     return response.json();
+  }
+
+  /**
+   * 解包响应数据
+   * 服务端返回格式: { ok: true, data: T } 或直接返回 T
+   */
+  private unwrapResponse<T>(response: any): T {
+    // 如果响应包含 ok 和 data 字段，提取 data
+    if (response && typeof response === 'object' && 'ok' in response && 'data' in response) {
+      return response.data;
+    }
+    // 否则直接返回（兼容未包装的响应）
+    return response;
   }
 
   /**
@@ -257,6 +300,15 @@ export interface TaskResult {
   status: string;
   artifacts?: Array<{ id: string; name: string; path: string }>;
   error?: string;
+}
+
+export interface EventLog {
+  id: string;
+  taskId: string;
+  runId?: string;
+  type: string;
+  payload?: Record<string, unknown>;
+  timestamp: string;
 }
 
 export interface AgentRun {
