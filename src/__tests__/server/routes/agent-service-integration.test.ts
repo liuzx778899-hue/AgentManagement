@@ -31,6 +31,12 @@ describe('Agent Service Route Integration', () => {
       const data = await response.json();
       expect(data.status).toBe('healthy');
     });
+
+    it('should return X-Request-Id header', async () => {
+      const response = await fetch(`http://localhost:${(server.address() as any).port}/api/v1/health`);
+      expect(response.status).toBe(200);
+      expect(response.headers.get('X-Request-Id')).toBeDefined();
+    });
   });
 
   describe('POST /api/v1/tasks', () => {
