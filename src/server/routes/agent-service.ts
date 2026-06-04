@@ -16,7 +16,15 @@ import {
   getAgentRun,
   listAgentRuns,
   getStatistics,
+  getTaskLogs,
+  getTaskResult,
+  stopRun,
 } from '../../services/agent-service/task-service';
+import { getTaskEvents, getAllEvents } from '../../services/agent-service/event-log';
+import { getResourceAudit, getAllAudit } from '../../services/agent-service/audit-log';
+import type { Task } from '../../domain/task';
+
+type TaskStatus = Task['status'];
 
 export function createAgentServiceRouter(): Router {
   const router = Router();
@@ -48,7 +56,9 @@ export function createAgentServiceRouter(): Router {
    */
   router.get('/tasks', (req: Request, res: Response) => {
     const projectId = req.query.projectId as string | undefined;
-    const tasks = listTasks(projectId);
+    const statusParam = req.query.status as string | undefined;
+    const status = statusParam as TaskStatus | undefined;
+    const tasks = listTasks(projectId, status);
     res.json({ ok: true, data: tasks, total: tasks.length });
   });
 
@@ -107,16 +117,20 @@ export function createAgentServiceRouter(): Router {
     if (!task) {
       return res.status(404).json({ ok: false, error: 'Task not found' });
     }
-    const run = task.activeRunId ? getAgentRun(task.activeRunId) : undefined;
-    res.json({ ok: true, logs: run?.log || [] });
+    const logs = getTaskLogs(req.params.taskId as string);
+    res.json({ ok: true, logs });
   });
 
   /**
    * GET /v1/tasks/:taskId/events - 获取任务事件
    */
   router.get('/tasks/:taskId/events', (req: Request, res: Response) => {
-    const runs = listAgentRuns(req.params.taskId as string);
-    res.json({ ok: true, events: runs });
+    const task = getTask(req.params.taskId as string);
+    if (!task) {
+      return res.status(404).json({ ok: false, error: 'Task not found' });
+    }
+    const events = getTaskEvents(req.params.taskId as string);
+    res.json({ ok: true, events });
   });
 
   /**
@@ -127,14 +141,44 @@ export function createAgentServiceRouter(): Router {
     if (!task) {
       return res.status(404).json({ ok: false, error: 'Task not found' });
     }
+    const result = getTaskResult(req.params.taskId as string);
     res.json({
       ok: true,
-      data: {
+      data: result || {
         status: task.status,
         artifacts: [],
-        error: undefined,
       },
     });
+  });
+
+  /**
+   * GET /v1/tasks/:taskId/audit - 获取任务审计日志
+   */
+  router.get('/tasks/:taskId/audit', (req: Request, res: Response) => {
+    const task = getTask(req.params.taskId as string);
+    if (!task) {
+      return res.status(404).json({ ok: false, error: 'Task not found' });
+    }
+    const audit = getResourceAudit(req.params.taskId as string);
+    res.json({ ok: true, audit });
+  });
+
+  // ===== Events & Audit API =====
+
+  /**
+   * GET /v1/events - 获取所有事件
+   */
+  router.get('/events', (_req: Request, res: Response) => {
+    const events = getAllEvents();
+    res.json({ ok: true, events, total: events.length });
+  });
+
+  /**
+   * GET /v1/audit - 获取所有审计日志
+   */
+  router.get('/audit', (_req: Request, res: Response) => {
+    const audit = getAllAudit();
+    res.json({ ok: true, audit, total: audit.length });
   });
 
   // ===== Sessions API =====
@@ -151,10 +195,57 @@ export function createAgentServiceRouter(): Router {
   });
 
   /**
+   * POST /v1/sessions/:sessionId/input - 发送输入到会话
+   */
+  router.post('/sessions/:sessionId/input', (req: Request, res: Response) => {
+    const run = getAgentRun(req.params.sessionId as string);
+    if (!run) {
+      return res.status(404).json({ ok: false, error: 'Session not found' });
+    }
+    // In a real implementation, this would send input to the running agent
+    // For now, just acknowledge the input was received
+    res.json({ ok: true, message: 'Input received' });
+  });
+
+  /**
    * POST /v1/sessions/:sessionId/stop - 停止会话
    */
   router.post('/sessions/:sessionId/stop', (req: Request, res: Response) => {
-    res.json({ ok: true, message: 'Session stopped' });
+    const sessionId = req.params.sessionId as string;
+    const run = getAgentRun(sessionId);
+    if (!run) {
+      return res.status(404).json({ ok: false, error: 'Session not found' });
+    }
+    const updatedRun = stopRun(sessionId);
+    res.json({ ok: true, data: updatedRun, message: 'Session stopped' });
+  });
+
+  // ===== Agents API =====
+
+  /**
+   * GET /v1/agents - 列出 Agents
+   */
+  router.get('/agents', (_req: Request, res: Response) => {
+    // Return mock agents for now - in production this would query actual agents
+    const agents = [
+      {
+        id: 'agent-1',
+        name: 'Developer Agent',
+        roleId: 'developer',
+        runnerProviderId: 'mock-runner',
+        enabled: true,
+        status: 'idle' as const,
+      },
+      {
+        id: 'agent-2',
+        name: 'QA Agent',
+        roleId: 'qa',
+        runnerProviderId: 'mock-runner',
+        enabled: true,
+        status: 'idle' as const,
+      },
+    ];
+    res.json({ ok: true, agents });
   });
 
   // ===== Statistics API =====
