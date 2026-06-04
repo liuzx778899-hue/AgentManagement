@@ -13,6 +13,7 @@ dist/
 !.agentmanagement/workflows/software-dev-v1.json
 !.agentmanagement/workflows/bug-fix-v1.json
 !.agentmanagement/workflows/design-review-v1.json
+!.agentmanagement/workflows/java-spring-vue-v1.json
 .claude/skills/
 .claude/worktrees/
 .worktrees/

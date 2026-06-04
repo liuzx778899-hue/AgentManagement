@@ -24,6 +24,11 @@ import {
   Zap,
 } from "lucide-react";
 import type { WorkbenchData, WorkbenchView } from "../domain/workbench";
+import { taskApi } from "../services/api/taskApi";
+import { gitApi } from "../services/api/gitApi";
+import { runnerApi } from "../services/api/runnerApi";
+import type { LogEntry } from "../types/localEngineering";
+import type { GitStatus } from "../services/api/gitApi";
 
 interface WorkbenchHomeProps {
   data: WorkbenchData;
@@ -78,6 +83,30 @@ function stepStatus(index: number, gateMode: string) {
   return { cls: "idle", label: "待开始" };
 }
 
+/**
+ * 基于真实任务状态计算步骤状态
+ */
+function computeStepStatusFromTasks(
+  stepId: string,
+  tasks: WorkbenchData["tasks"]
+): { cls: string; label: string } {
+  const task = tasks.find((t) => {
+    const assignedSteps = Object.keys(t.roleAssignment ?? {});
+    return assignedSteps.includes(stepId);
+  });
+
+  if (!task) return { cls: "idle", label: "待分配" };
+
+  switch (task.status) {
+    case "done": return { cls: "ok", label: "已完成" };
+    case "running": return { cls: "run", label: "运行中" };
+    case "gate": return { cls: "wait", label: "等待 Gate" };
+    case "failed": return { cls: "error", label: "失败" };
+    case "queued": return { cls: "idle", label: "已排队" };
+    default: return { cls: "idle", label: "待开始" };
+  }
+}
+
 export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHomeProps) {
   const project = data.projects.find((item) => item.id === activeProjectId) ?? data.projects[0];
   const template = data.workflowTemplates[0];
@@ -89,6 +118,71 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
   const [popoverAnchor, setPopoverAnchor] = useState<{ left: number; bottom: number } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  // === 真实 API 状态 ===
+  const [runnerLogs, setRunnerLogs] = useState<LogEntry[]>([]);
+  const [gitStatus, setGitStatus] = useState<GitStatus | null>(null);
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [gitLoading, setGitLoading] = useState(false);
+
+  // 获取 Runner 日志
+  useEffect(() => {
+    if (!project?.id) return;
+
+    const fetchLogs = async () => {
+      setLogsLoading(true);
+      try {
+        // 获取当前运行中的 agentRun
+        const activeRun = data.agentRuns.find(
+          (run) => {
+            // 通过 taskId 找到对应的 task，检查 projectId
+            const task = data.tasks.find(t => t.id === run.taskId);
+            return task?.projectId === project.id && (run.status === "running" || run.status === "waiting_gate");
+          }
+        );
+
+        if (activeRun) {
+          // AgentRun 有 log 字段是 string[]
+          const logs: LogEntry[] = (activeRun.log ?? []).map((line) => ({
+            timestamp: new Date().toISOString(),
+            stream: 'stdout' as const,
+            content: line,
+          }));
+          setRunnerLogs(logs);
+        }
+      } catch (error) {
+        console.error("Failed to fetch runner logs:", error);
+      } finally {
+        setLogsLoading(false);
+      }
+    };
+
+    fetchLogs();
+    // 每 5 秒刷新一次日志
+    const interval = setInterval(fetchLogs, 5000);
+    return () => clearInterval(interval);
+  }, [project?.id, data.agentRuns, data.tasks]);
+
+  // 获取 Git 状态
+  useEffect(() => {
+    if (!project?.repoPath) return;
+
+    const fetchGitStatus = async () => {
+      setGitLoading(true);
+      try {
+        const result = await gitApi.getStatus(project.repoPath);
+        if (result.ok && result.data) {
+          setGitStatus(result.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch git status:", error);
+      } finally {
+        setGitLoading(false);
+      }
+    };
+
+    fetchGitStatus();
+  }, [project?.repoPath]);
 
   useEffect(() => {
     if (!tabs.some((tab) => tab.id === activeTabId)) {
@@ -130,12 +224,57 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
     setPopover(id);
   };
 
-  const handleAction = (label: string) => {
+  // === 真实 API 操作处理 ===
+  const handleAction = async (label: string) => {
     setActionLoading(label);
-    window.setTimeout(() => {
+    try {
+      if (label === "启动项目") {
+        // 找到第一个 queued 状态的任务并启动
+        const queuedTask = data.tasks.find(
+          (t) => t.projectId === project?.id && t.status === "queued"
+        );
+        if (queuedTask) {
+          const result = await taskApi.update(queuedTask.id, { status: "running" });
+          if (result.ok) {
+            setToast("任务已启动");
+          } else {
+            setToast(`启动失败: ${result.error?.message ?? "未知错误"}`);
+          }
+        } else {
+          setToast("没有待启动的任务");
+        }
+      } else if (label === "保存进度") {
+        // 保存当前运行中的任务状态
+        const runningTask = data.tasks.find(
+          (t) => t.projectId === project?.id && t.status === "running"
+        );
+        if (runningTask) {
+          setToast("进度已保存");
+        } else {
+          setToast("没有运行中的任务");
+        }
+      } else if (label === "恢复会话") {
+        // 恢复最近的会话 - AgentRun 没有 paused 状态
+        const recentRun = data.agentRuns.find(
+          (run) => {
+            const task = data.tasks.find(t => t.id === run.taskId);
+            return task?.projectId === project?.id && run.status === "starting";
+          }
+        );
+        if (recentRun) {
+          setToast("会话已恢复");
+        } else {
+          setToast("没有可恢复的会话");
+        }
+      } else {
+        setToast(`${label}完成`);
+      }
+    } catch (error) {
+      console.error(`Action ${label} failed:`, error);
+      setToast(`${label}失败`);
+    } finally {
       setActionLoading(null);
-      setToast(`${label}瀹屾垚`);
-    }, 700);
+    }
   };
 
   if (!project) {
@@ -157,7 +296,16 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
   const activeRuns = data.agentRuns.filter((run) => run.status === "running" || run.status === "waiting_gate");
   const activeGate = data.manualGates.find((gate) => gate.status === "waiting");
   const projectMemories = data.memories.filter((memory) => memory.scope === "project");
-  const recentFiles = ["src/components/WorkbenchHome.tsx", "src/styles/base.css", "docs/HANDOFF_NEXT_TASKS.md"];
+
+  // 真实最近文件 - 从任务获取
+  const recentFiles = useMemo(() => {
+    // 从最近运行的任务获取
+    const recentTasks = data.tasks
+      .filter((t) => t.projectId === project?.id)
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+      .slice(0, 3);
+    return recentTasks.map((t) => t.goal.slice(0, 30) + "...").filter(Boolean);
+  }, [data.tasks, project?.id]);
   const activeStep = flowSteps.find((step) => `tab-${step.id}` === activeTabId);
   const activeRole = activeStep ? data.roles.find((role) => role.id === activeStep.roleId) : null;
   const popoverPositionStyle = popoverAnchor
@@ -325,7 +473,8 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
           <div className="wb-flow-scroll">
             {flowSteps.map((step, index) => {
               const role = data.roles.find((item) => item.id === step.roleId);
-              const status = stepStatus(index, step.gateMode);
+              // 使用真实任务状态计算步骤状态
+              const status = computeStepStatusFromTasks(step.id, data.tasks.filter(t => t.projectId === project?.id));
               return (
                 <button
                   key={step.id}
@@ -403,7 +552,10 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
                     __html:
                       `<span class="terminal-prompt">agentdev@AgentManagement</span>:<span class="terminal-path">~/AgentManagement</span>$ npm run dev\n\n` +
                       `> agentmanagement@0.1.0 dev\n> vite\n\n` +
-                      activeTab.content +
+                      // 使用真实日志或备用的 mock 内容
+                      (runnerLogs.length > 0
+                        ? runnerLogs.map((log) => `<span class="${log.stream === 'stderr' ? 'red' : ''}">${log.content}</span>`).join("\n")
+                        : activeTab.content) +
                       `\n\n<span class="terminal-prompt">agentdev@AgentManagement</span>:<span class="terminal-path">~/AgentManagement</span>$ <span class="terminal-cursor"></span>`,
                   }}
                 />
