@@ -131,10 +131,12 @@ paths:
               schema:
                 type: object
                 properties:
+                  ok:
+                    type: boolean
                   logs:
                     type: array
                     items:
-                      type: string
+                      $ref: '#/components/schemas/EventLog'
 
   /sessions/{sessionId}:
     get:
@@ -294,6 +296,47 @@ components:
           type: string
           format: date-time
           nullable: true
+
+    EventLog:
+      type: object
+      required: [id, taskId, type, timestamp]
+      properties:
+        id:
+          type: string
+        taskId:
+          type: string
+        runId:
+          type: string
+        type:
+          type: string
+          enum:
+            - task_created
+            - task_started
+            - task_completed
+            - task_failed
+            - task_cancelled
+            - run_started
+            - run_completed
+            - run_failed
+            - gate_requested
+            - gate_passed
+            - gate_failed
+        payload:
+          type: object
+          additionalProperties: true
+        timestamp:
+          type: string
+          format: date-time
+
+    TaskLogsResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        logs:
+          type: array
+          items:
+            $ref: '#/components/schemas/EventLog'
 
   securitySchemes:
     ApiKeyAuth:
