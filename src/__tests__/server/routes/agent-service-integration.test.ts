@@ -6,11 +6,12 @@
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import express from 'express';
+import type { Server } from 'node:http';
 import { createRouter } from '../../../server/routes/index';
 
 describe('Agent Service Route Integration', () => {
   let app: express.Application;
-  let server: ReturnType<typeof express.Application.listen>;
+  let server: Server;
 
   beforeAll(() => {
     app = express();

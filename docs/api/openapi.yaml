@@ -9,7 +9,7 @@ info:
     - 事件投递与审计日志
 
 servers:
-  - url: http://localhost:3000/v1
+  - url: http://localhost:3001/api/v1
     description: 本地开发服务器
 
 tags:
