@@ -255,9 +255,18 @@ export function AiProjectBriefing({ data: _data, onBack }: AiProjectBriefingProp
         id: `ai-briefing-step-${index + 1}`,
         order: index + 1,
         name: binding.step,
-        roleId: role?.id ?? "",
-        modelProviderId: provider?.id ?? "",
-        modelName: binding.model || provider?.models?.[0]?.name || "",
+        assignments: [{
+          id: `ai-briefing-assignment-${index + 1}`,
+          order: 1,
+          roleId: role?.id ?? "",
+          modelProviderId: provider?.id ?? "",
+          modelName: binding.model || provider?.models?.[0]?.name || "",
+          runnerId: runner?.id,
+          goal: binding.step,
+          acceptanceCriteria: [],
+          inputs: index === 0 ? ["讨论上下文", "协同资料"] : ["上一步输出"],
+          outputs: index === flowBindings.length - 1 ? ["验收报告", "创建前确认"] : [`${binding.step}输出`],
+        }],
         inputs: index === 0 ? ["讨论上下文", "协同资料"] : ["上一步输出"],
         outputs: index === flowBindings.length - 1 ? ["验收报告", "创建前确认"] : [`${binding.step}输出`],
         gateMode: "manual",
@@ -270,7 +279,6 @@ export function AiProjectBriefing({ data: _data, onBack }: AiProjectBriefingProp
           `模型：${binding.model}`,
         ].join("\n"),
         projectOverride: false,
-        runnerId: runner?.id,
       };
     });
 

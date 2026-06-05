@@ -35,10 +35,15 @@ export function WorkflowNode({
   onDragOver,
   onDrop,
 }: WorkflowNodeProps) {
-  const role = useMemo(() => data.roles.find((r) => r.id === step.roleId), [data.roles, step.roleId]);
+  // Issue #41: 从 assignments 获取角色和模型
+  const assignment = step.assignments?.[0];
+  const role = useMemo(
+    () => (assignment ? data.roles.find((r) => r.id === assignment.roleId) : undefined),
+    [data.roles, assignment]
+  );
   const provider = useMemo(
-    () => data.modelProviders.find((p) => p.id === step.modelProviderId),
-    [data.modelProviders, step.modelProviderId]
+    () => (assignment ? data.modelProviders.find((p) => p.id === assignment.modelProviderId) : undefined),
+    [data.modelProviders, assignment]
   );
 
   const orderLabel = String(index + 1).padStart(2, "0");
@@ -55,11 +60,12 @@ export function WorkflowNode({
     fallback: "回退",
   };
   const failureLabel = failureLabels[step.failureStrategy] ?? step.failureStrategy;
-  const modelLabel = step.modelName.includes("deepseek")
+  const modelName = assignment?.modelName ?? "";
+  const modelLabel = modelName.includes("deepseek")
     ? "v4-pro"
-    : step.modelName.includes("gpt-5.3")
+    : modelName.includes("gpt-5.3")
       ? "gpt-5.3"
-      : step.modelName;
+      : modelName;
 
   const handleDragStart = (e: React.DragEvent) => {
     e.dataTransfer.setData("text/plain", step.id);

@@ -107,7 +107,7 @@ export async function createWorkflowRun(
   const stepExecutions: StepExecution[] = workflow.steps.map((step: WorkflowStep, index: number) => ({
     stepId: step.id,
     stepName: step.name,
-    roleId: step.roleId || '',
+    roleId: step.assignments?.[0]?.roleId || '',
     state: index === 0 ? 'running' : 'pending',
     inputArtifacts: [],
     outputArtifacts: [],

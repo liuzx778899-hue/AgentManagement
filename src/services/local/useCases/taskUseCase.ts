@@ -167,7 +167,7 @@ export async function createTasksFromWorkflow(
       goal: step.name,
       acceptanceCriteria: [], // 初始为空，后续可以填充
       workflowTemplateId,
-      roleAssignment: { [step.id]: step.roleId },
+      roleAssignment: { [step.id]: step.assignments?.[0]?.roleId ?? '' },
       capabilityAuthorization: [],
       launchStrategy: 'direct',
       // 第一个任务状态为 running，其余为 queued

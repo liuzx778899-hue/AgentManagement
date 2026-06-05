@@ -136,15 +136,17 @@ function AiWorkflowDesignInline({
     const roleIssues: string[] = [];
     const roleIds = new Set(draftRoles.map(r => r.id));
     draftSteps.forEach((s, i) => {
-      if (!s.roleId) { roleIssues.push(`步骤 ${i + 1}「${s.name}」未绑定角色`); }
-      else if (!roleIds.has(s.roleId)) { roleIssues.push(`步骤 ${i + 1}「${s.name}」的角色不存在`); }
+      const roleId = s.assignments?.[0]?.roleId;
+      if (!roleId) { roleIssues.push(`步骤 ${i + 1}「${s.name}」未绑定角色`); }
+      else if (!roleIds.has(roleId)) { roleIssues.push(`步骤 ${i + 1}「${s.name}」的角色不存在`); }
     });
     results.push({ label: "角色绑定检查", done: roleIssues.length === 0, issues: roleIssues });
 
     // 3. 模型配置检查
     const modelIssues: string[] = [];
     draftSteps.forEach((s, i) => {
-      if (!s.modelProviderId || !s.modelName) modelIssues.push(`步骤 ${i + 1}「${s.name}」未配置模型`);
+      const assignment = s.assignments?.[0];
+      if (!assignment?.modelProviderId || !assignment?.modelName) modelIssues.push(`步骤 ${i + 1}「${s.name}」未配置模型`);
     });
     results.push({ label: "模型配置检查", done: modelIssues.length === 0, issues: modelIssues });
 
@@ -158,7 +160,7 @@ function AiWorkflowDesignInline({
     // 5. Runner 配置检查
     const runnerIssues: string[] = [];
     draftSteps.forEach((s, i) => {
-      if (!s.runnerId) runnerIssues.push(`步骤 ${i + 1}「${s.name}」未配置 Runner`);
+      if (!s.assignments?.[0]?.runnerId) runnerIssues.push(`步骤 ${i + 1}「${s.name}」未配置 Runner`);
     });
     results.push({ label: "Runner 配置检查", done: runnerIssues.length === 0, issues: runnerIssues });
 
@@ -833,20 +835,31 @@ ${runnersContext}
             strategy === "stop" ? "停止流程" : strategy === "retry" ? "重试当前步骤" : strategy === "skip" ? "跳过步骤" : "回退到前一步",
           ].join("\n");
 
+          const stepInputs = step.inputs || (index === 0 ? ["项目目标", "协同资料"] : [`步骤 ${index} 输出`]);
+          const stepOutputs = step.outputs || [`${step.name}结果`];
+
           newSteps.push({
             id: `ai-draft-step-${index + 1}`,
             order: index + 1,
             name: step.name,
-            roleId,
-            modelProviderId: provider?.id ?? "",
-            modelName: modelLabel,
-            inputs: step.inputs || (index === 0 ? ["项目目标", "协同资料"] : [`步骤 ${index} 输出`]),
-            outputs: step.outputs || [`${step.name}结果`],
+            assignments: [{
+              id: `ai-draft-assignment-${index + 1}`,
+              order: 1,
+              roleId,
+              modelProviderId: provider?.id ?? "",
+              modelName: modelLabel,
+              runnerId: step.runner || defaultRunnerId,
+              goal: step.name,
+              acceptanceCriteria: [],
+              inputs: stepInputs,
+              outputs: stepOutputs,
+            }],
+            inputs: stepInputs,
+            outputs: stepOutputs,
             gateMode: step.gate === "manual" ? "manual" : "auto",
             failureStrategy: strategy,
             stepMarkdown: defaultMarkdown,
             projectOverride: false,
-            runnerId: step.runner || defaultRunnerId,
           });
 
           newDiffs.push({
@@ -1070,7 +1083,28 @@ ${runnersContext}
                 </div>
                 <div className="awd-toolbar-sep" />
                 <button className="awd-toolbar-action-btn" title="新增步骤" onClick={() => {
-                  const newStep: WorkflowStep = { id: `step-new-${Date.now()}`, order: draftSteps.length + 1, name: '新步骤', roleId: '', modelProviderId: '', modelName: '', inputs: [], outputs: [], gateMode: 'auto', failureStrategy: 'retry', stepMarkdown: '', projectOverride: false };
+                  const newStep: WorkflowStep = {
+                    id: `step-new-${Date.now()}`,
+                    order: draftSteps.length + 1,
+                    name: '新步骤',
+                    assignments: [{
+                      id: `assignment-new-${Date.now()}`,
+                      order: 1,
+                      roleId: '',
+                      modelProviderId: '',
+                      modelName: '',
+                      goal: '新步骤',
+                      acceptanceCriteria: [],
+                      inputs: [],
+                      outputs: [],
+                    }],
+                    inputs: [],
+                    outputs: [],
+                    gateMode: 'auto',
+                    failureStrategy: 'retry',
+                    stepMarkdown: '',
+                    projectOverride: false
+                  };
                   setDraftSteps(prev => [...prev, newStep]);
                 }}>
                   <Plus size={13} /> 新增步骤
@@ -1105,7 +1139,8 @@ ${runnersContext}
                 ) : (
                   draftSteps.map((step, i) => {
                     const stateClass = i === 0 ? "active" : "idle";
-                    const roleName = getRoleName(step.roleId);
+                    const roleId = step.assignments?.[0]?.roleId;
+                    const roleName = roleId ? getRoleName(roleId) : "待分配";
                     return (
                       <div key={i} style={{ display: "flex", alignItems: "center", gap: 0, flexShrink: 0 }}>
                         <div
@@ -1138,7 +1173,7 @@ ${runnersContext}
                               <span className={`awd-node-v2-dot ${stateClass}`} />
                               <div>
                                 <div className="awd-node-v2-label">模型</div>
-                                <div className="awd-node-v2-val">{step.modelName || "—"}</div>
+                                <div className="awd-node-v2-val">{step.assignments?.[0]?.modelName || "—"}</div>
                               </div>
                             </div>
                           </div>
@@ -1645,7 +1680,7 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
     if (!selectedTemplate) return [];
     const templateRoleMap = new Map((selectedTemplate.roles || []).map(r => [r.id, r]));
     const globalRoleMap = new Map(data.roles.map(r => [r.id, r]));
-    const roleIds = selectedTemplate.steps.map((step) => step.roleId).filter(Boolean);
+    const roleIds = selectedTemplate.steps.map((step) => step.assignments?.[0]?.roleId).filter(Boolean) as string[];
     const extraRoleIds = templateRoleIds[selectedTemplate.id] ?? [];
     const uniqueRoleIds = Array.from(new Set([...roleIds, ...extraRoleIds]));
     return uniqueRoleIds
@@ -1657,7 +1692,7 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
           ? { id: templateRole.id, name: templateRole.name, description: templateRole.description ?? "", roleMarkdown: templateRole.roleMarkdown ?? "", isBuiltIn: false, defaultCapabilities: [] as string[], projectId: null as string | null }
           : globalRole;
         if (!role) return null;
-        const boundSteps = selectedTemplate.steps.filter((step) => step.roleId === roleId);
+        const boundSteps = selectedTemplate.steps.filter((step) => step.assignments?.[0]?.roleId === roleId);
         return { role, boundSteps };
       })
       .filter((item): item is { role: NonNullable<typeof item>["role"]; boundSteps: NonNullable<typeof selectedTemplate>["steps"] } => Boolean(item));
@@ -1681,19 +1716,28 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
 
   const createDefaultStep = (order: number): WorkflowStep => {
     const provider = data.modelProviders.find((item) => item.enabled) ?? data.modelProviders[0];
+    const runnerId = data.runnerProfiles?.find((runner) => runner.enabled)?.id;
     return {
       id: `step-${Date.now()}`,
       order,
       name: "新增步骤",
-      roleId: "",
-      modelProviderId: provider?.id ?? "",
-      modelName: provider?.defaultModel || provider?.models[0]?.name || "",
+      assignments: [{
+        id: `assignment-${Date.now()}`,
+        order: 1,
+        roleId: "",
+        modelProviderId: provider?.id ?? "",
+        modelName: provider?.defaultModel || provider?.models[0]?.name || "",
+        runnerId,
+        goal: "新增步骤",
+        acceptanceCriteria: [],
+        inputs: [],
+        outputs: [],
+      }],
       inputs: [],
       outputs: [],
       gateMode: "auto",
       failureStrategy: "stop",
       projectOverride: false,
-      runnerId: data.runnerProfiles?.find((runner) => runner.enabled)?.id,
     };
   };
 
@@ -1777,9 +1821,10 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
       if (steps.length === 0) issues.push("流程没有任何步骤");
       steps.forEach((s, i) => {
         if (!s.name?.trim()) issues.push(`步骤 ${i + 1} 缺少名称`);
-        if (!s.roleId) issues.push(`步骤 ${i + 1}「${s.name}」未绑定角色`);
-        if (!s.modelProviderId || !s.modelName) issues.push(`步骤 ${i + 1}「${s.name}」未配置模型`);
-        if (!s.runnerId) issues.push(`步骤 ${i + 1}「${s.name}」未配置 Runner`);
+        const assignment = s.assignments?.[0];
+        if (!assignment?.roleId) issues.push(`步骤 ${i + 1}「${s.name}」未绑定角色`);
+        if (!assignment?.modelProviderId || !assignment?.modelName) issues.push(`步骤 ${i + 1}「${s.name}」未配置模型`);
+        if (!assignment?.runnerId) issues.push(`步骤 ${i + 1}「${s.name}」未配置 Runner`);
       });
       if (issues.length > 0) {
         alert(`流程存在校验问题，无法启用：\n\n${issues.join('\n')}`);
@@ -1821,9 +1866,10 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
                 if (sortedSteps.length === 0) issues.push("流程没有任何步骤");
                 sortedSteps.forEach((s, i) => {
                   if (!s.name?.trim()) issues.push(`步骤 ${i + 1} 缺少名称`);
-                  if (!s.roleId) issues.push(`步骤 ${i + 1}「${s.name}」未绑定角色`);
-                  if (!s.modelProviderId || !s.modelName) issues.push(`步骤 ${i + 1}「${s.name}」未配置模型`);
-                  if (!s.runnerId) issues.push(`步骤 ${i + 1}「${s.name}」未配置 Runner`);
+                  const assignment = s.assignments?.[0];
+                  if (!assignment?.roleId) issues.push(`步骤 ${i + 1}「${s.name}」未绑定角色`);
+                  if (!assignment?.modelProviderId || !assignment?.modelName) issues.push(`步骤 ${i + 1}「${s.name}」未配置模型`);
+                  if (!assignment?.runnerId) issues.push(`步骤 ${i + 1}「${s.name}」未配置 Runner`);
                 });
                 if (issues.length > 0) {
                   alert(`校验未通过，无法发布为正式：\n\n${issues.join('\n')}`);
@@ -1863,9 +1909,10 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
             if (stepsToValidate.length === 0) issues.push("流程没有任何步骤");
             stepsToValidate.forEach((s: WorkflowStep, i: number) => {
               if (!s.name?.trim()) issues.push(`步骤 ${i + 1} 缺少名称`);
-              if (!s.roleId) issues.push(`步骤 ${i + 1}「${s.name}」未绑定角色`);
-              if (!s.modelProviderId || !s.modelName) issues.push(`步骤 ${i + 1}「${s.name}」未配置模型`);
-              if (!s.runnerId) issues.push(`步骤 ${i + 1}「${s.name}」未配置 Runner`);
+              const assignment = s.assignments?.[0];
+              if (!assignment?.roleId) issues.push(`步骤 ${i + 1}「${s.name}」未绑定角色`);
+              if (!assignment?.modelProviderId || !assignment?.modelName) issues.push(`步骤 ${i + 1}「${s.name}」未配置模型`);
+              if (!assignment?.runnerId) issues.push(`步骤 ${i + 1}「${s.name}」未配置 Runner`);
             });
             if (issues.length === 0) alert(`✓ 校验通过\n「${templateName}」共 ${stepsToValidate.length} 个步骤，全部校验通过。`);
             else alert(`⚠ 校验发现 ${issues.length} 个问题：\n\n${issues.join('\n')}`);
@@ -2079,8 +2126,10 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
                   <>
                     <div className="wf-v2-node-track" style={{ zoom: canvasScale }}>
                       {sortedSteps.map((step, i) => {
-                        const role = data.roles.find(r => r.id === step.roleId) ?? null;
-                        const runnerProfile = data.runnerProfiles?.find(r => r.id === step.runnerId) ?? null;
+                        const roleId = step.assignments?.[0]?.roleId;
+                        const runnerId = step.assignments?.[0]?.runnerId;
+                        const role = roleId ? data.roles.find(r => r.id === roleId) ?? null : null;
+                        const runnerProfile = runnerId ? data.runnerProfiles?.find(r => r.id === runnerId) ?? null : null;
                         const isActive = i === 2;
                         return (
                           <React.Fragment key={step.id}>
@@ -2121,7 +2170,7 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
                                 </div>
                                 <div>
                                   <label>模型</label>
-                                  <span>{step.modelName || "—"}</span>
+                                  <span>{step.assignments?.[0]?.modelName || "—"}</span>
                                 </div>
                               </div>
                             </div>

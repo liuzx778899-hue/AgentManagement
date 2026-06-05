@@ -14,8 +14,6 @@ import type { Workflow } from '../../../../domain/workflow';
 
 describe('workflowExecutionUseCase', () => {
   const defaultStep = {
-    modelProviderId: 'provider-1',
-    modelName: 'model-1',
     inputs: [] as string[],
     outputs: [] as string[],
     gateMode: 'auto' as const,
@@ -23,16 +21,28 @@ describe('workflowExecutionUseCase', () => {
     projectOverride: false,
   };
 
+  const createAssignment = (roleId: string, order: number) => ({
+    id: `assignment-${order}`,
+    order,
+    roleId,
+    modelProviderId: 'provider-1',
+    modelName: 'model-1',
+    goal: `Step ${order}`,
+    acceptanceCriteria: [],
+    inputs: [],
+    outputs: [],
+  });
+
   const mockWorkflow: Workflow = {
     id: 'wf-001',
     name: '开发流程',
     description: '完整开发流程',
     version: '1.0',
     steps: [
-      { id: 'step-1', name: '需求分析', roleId: 'role-pm', order: 1, ...defaultStep },
-      { id: 'step-2', name: '前端开发', roleId: 'role-fe', order: 2, ...defaultStep },
-      { id: 'step-3', name: '代码审查', roleId: 'role-reviewer', order: 3, gateType: 'manual', ...defaultStep },
-      { id: 'step-4', name: '测试验证', roleId: 'role-qa', order: 4, ...defaultStep },
+      { id: 'step-1', name: '需求分析', order: 1, assignments: [createAssignment('role-pm', 1)], ...defaultStep },
+      { id: 'step-2', name: '前端开发', order: 2, assignments: [createAssignment('role-fe', 2)], ...defaultStep },
+      { id: 'step-3', name: '代码审查', order: 3, gateType: 'manual', assignments: [createAssignment('role-reviewer', 3)], ...defaultStep },
+      { id: 'step-4', name: '测试验证', order: 4, assignments: [createAssignment('role-qa', 4)], ...defaultStep },
     ],
     status: 'active',
     createdAt: '2026-05-01',

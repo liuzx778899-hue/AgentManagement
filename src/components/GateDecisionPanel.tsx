@@ -54,14 +54,16 @@ export function GateDecisionPanel({ data, onClose }: GateDecisionPanelProps) {
 
   const role = useMemo(() => {
     if (!currentStep) return null;
-    return data.roles.find((r) => r.id === currentStep.roleId);
+    const roleId = currentStep.assignments?.[0]?.roleId;
+    return roleId ? data.roles.find((r) => r.id === roleId) : null;
   }, [data, currentStep]);
 
   const handleAction = (status: GateStatus) => {
     if (!waitingGate) return;
     if (status === "reassign") {
       setShowReassignModal(true);
-      setSelectedRoleId(currentStep?.roleId ?? data.roles[0]?.id ?? "");
+      const roleId = currentStep?.assignments?.[0]?.roleId;
+      setSelectedRoleId(roleId ?? data.roles[0]?.id ?? "");
     } else {
       setActionStatus(status);
       updateGateStatus(waitingGate.id, status);

@@ -23,14 +23,16 @@ export function StepEditModal({
   onDelete,
   onClose,
 }: StepEditModalProps) {
+  // Read from assignments array (use first assignment for backward compatibility)
+  const primaryAssignment = step.assignments?.[0];
   const [name, setName] = useState(step.name);
-  const [providerId, setProviderId] = useState(step.modelProviderId);
-  const [modelName, setModelName] = useState(step.modelName);
+  const [providerId, setProviderId] = useState(primaryAssignment?.modelProviderId ?? '');
+  const [modelName, setModelName] = useState(primaryAssignment?.modelName ?? '');
   const [gateMode, setGateMode] = useState<GateMode>(step.gateMode);
   const [failureStrategy, setFailureStrategy] = useState<FailureStrategy>(step.failureStrategy);
   const [inputs, setInputs] = useState(step.inputs.join(", "));
   const [outputs, setOutputs] = useState(step.outputs.join(", "));
-  const [runnerId, setRunnerId] = useState<string>(step.runnerId ?? "");
+  const [runnerId, setRunnerId] = useState<string>(primaryAssignment?.runnerId ?? "");
 
   // 角色处理：从当前流程角色中查找
   const getRoleNameFromId = (rid: string) => {
@@ -38,7 +40,7 @@ export function StepEditModal({
     const role = (flowRoles ?? []).find(r => r.id === rid);
     return role?.name ?? rid;
   };
-  const [roleId, setRoleId] = useState(step.roleId || "");
+  const [roleId, setRoleId] = useState(primaryAssignment?.roleId || "");
   const roleName = getRoleNameFromId(roleId);
 
   const enabledRunners = useMemo(() => (data.runnerProfiles ?? []).filter((runner) => runner.enabled), [data.runnerProfiles]);
@@ -93,17 +95,29 @@ export function StepEditModal({
 
   const handleSave = () => {
     if (readOnly) return;
+    // Update step with assignments array
+    const parsedInputs = inputs.split(",").map((item) => item.trim()).filter(Boolean);
+    const parsedOutputs = outputs.split(",").map((item) => item.trim()).filter(Boolean);
+
     onSave({
       name: name.trim(),
-      roleId: roleId,
-      modelProviderId: providerId,
-      modelName,
+      assignments: [{
+        id: primaryAssignment?.id ?? `assignment-${Date.now()}`,
+        order: 1,
+        roleId: roleId,
+        modelProviderId: providerId,
+        modelName,
+        runnerId: runnerId || undefined,
+        goal: name.trim(),
+        acceptanceCriteria: [],
+        inputs: parsedInputs,
+        outputs: parsedOutputs,
+      }],
       gateMode,
       failureStrategy,
-      inputs: inputs.split(",").map((item) => item.trim()).filter(Boolean),
-      outputs: outputs.split(",").map((item) => item.trim()).filter(Boolean),
+      inputs: parsedInputs,
+      outputs: parsedOutputs,
       stepMarkdown,
-      runnerId: runnerId || undefined,
     });
     onClose();
   };

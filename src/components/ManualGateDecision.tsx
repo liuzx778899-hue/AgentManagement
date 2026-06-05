@@ -34,14 +34,16 @@ export function ManualGateDecision({ data }: ManualGateDecisionProps) {
   }, [template, activeRun]);
   const role = useMemo(() => {
     if (!currentStep) return null;
-    return data.roles.find((r) => r.id === currentStep.roleId);
+    const roleId = currentStep.assignments?.[0]?.roleId;
+    return roleId ? data.roles.find((r) => r.id === roleId) : null;
   }, [data, currentStep]);
 
   const handleAction = (status: GateStatus) => {
     if (!waitingGate) return;
     if (status === "reassign") {
       setShowReassignModal(true);
-      setSelectedRoleId(currentStep?.roleId ?? data.roles[0]?.id ?? "");
+      const roleId = currentStep?.assignments?.[0]?.roleId;
+      setSelectedRoleId(roleId ?? data.roles[0]?.id ?? "");
     } else {
       setActionStatus(status);
       updateGateStatus(waitingGate.id, status);
@@ -116,7 +118,8 @@ export function ManualGateDecision({ data }: ManualGateDecisionProps) {
         <section className="gate-timeline">
           <div className="stepper">
             {template.steps.map((step) => {
-              const stepRole = data.roles.find((r) => r.id === step.roleId);
+              const stepRoleId = step.assignments?.[0]?.roleId;
+              const stepRole = stepRoleId ? data.roles.find((r) => r.id === stepRoleId) : null;
               const isActive = step.id === activeRun?.currentStepId;
               const currentIndex = template.steps.findIndex((s) => s.id === activeRun?.currentStepId);
               const isPast = currentIndex > template.steps.indexOf(step);
