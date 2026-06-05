@@ -42,7 +42,9 @@ function mockTabs(data: WorkbenchData): MockTab[] {
   const template = data.workflowTemplates[0];
   if (!template) return [];
   return template.steps.slice(0, 3).map((step, index) => {
-    const role = data.roles.find((item) => item.id === step.roleId);
+    // Issue #41: 从 assignments 获取角色
+    const assignment = step.assignments?.[0];
+    const role = assignment ? data.roles.find((item) => item.id === assignment.roleId) : undefined;
     const content =
       index === 0
         ? [
@@ -169,7 +171,8 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
   const projectMemories = data.memories.filter((memory) => memory.scope === "project");
 
   const activeStep = flowSteps.find((step) => `tab-${step.id}` === activeTabId);
-  const activeRole = activeStep ? data.roles.find((role) => role.id === activeStep.roleId) : null;
+  // Issue #41: 从 assignments 获取角色
+  const activeRole = activeStep?.assignments?.[0] ? data.roles.find((role) => role.id === activeStep.assignments[0].roleId) : null;
   const popoverPositionStyle = popoverAnchor
     ? { left: popoverAnchor.left, top: popoverAnchor.bottom + 8, right: "auto", bottom: "auto", display: "block" }
     : undefined;
@@ -334,7 +337,9 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
           </div>
           <div className="wb-flow-scroll">
             {flowSteps.map((step, index) => {
-              const role = data.roles.find((item) => item.id === step.roleId);
+              // Issue #41: 从 assignments 获取角色和模型
+              const assignment = step.assignments?.[0];
+              const role = assignment ? data.roles.find((item) => item.id === assignment.roleId) : undefined;
               const status = stepStatus(index, step.gateMode);
               return (
                 <button
@@ -348,7 +353,7 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
                     <strong>{step.name}</strong>
                   </div>
                   <p>{role?.name ?? "未绑定"} Agent</p>
-                  <div className="wb-flow-model">{step.modelName || "DeepSeek / deepseek-v4-pro"}</div>
+                  <div className="wb-flow-model">{assignment?.modelName || "DeepSeek / deepseek-v4-pro"}</div>
                   <div className="wb-flow-footer">
                     <span>{tabs[index % Math.max(tabs.length, 1)]?.runnerLabel ?? "Claude Code"}</span>
                     <b className={`wb-step-state ${status.cls}`}>{status.label}</b>

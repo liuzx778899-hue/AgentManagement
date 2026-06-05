@@ -1,6 +1,6 @@
 // Re-export all domain types for backward compatibility
 export type { Scope, DesktopIntegrationStatus, PermissionLevel, ProjectSettings, Project } from "./project";
-export type { GateMode, FailureStrategy, WorkflowTemplate, WorkflowStep } from "./workflow";
+export type { GateMode, FailureStrategy, WorkflowTemplate, WorkflowStep, WorkflowStepAssignment, WorkflowEventRouteSimple, getPrimaryRoleId, getPrimaryRunnerId, getPrimaryModelConfig } from "./workflow";
 export type { Task, AgentRun } from "./task";
 export type { AgentRole } from "./role";
 export type { GateStatus, ManualGate } from "./gate";
@@ -44,6 +44,9 @@ export type { WorkflowAssignment, WorkflowEventRoute, WorkflowEventTrigger, Work
 export type { WorkflowEvent, WorkflowEventRouteResult } from "./workflowEvent";
 export type { WorkflowNotification, NotificationStatus, createNotification, markDelivered, markConsumed, markResolved } from "./notification";
 export type { StepViewModel, AssignmentViewModel, WorkbenchViewModel } from "./workbenchViewModel";
+
+// Re-export helper functions
+export { getPrimaryRoleId, getPrimaryRunnerId, getPrimaryModelConfig } from "./workflow";
 
 // View type (stays here as it's UI-specific)
 export type WorkbenchView =
