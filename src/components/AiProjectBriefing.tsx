@@ -17,10 +17,7 @@ import {
   Send,
 } from "lucide-react";
 import type { WorkbenchData, WorkflowStep } from "../domain/workbench";
-import { useWorkbenchState } from "../App";
-import { projectApi } from "../services/api/projectApi";
-import { useWorkbenchDispatch } from "../state/WorkbenchProvider";
-import { addProject as addProjectAction, addWorkflowTemplate as addWorkflowTemplateAction } from "../state/workbenchActions";
+import { projectApi, workflowApi, rolesApi, taskApi } from "../services/api";
 
 interface AiProjectBriefingProps {
   data: WorkbenchData;
@@ -118,7 +115,7 @@ function generateDraftFromInput(input: string): DraftData {
 }
 
 export function AiProjectBriefing({ data: _data, onBack }: AiProjectBriefingProps) {
-  const { addProject, addWorkflowTemplate } = useWorkbenchState();
+  // Component uses API directly for AI briefing creation
   const [step, setStep] = useState<BriefingStep>("input");
   const [composerInput, setComposerInput] = useState("");
   const [attachments, setAttachments] = useState<string[]>([]); // file names for display
@@ -132,6 +129,9 @@ export function AiProjectBriefing({ data: _data, onBack }: AiProjectBriefingProp
   const [analysisStarted, setAnalysisStarted] = useState(false);
   const [materialsExpanded, setMaterialsExpanded] = useState(false);
   const [flowInserted, setFlowInserted] = useState(false);
+  const [createdTemplateId, setCreatedTemplateId] = useState<string | null>(null);
+  const [createdProjectId, setCreatedProjectId] = useState<string | null>(null);
+  const [apiError, setApiError] = useState<string | null>(null);
   const [flowBindings, setFlowBindings] = useState<AiFlowRoleBinding[]>(() => AI_FLOW_ROLE_BINDINGS.map((item) => ({ ...item })));
   const progressTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const materialFileInputRef = useRef<HTMLInputElement | null>(null);
@@ -239,7 +239,7 @@ export function AiProjectBriefing({ data: _data, onBack }: AiProjectBriefingProp
     setStep("confirm");
   }, []);
 
-  const persistFlowTemplate = useCallback(() => {
+  const persistFlowTemplate = useCallback(async () => {
     if (!analysisStarted || flowInserted) return;
 
     const provider = _data.modelProviders.find((item) => item.enabled) ?? _data.modelProviders[0];
@@ -282,7 +282,7 @@ export function AiProjectBriefing({ data: _data, onBack }: AiProjectBriefingProp
       };
     });
 
-    addWorkflowTemplate({
+    const result = await workflowApi.createTemplate({
       name: "AI 建项生成流程",
       version: 1,
       steps,
@@ -301,56 +301,73 @@ export function AiProjectBriefing({ data: _data, onBack }: AiProjectBriefingProp
         },
       ],
     });
+
+    if (!result.ok || !result.data) {
+      throw new Error(result.error?.message || "Failed to create workflow template");
+    }
+
+    setCreatedTemplateId(result.data.id);
     setFlowInserted(true);
-  }, [analysisStarted, flowInserted, flowBindings, addWorkflowTemplate, _data.modelProviders, _data.roles, _data.runnerProfiles]);
+  }, [analysisStarted, flowInserted, flowBindings, _data.modelProviders, _data.roles, _data.runnerProfiles]);
 
   // Final confirmation - create project
-  const handleCreateProject = useCallback(() => {
+  const handleCreateProject = useCallback(async () => {
     if (!draft) return;
-    persistFlowTemplate();
     setCreating(true);
-    setTimeout(() => {
-      addProject({
+    setApiError(null);
+
+    try {
+      // Step 1: Persist workflow template
+      await persistFlowTemplate();
+
+      // Step 2: Create roles (if AI generated new roles that don't exist)
+      const existingRoleNames = new Set(_data.roles.map(r => r.name));
+      const newRoles = draft.roles.filter(r => !existingRoleNames.has(r.name));
+
+      if (newRoles.length > 0) {
+        const rolesInput = newRoles.map(r => ({
+          name: r.name,
+          description: r.description,
+          projectId: null,
+          isBuiltIn: false,
+          defaultCapabilities: [],
+        }));
+        await rolesApi.createBatch(rolesInput);
+      }
+
+      // Step 3: Create project via API
+      const result = await projectApi.create({
         name: "AI 建项 - " + new Date().toLocaleDateString("zh-CN"),
-        repoPath: "",
+        repoPath: "/tmp/ai-briefing-project",
         defaultBranch: "main",
         worktreeRoot: ".claude/worktrees",
-        scope: "personal",
-        desktopIntegrationStatus: "deferred",
-        permissions: { permissionLevel: "owner" },
-        settings: {
-          installCommand: "npm install",
-          testCommand: "npm test",
-          buildCommand: "npm run build",
-          previewCommand: "npm run dev",
-          detectedStack: "Unknown",
-          riskSummary: "AI建项项目",
-          projectDescription: draft.productBrief,
-        },
-        workflowTemplateId: _data.workflowTemplates[0]?.id ?? "",
-        sourceType: "ai-briefing",
-        phase: "planning",
-        projectMarkdown: [
-          `# 产品方案`,
-          draft.productBrief,
-          "",
-          `# 页面结构`,
-          ...draft.pages.map((p: string) => `- ${p}`),
-          "",
-          `# 建议角色`,
-          ...draft.roles.map((r: { name: string; description: string }) => `- **${r.name}**: ${r.description}`),
-          "",
-          `# 工作流建议`,
-          ...draft.workflow.map((w: string) => `1. ${w}`),
-          "",
-          `# 项目计划`,
-          ...draft.projectPlan.map((p: string) => `- ${p}`),
-        ].join("\n"),
+        workflowTemplateId: createdTemplateId ?? _data.workflowTemplates[0]?.id ?? "",
       });
+
+      if (!result.ok || !result.data) {
+        throw new Error(result.error?.message || "Failed to create project");
+      }
+
+      setCreatedProjectId(result.data.id);
+
+      // Step 4: Create tasks from workflow
+      if (createdTemplateId) {
+        await taskApi.createFromWorkflow({
+          projectId: result.data.id,
+          workflowTemplateId: createdTemplateId,
+        });
+      }
+
       setCreating(false);
-      onBack();
-    }, 800);
-  }, [draft, persistFlowTemplate, addProject, _data, onBack]);
+
+      // Trigger a page reload to refresh all data from API
+      window.dispatchEvent(new CustomEvent("navigate", { detail: { view: "project-management" } }));
+    } catch (error) {
+      console.error("Failed to create project:", error);
+      setApiError(error instanceof Error ? error.message : "创建项目失败，请重试");
+      setCreating(false);
+    }
+  }, [draft, persistFlowTemplate, createdTemplateId, _data.roles, _data.workflowTemplates]);
 
   // Mock handlers for attachment strip
   const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
