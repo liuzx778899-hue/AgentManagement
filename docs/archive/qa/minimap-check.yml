@@ -1,0 +1,249 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - complementary [ref=e4]:
+      - generic [ref=e5]:
+        - img [ref=e7]
+        - generic [ref=e10]: Agent 工程管理系统
+      - navigation [ref=e11]:
+        - button "工作台" [ref=e12] [cursor=pointer]:
+          - img [ref=e14]
+          - generic [ref=e17]: 工作台
+        - button "流程管理" [ref=e18] [cursor=pointer]:
+          - img [ref=e20]
+          - generic [ref=e24]: 流程管理
+        - button "项目管理" [ref=e25] [cursor=pointer]:
+          - img [ref=e27]
+          - generic [ref=e32]: 项目管理
+        - button "记忆管理" [ref=e33] [cursor=pointer]:
+          - img [ref=e35]
+          - generic [ref=e37]: 记忆管理
+        - button "设置中心" [ref=e38] [cursor=pointer]:
+          - img [ref=e40]
+          - generic [ref=e43]: 设置中心
+      - button "收起侧边栏" [ref=e44] [cursor=pointer]:
+        - img [ref=e45]
+    - generic [ref=e47]:
+      - banner [ref=e48]:
+        - generic [ref=e49]:
+          - generic [ref=e50]: AgentDevelop
+          - generic [ref=e51]: /
+          - generic [ref=e52]: 工作台
+        - generic [ref=e54]: 个人本地版
+      - main [ref=e55]:
+        - generic [ref=e56]:
+          - generic [ref=e57]:
+            - generic [ref=e58]:
+              - generic [ref=e59]:
+                - img [ref=e60]
+                - text: AgentDevelop
+                - img [ref=e65]
+              - generic [ref=e67]:
+                - img [ref=e68]
+                - text: 项目提示词
+              - generic [ref=e71]:
+                - img [ref=e72]
+                - text: main
+                - img [ref=e76]
+              - generic [ref=e78]:
+                - img [ref=e79]
+                - text: .claude/worktrees
+                - img [ref=e83]
+              - generic [ref=e85]:
+                - img [ref=e86]
+                - text: Phase 1 Web MVP
+                - img [ref=e89]
+              - generic [ref=e91]:
+                - img [ref=e92]
+                - text: 已保存
+                - generic [ref=e95]: 09:20
+            - generic [ref=e96]:
+              - button "启动项目" [ref=e97] [cursor=pointer]:
+                - img [ref=e98]
+                - text: 启动项目
+              - button "恢复会话" [ref=e100] [cursor=pointer]:
+                - img [ref=e101]
+                - text: 恢复会话
+              - button "保存进度" [ref=e104] [cursor=pointer]:
+                - img [ref=e105]
+                - text: 保存进度
+              - button "关闭项目" [ref=e109] [cursor=pointer]:
+                - img [ref=e110]
+                - text: 关闭项目
+              - button "更多操作" [ref=e114] [cursor=pointer]:
+                - img [ref=e115]
+          - generic [ref=e119]:
+            - generic [ref=e120]:
+              - generic [ref=e121]:
+                - text: 角色流程运行带
+                - generic [ref=e122]: 5 个角色
+                - generic [ref=e123]: · 01 产品经理 运行中
+              - generic [ref=e124]:
+                - generic [ref=e125] [cursor=pointer]:
+                  - generic [ref=e126]:
+                    - generic [ref=e127]: "01"
+                    - generic [ref=e128]: 需求分析
+                  - generic [ref=e129]: 产品经理 Agent
+                  - generic [ref=e130]:
+                    - generic [ref=e131]: DeepSeek / deepseek-v4-pro
+                    - generic [ref=e132]: Claude Code
+                  - generic [ref=e133]:
+                    - img [ref=e134]
+                    - text: 已完成
+                - generic [ref=e137] [cursor=pointer]:
+                  - generic [ref=e138]:
+                    - generic [ref=e139]: "02"
+                    - generic [ref=e140]: UI/UX 设计
+                  - generic [ref=e141]: UI/UX 设计师 Agent
+                  - generic [ref=e142]:
+                    - generic [ref=e143]: DeepSeek / deepseek-v4-pro
+                    - generic [ref=e144]: Claude Code
+                  - generic [ref=e145]:
+                    - img [ref=e146]
+                    - text: 已完成
+                - generic [ref=e149] [cursor=pointer]:
+                  - generic [ref=e150]:
+                    - generic [ref=e151]: "03"
+                    - generic [ref=e152]: 前端开发
+                  - generic [ref=e153]: 前端工程师 Agent
+                  - generic [ref=e154]:
+                    - generic [ref=e155]: OpenAI / gpt-5.3-codex
+                    - generic [ref=e156]: Codex CLI
+                  - generic [ref=e157]:
+                    - img [ref=e158]
+                    - text: 运行中
+                - generic [ref=e161] [cursor=pointer]:
+                  - generic [ref=e162]:
+                    - generic [ref=e163]: "04"
+                    - generic [ref=e164]: 代码审查
+                  - generic [ref=e165]: 代码审查员 Agent
+                  - generic [ref=e166]:
+                    - generic [ref=e167]: DeepSeek / deepseek-v4-pro
+                    - generic [ref=e168]: —
+                  - generic [ref=e169]:
+                    - img [ref=e170]
+                    - text: 等待 Gate
+                - generic [ref=e173] [cursor=pointer]:
+                  - generic [ref=e174]:
+                    - generic [ref=e175]: "05"
+                    - generic [ref=e176]: 测试验证
+                  - generic [ref=e177]: 测试工程师 Agent
+                  - generic [ref=e178]:
+                    - generic [ref=e179]: DeepSeek / deepseek-v4-pro
+                    - generic [ref=e180]: —
+                  - generic [ref=e181]:
+                    - img [ref=e182]
+                    - text: 待开始
+            - generic [ref=e184]:
+              - generic [ref=e185]:
+                - generic [ref=e186]:
+                  - text: Terminal Workspace
+                  - generic [ref=e187]: 运行中 · 01 产品经理
+                - generic [ref=e189]:
+                  - button "步骤上下文" [ref=e190] [cursor=pointer]:
+                    - img [ref=e191]
+                    - generic [ref=e193]: 步骤上下文
+                  - button "角色记忆" [ref=e194] [cursor=pointer]:
+                    - img [ref=e195]
+                    - generic [ref=e205]: 角色记忆
+                  - button "角色提示词" [ref=e206] [cursor=pointer]:
+                    - img [ref=e207]
+                    - generic [ref=e210]: 角色提示词
+                  - button "MCP" [ref=e211] [cursor=pointer]:
+                    - img [ref=e212]
+                    - generic [ref=e214]: MCP
+                  - button "Skills" [ref=e215] [cursor=pointer]:
+                    - img [ref=e216]
+                    - generic [ref=e218]: Skills
+                  - button "Git" [ref=e219] [cursor=pointer]:
+                    - img [ref=e220]
+                    - generic [ref=e224]: Git
+                  - button "Local Shell" [ref=e225] [cursor=pointer]:
+                    - img [ref=e226]
+                    - generic [ref=e228]: Local Shell
+                  - button "快照" [ref=e229] [cursor=pointer]:
+                    - img [ref=e230]
+                    - generic [ref=e233]: 快照
+                  - button "更多" [ref=e234] [cursor=pointer]:
+                    - img [ref=e235]
+              - generic [ref=e239]:
+                - button "产品经理" [ref=e240] [cursor=pointer]
+                - button "UI/UX 设计师" [ref=e241] [cursor=pointer]
+                - button "前端工程师" [ref=e242] [cursor=pointer]
+                - button "+" [ref=e243] [cursor=pointer]
+              - generic [ref=e244]:
+                - generic [ref=e245]: agentdev@AgentDevelop:~/AgentDevelop$ npm run dev > agentdevelop@0.1.0 dev > vite RUN v1.6.0 /home/agentdev/AgentDevelop ✓ src/utils/format.ts (18) ✓ src/components/__tests__/NavBar.spec.tsx (12) ✓ src/pages/__tests__/dashboard.spec.tsx (14) Test Files 21 passed (21) Tests 99 passed (99) agentdev@AgentDevelop:~/AgentDevelop$
+                - generic [ref=e247]:
+                  - generic [ref=e248]: 行 1，列 1
+                  - generic [ref=e249]: UTF-8
+                  - generic [ref=e250]: LF
+                  - generic [ref=e251]: "Shell: bash"
+            - complementary [ref=e252]:
+              - generic [ref=e253]:
+                - generic [ref=e254]: 工作区信息
+                - generic [ref=e255]:
+                  - button "返回项目管理" [ref=e256] [cursor=pointer]:
+                    - img [ref=e257]
+                  - button "隐藏面板" [ref=e259] [cursor=pointer]:
+                    - img [ref=e260]
+                  - button "记忆面板" [ref=e263] [cursor=pointer]:
+                    - img [ref=e264]
+              - generic [ref=e268]:
+                - generic [ref=e269]:
+                  - generic [ref=e270]:
+                    - generic [ref=e271]: TODO LIST
+                    - generic [ref=e272]: "4"
+                  - generic [ref=e273]:
+                    - generic [ref=e274]:
+                      - generic [ref=e276]: 完成 V1 产品闭环页面开发
+                      - generic [ref=e277]: 高
+                    - generic [ref=e278]:
+                      - generic [ref=e280]: API 网关模块开发和集成测试
+                      - generic [ref=e281]: 高
+                    - generic [ref=e282]:
+                      - generic [ref=e284]: Markdown 渲染引擎开发
+                      - generic [ref=e285]: 高
+                    - generic [ref=e286]:
+                      - generic [ref=e288]: CLI 框架搭建与原型验证
+                      - generic [ref=e289]: 低
+                - generic [ref=e290]:
+                  - generic [ref=e291]:
+                    - generic [ref=e292]: Gate 状态
+                    - generic [ref=e293]: 待决策
+                  - generic [ref=e294]:
+                    - paragraph [ref=e295]: 需求分析已完成，请确认产品需求规格后继续。
+                    - button "前往 Gate 决策" [ref=e296] [cursor=pointer]
+                - generic [ref=e297]:
+                  - generic [ref=e299]: 项目记忆
+                  - generic [ref=e300]:
+                    - generic [ref=e301]:
+                      - img [ref=e302]
+                      - generic [ref=e306]: AgentDevelop 项目背景
+                      - generic [ref=e307]: 2026-05-15
+                    - generic [ref=e308]:
+                      - img [ref=e309]
+                      - generic [ref=e313]: 产品经理角色约束
+                      - generic [ref=e314]: 2026-05-15
+                - generic [ref=e315]:
+                  - generic [ref=e317]: 当前角色记忆摘要
+                  - paragraph [ref=e318]: "产品经理: 产品经理角色约束 — 产品经理负责需求分析和验收标准定义，不参与代码实现。高风险操作需要经过人工决策确认。..."
+                - generic [ref=e319]:
+                  - generic [ref=e321]: 最近文件
+                  - generic [ref=e322]:
+                    - generic [ref=e323]:
+                      - img [ref=e324]
+                      - generic [ref=e329]: src/components/WorkbenchHome.tsx
+                      - generic [ref=e330]: 12:30
+                    - generic [ref=e331]:
+                      - img [ref=e332]
+                      - generic [ref=e337]: src/styles/base.css
+                      - generic [ref=e338]: 12:30
+                    - generic [ref=e339]:
+                      - img [ref=e340]
+                      - generic [ref=e345]: docs/HANDOFF_NEXT_TASKS.md
+                      - generic [ref=e346]: 12:30
+                - generic [ref=e347]:
+                  - generic [ref=e349]: 会话状态
+                  - paragraph [ref=e352]: 正在运行 Agent：4 | 等待 Gate：3
+                  - button "恢复会话" [ref=e353] [cursor=pointer]
+  - button "打开工程助手" [ref=e355] [cursor=pointer]:
+    - img [ref=e356]

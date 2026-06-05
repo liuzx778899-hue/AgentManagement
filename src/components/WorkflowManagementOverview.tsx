@@ -22,6 +22,7 @@ interface WorkflowManagementOverviewProps {
   data: WorkbenchData;
   onNavigate?: (view: WorkbenchView) => void;
   onEnterWorkflowDesign?: (workflowId: string) => void;
+  onEnterAiWorkflowDesign?: () => void;
   onDeleteTemplate?: (templateId: string) => void;
   onUpdateTemplate?: (templateId: string, updates: Partial<WorkbenchData["workflowTemplates"][0]>) => void;
 }
@@ -260,7 +261,7 @@ function KpiIcon({ type }: { type: "total" | "enabled" | "bound" | "pending" | "
   }
 }
 
-export function WorkflowManagementOverview({ data, onNavigate, onEnterWorkflowDesign, onDeleteTemplate, onUpdateTemplate }: WorkflowManagementOverviewProps) {
+export function WorkflowManagementOverview({ data, onNavigate, onEnterWorkflowDesign, onEnterAiWorkflowDesign, onDeleteTemplate, onUpdateTemplate }: WorkflowManagementOverviewProps) {
   const [activeCategory, setActiveCategory] = useState<WorkflowCategory>("all");
   const [validating, setValidating] = useState(false);
 
@@ -387,7 +388,11 @@ export function WorkflowManagementOverview({ data, onNavigate, onEnterWorkflowDe
   };
 
   const handleCreateAiWorkflow = () => {
-    onNavigate?.("workflows");
+    if (onEnterAiWorkflowDesign) {
+      onEnterAiWorkflowDesign();
+    } else {
+      onNavigate?.("workflows");
+    }
   };
 
   const handleImportWorkflow = () => {

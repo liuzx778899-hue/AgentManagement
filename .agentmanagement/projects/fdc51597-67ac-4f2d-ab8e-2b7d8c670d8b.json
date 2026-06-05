@@ -1,25 +1,4 @@
 {
-  "id": "fdc51597-67ac-4f2d-ab8e-2b7d8c670d8b",
-  "name": "flinketl",
-  "repoPath": "D:\\work\\vibecode\\flinketl",
-  "defaultBranch": "main",
-  "worktreeRoot": ".claude/worktrees",
-  "scope": "personal",
-  "desktopIntegrationStatus": "deferred",
-  "permissions": {
-    "permissionLevel": "owner"
-  },
-  "settings": {
-    "installCommand": "npm install",
-    "testCommand": "npm test",
-    "buildCommand": "npm run build",
-    "previewCommand": "npm run preview",
-    "detectedStack": "",
-    "riskSummary": ""
-  },
-  "workflowTemplateId": "1780241259031-i6l554y",
-  "createdAt": "2026-05-31T15:31:56.729Z",
-  "updatedAt": "2026-05-31T15:31:56.729Z",
-  "version": "1.0",
-  "persistedAt": "2026-05-31T15:31:56.729Z"
+  "deleted": true,
+  "deletedAt": "2026-06-04T16:09:31.076Z"
 }

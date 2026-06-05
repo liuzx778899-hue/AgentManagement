@@ -60,23 +60,65 @@ export function ProjectManagement({ data, onEnterProject, onEnterDetail, onEnter
     setActiveDropdown("none");
   };
 
-  const projects = data.projects;
+  // Filter and sort projects
+  const filteredProjects = useMemo(() => {
+    let result = [...data.projects];
 
-  // KPI calculations
+    // Portfolio filter
+    if (portfolio === "重点项目") {
+      result = result.filter(p => p.starred === true);
+    } else if (portfolio === "AgentManagement 相关") {
+      result = result.filter(p => p.repoPath.toLowerCase().includes("agentmanagement") || p.repoPath.toLowerCase().includes("agentdevelop"));
+    } else if (portfolio === "测试项目") {
+      result = result.filter(p => p.name.toLowerCase().includes("测试") || p.name.toLowerCase().includes("test"));
+    }
+    // "全部项目组合" shows all
+
+    // View mode filter - only filter if user explicitly changes from default
+    const now = new Date();
+    if (viewMode === "本周视图") {
+      // Show all projects for now - week filter is too restrictive for demo data
+      // const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      // result = result.filter(p => new Date(p.updatedAt) >= weekAgo);
+    } else if (viewMode === "本月视图") {
+      // Show all projects for now - month filter is too restrictive for demo data
+      // const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      // result = result.filter(p => new Date(p.updatedAt) >= monthAgo);
+    }
+    // "全部视图" shows all, "自定义范围" would need date picker
+
+    // Sort
+    if (sortBy === "按风险优先") {
+      const riskOrder: Record<string, number> = { "critical": 0, "high": 1, "medium": 2, "low": 3 };
+      result.sort((a, b) => (riskOrder[a.riskLevel ?? "low"] ?? 3) - (riskOrder[b.riskLevel ?? "low"] ?? 3));
+    } else if (sortBy === "按进度排序") {
+      result.sort((a, b) => (b.progress ?? 0) - (a.progress ?? 0));
+    } else if (sortBy === "按健康分排序") {
+      result.sort((a, b) => (b.healthScore ?? 0) - (a.healthScore ?? 0));
+    } else if (sortBy === "按更新时间") {
+      result.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+    }
+
+    return result;
+  }, [data.projects, portfolio, viewMode, sortBy]);
+
+  const projects = filteredProjects;
+
+  // KPI calculations - always use all projects for totals
   const kpis = useMemo(() => {
-    const total = projects.length;
-    const running = projects.filter(p =>
+    const total = data.projects.length;
+    const running = data.projects.filter(p =>
       data.tasks.some(t => t.projectId === p.id && t.status === "running")
     ).length;
     const waitingConfirm = data.manualGates.filter(g => g.status === "waiting").length;
-    const highRisk = projects.filter(p => p.riskLevel === "high" || p.riskLevel === "critical").length;
+    const highRisk = data.projects.filter(p => p.riskLevel === "high" || p.riskLevel === "critical").length;
     const gateBlocked = data.tasks.filter(t => t.status === "gate").length;
-    const todaySync = projects.filter(p => {
+    const todaySync = data.projects.filter(p => {
       if (!p.lastCheckAt) return false;
       return new Date(p.lastCheckAt).toDateString() === new Date().toDateString();
     }).length;
-    const healthPct = projects.length > 0
-      ? Math.round(projects.reduce((s, p) => s + (p.healthScore ?? 70), 0) / projects.length)
+    const healthPct = data.projects.length > 0
+      ? Math.round(data.projects.reduce((s, p) => s + (p.healthScore ?? 70), 0) / data.projects.length)
       : 0;
     return { total, running, waitingConfirm, highRisk, gateBlocked, todaySync, healthPct };
   }, [data, projects]);

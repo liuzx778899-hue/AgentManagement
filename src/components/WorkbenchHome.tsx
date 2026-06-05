@@ -102,6 +102,16 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
     return () => window.clearTimeout(timer);
   }, [toast]);
 
+  // 真实最近文件 - 从任务获取 (必须在条件返回之前声明)
+  const recentFiles = useMemo(() => {
+    if (!project?.id) return [];
+    const recentTasks = data.tasks
+      .filter((t) => t.projectId === project.id)
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+      .slice(0, 3);
+    return recentTasks.map((t) => t.goal.slice(0, 30) + "...").filter(Boolean);
+  }, [data.tasks, project?.id]);
+
   const closePopover = () => {
     setPopover(null);
     setPopoverAnchor(null);
@@ -157,7 +167,8 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
   const activeRuns = data.agentRuns.filter((run) => run.status === "running" || run.status === "waiting_gate");
   const activeGate = data.manualGates.find((gate) => gate.status === "waiting");
   const projectMemories = data.memories.filter((memory) => memory.scope === "project");
-  const recentFiles = ["src/components/WorkbenchHome.tsx", "src/styles/base.css", "docs/HANDOFF_NEXT_TASKS.md"];
+  const recentFiles: string[] = [];
+
   const activeStep = flowSteps.find((step) => `tab-${step.id}` === activeTabId);
   const activeRole = activeStep ? data.roles.find((role) => role.id === activeStep.roleId) : null;
   const popoverPositionStyle = popoverAnchor

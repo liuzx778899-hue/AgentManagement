@@ -9,10 +9,10 @@
   },
   "capabilityAuthorization": [],
   "launchStrategy": "direct",
-  "status": "queued",
+  "status": "running",
   "activeRunId": null,
   "createdAt": "2026-06-02T02:06:24.312Z",
-  "updatedAt": "2026-06-02T02:06:24.312Z",
+  "updatedAt": "2026-06-04T16:04:30.741Z",
   "version": "1.0",
-  "persistedAt": "2026-06-02T02:06:24.321Z"
+  "persistedAt": "2026-06-04T16:04:30.742Z"
 }

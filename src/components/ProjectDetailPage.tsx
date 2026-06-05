@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   ArrowLeft,
   Activity,
@@ -35,7 +35,7 @@ interface SelectedObjectState {
   id: string;
 }
 
-type TaskPriority = "P0" | "P1" | "P2" | "P3" | "P4";
+type TaskPriority = "P0" | "P1" | "P2" | "P3" | "P4" | "P5" | "P6" | "P7" | "P8" | "P9";
 
 interface ComputedRisk {
   id: string;
@@ -119,14 +119,19 @@ const typeLabels: Record<string, string> = {
   changelog: "变更记录",
 };
 
-const TASK_PRIORITY_OPTIONS: TaskPriority[] = ["P0", "P1", "P2", "P3", "P4"];
+const TASK_PRIORITY_OPTIONS: TaskPriority[] = ["P0", "P1", "P2", "P3", "P4", "P5", "P6", "P7", "P8", "P9"];
 
 const taskPriorityMeta: Record<TaskPriority, { label: string; hint: string }> = {
   P0: { label: "紧急", hint: "阻塞项，优先处理" },
   P1: { label: "高优先级", hint: "本阶段关键交付" },
   P2: { label: "中优先级", hint: "按计划推进" },
-  P3: { label: "低优先级", hint: "可排期处理" },
-  P4: { label: "观察项", hint: "暂不阻塞主线" },
+  P3: { label: "低优先级", hint: "可延后处理" },
+  P4: { label: "最低优先级", hint: "非关键路径" },
+  P5: { label: "后续迭代", hint: "下一迭代处理" },
+  P6: { label: "后续迭代", hint: "下一迭代处理" },
+  P7: { label: "后续迭代", hint: "下一迭代处理" },
+  P8: { label: "后续迭代", hint: "下一迭代处理" },
+  P9: { label: "后续迭代", hint: "下一迭代处理" },
 };
 
 function formatSyncTime(iso: string | undefined): string {
@@ -164,7 +169,11 @@ export function ProjectDetailPage({ data, projectId, onBack, onEnterWorkbench }:
   const [error, setError] = useState<string | null>(null);
   const [diffModalOpen, setDiffModalOpen] = useState(false);
   const [priorityModalOpen, setPriorityModalOpen] = useState(false);
+  const [promptModalOpen, setPromptModalOpen] = useState(false);
+  const [memoryModalOpen, setMemoryModalOpen] = useState(false);
   const [taskPriorityOverrides, setTaskPriorityOverrides] = useState<Record<string, TaskPriority>>({});
+  const [starred, setStarred] = useState(false);
+  const [ganttViewMode, setGanttViewMode] = useState<"week" | "month">("week");
 
   // Get default selected task (highest progress, status running or gate)
   const getDefaultSelectedTask = useMemo(() => {
@@ -184,6 +193,18 @@ export function ProjectDetailPage({ data, projectId, onBack, onEnterWorkbench }:
   const [selected, setSelected] = useState<SelectedObjectState>(() => getDefaultSelectedTask || { type: null, id: "" });
 
   const project = data.projects.find((p) => p.id === projectId);
+
+  // Initialize starred state from project data
+  useEffect(() => {
+    if (project?.starred) {
+      setStarred(project.starred);
+    }
+  }, [project?.starred]);
+
+  // Handle star toggle
+  const handleToggleStar = () => {
+    setStarred((prev) => !prev);
+  };
 
   // Project tasks
   const projectTasks = useMemo(
@@ -212,11 +233,22 @@ export function ProjectDetailPage({ data, projectId, onBack, onEnterWorkbench }:
     return data.manualGates.filter((g) => taskIds.has(g.taskId));
   }, [data.manualGates, projectTasks]);
 
-  // Template
+  // Template - find by ID, or by matching roleAssignment keys to step IDs
   const template = useMemo(() => {
     if (!project?.workflowTemplateId) return null;
-    return data.workflowTemplates.find((t) => t.id === project.workflowTemplateId);
-  }, [data.workflowTemplates, project?.workflowTemplateId]);
+    // First try exact match
+    let found = data.workflowTemplates.find((t) => t.id === project.workflowTemplateId);
+    if (found) return found;
+    // Fallback: find template whose steps match roleAssignment keys
+    const firstTask = projectTasks[0];
+    if (firstTask?.roleAssignment) {
+      const assignedKeys = Object.keys(firstTask.roleAssignment);
+      found = data.workflowTemplates.find((t) =>
+        assignedKeys.some(key => t.steps.some(s => s.id === key))
+      );
+    }
+    return found ?? null;
+  }, [data.workflowTemplates, project?.workflowTemplateId, projectTasks]);
 
   // Compute task IDs sorted by workflow step order (shared by getTaskPriority and render functions)
   const sortedTaskIds = useMemo(() => {
@@ -225,8 +257,11 @@ export function ProjectDetailPage({ data, projectId, onBack, onEnterWorkbench }:
       : new Map<string, number>();
     return [...projectTasks]
       .sort((a, b) => {
-        const aStepId = template?.steps?.find(s => a.roleAssignment?.[s.id])?.id;
-        const bStepId = template?.steps?.find(s => b.roleAssignment?.[s.id])?.id;
+        // Try to find step that matches roleAssignment
+        const aStepId = template?.steps?.find(s => a.roleAssignment?.[s.id])?.id
+          || Object.keys(a.roleAssignment || {})[0];
+        const bStepId = template?.steps?.find(s => b.roleAssignment?.[s.id])?.id
+          || Object.keys(b.roleAssignment || {})[0];
         const aOrder = aStepId ? (stepOrderMap.get(aStepId) ?? 999) : 999;
         const bOrder = bStepId ? (stepOrderMap.get(bStepId) ?? 999) : 999;
         return aOrder - bOrder;
@@ -340,33 +375,21 @@ export function ProjectDetailPage({ data, projectId, onBack, onEnterWorkbench }:
     );
   }
 
-  // ── State: No plan (empty plan) ──────────────────────────────────────
+  // ── State: Allow display even without matching template ──────────────────────────────────────
 
-  const hasPlan = template && projectTasks.length > 0;
+  // Only require tasks, not matching template
+  // Template can be null and we'll show a fallback view
 
-  if (!hasPlan) {
+  if (!project) {
     return (
       <div className="project-detail-page">
-        {/* Cockpit header */}
-        <header className="pd-cockpit-header">
-          <div className="pd-cockpit-top">
-            <div className="pd-cockpit-info">
-              <button className="pd-back-btn" onClick={onBack} type="button" title="返回项目管理">
-                <ArrowLeft size={18} />
-              </button>
-              <span className="pd-project-name">{project.name}</span>
-            </div>
-          </div>
-        </header>
-
         <div className="pd-empty-hint" style={{ flex: 1 }}>
           <AlertTriangle />
-          <p>需要补充信息</p>
-          <span>前往设置或导入协同文件以开始项目</span>
+          <p>项目不存在</p>
           <div className="pd-state-actions">
             <button className="btn" onClick={onBack} type="button">
               <ArrowLeft size={16} />
-              返回项目设置
+              返回项目列表
             </button>
           </div>
         </div>
@@ -729,8 +752,10 @@ export function ProjectDetailPage({ data, projectId, onBack, onEnterWorkbench }:
   // ── Tab Content Renders ──────────────────────────────────────────────
 
   function renderOverviewTab() {
-    // Build plan rows from real tasks
-    const overviewTasks = projectTasks.slice(0, 6);
+    // Use sorted tasks (by workflow step order) - same as plan tab, show all tasks
+    const sortedOverviewTasks = sortedTaskIds
+      .map(id => projectTasks.find(t => t.id === id))
+      .filter((t): t is NonNullable<typeof t> => t != null);
 
     return (
       <div className="pd-overview-grid">
@@ -747,10 +772,10 @@ export function ProjectDetailPage({ data, projectId, onBack, onEnterWorkbench }:
           </div>
         </section>
         <section className="pd-panel">
-          <div className="pd-panel-head"><h2>计划摘要</h2><a>查看全部任务</a></div>
+          <div className="pd-panel-head"><h2>计划摘要</h2><a onClick={() => setActiveTab("plan")} style={{ cursor: "pointer" }}>查看全部任务</a></div>
           <div className="pd-panel-body">
             <div className="pd-plan-row"><span>优先级</span><span>任务</span><span>状态</span><span>负责人</span><span>进度</span></div>
-            {overviewTasks.length > 0 ? overviewTasks.map((task) => {
+            {sortedOverviewTasks.length > 0 ? sortedOverviewTasks.map((task) => {
               const priority = getTaskPriorityWithSort(task.id);
               const statusLabel = task.status === "running" ? "推进中"
                 : task.status === "done" ? "完成"
@@ -811,6 +836,10 @@ export function ProjectDetailPage({ data, projectId, onBack, onEnterWorkbench }:
       const roleNames = Object.values(task.roleAssignment ?? {}).map((rid) =>
         data.roles.find((r) => r.id === rid)?.name ?? rid
       ).join("、") || "未分配";
+      // Get step names from roleAssignment keys (step ids)
+      const stepNames = Object.keys(task.roleAssignment ?? {}).map((stepId) =>
+        template?.steps?.find((s) => s.id === stepId)?.name ?? stepId
+      ).join("、") || "";
       const barPct = task.status === "done" ? 100
         : task.status === "running" ? 65
         : task.status === "gate" ? 50
@@ -829,7 +858,7 @@ export function ProjectDetailPage({ data, projectId, onBack, onEnterWorkbench }:
         id: task.id,
         priority,
         task: task.goal,
-        phase: p.phase ?? "未设置",
+        phase: task.phase ?? stepNames ?? p.phase ?? "未设置",
         role: roleNames,
         progress: barPct,
         status: statusLabel,
@@ -884,6 +913,7 @@ export function ProjectDetailPage({ data, projectId, onBack, onEnterWorkbench }:
     const sortedForGantt = sortedTaskIds
       .map(id => projectTasks.find(t => t.id === id))
       .filter((t): t is NonNullable<typeof t> => t != null);
+    const totalTasks = sortedForGantt.length;
     const ganttRows = sortedForGantt.map((task, i) => {
       const roleNames = Object.values(task.roleAssignment ?? {}).map((rid) =>
         data.roles.find((r) => r.id === rid)?.name ?? rid
@@ -893,26 +923,42 @@ export function ProjectDetailPage({ data, projectId, onBack, onEnterWorkbench }:
         : task.status === "failed" ? "orange"
         : task.status === "gate" ? "purple"
         : "";
-      const totalSteps = phases.length || 1;
-      const startPct = Math.round((i / totalSteps) * 80);
-      const spanPct = Math.round(80 / totalSteps);
+      // Position bar based on task index - each task spans one phase slot
+      const totalSteps = days.length || 1;
+      const startPct = Math.round((i / totalTasks) * 70) + 10;
+      const spanPct = Math.max(15, Math.round(60 / totalTasks));
       return {
         id: task.id,
         task: `${getTaskPriorityWithSort(task.id)} ${task.goal}`,
         role: roleNames,
         className,
-        start: startPct,
+        start: Math.min(startPct, 85 - spanPct),
         span: spanPct,
       };
     });
+
+    // Handle "Today" button - scroll to today's position
+    const handleScrollToToday = () => {
+      const ganttContainer = document.querySelector('.pd-design-gantt');
+      if (ganttContainer) {
+        ganttContainer.scrollLeft = 300; // Scroll to approximate "today" position
+      }
+    };
+
+    // Handle view mode toggle
+    const handleToggleViewMode = () => {
+      setGanttViewMode(prev => prev === "week" ? "month" : "week");
+    };
+
+    const viewModeLabel = ganttViewMode === "week" ? "周视图" : "月视图";
 
     return (
       <section className="pd-design-panel pd-gantt-tab">
         <div className="pd-design-panel-head">
           <h2>进度视图 · 甘特图</h2>
           <div className="pd-design-head-actions">
-            <button type="button">今天</button>
-            <button type="button">周视图</button>
+            <button type="button" onClick={handleScrollToToday}>今天</button>
+            <button type="button" onClick={handleToggleViewMode}>{viewModeLabel}</button>
           </div>
         </div>
         <div className="pd-design-gantt">
@@ -1306,10 +1352,6 @@ export function ProjectDetailPage({ data, projectId, onBack, onEnterWorkbench }:
             <p>{task.goal}</p>
           </div>
           <div className="pd-detail-row">
-            <label>所属阶段</label>
-            <p><span className="pd-chip">{p.phase ?? "未设置"}</span></p>
-          </div>
-          <div className="pd-detail-row">
             <label>负责人角色</label>
             <p>{assignedRoleNames}</p>
           </div>
@@ -1359,6 +1401,66 @@ export function ProjectDetailPage({ data, projectId, onBack, onEnterWorkbench }:
 
     // Risk detail
     if (selected.type === "risk") {
+      // Handle SWOT card clicks
+      if (selected.id.startsWith("swot-")) {
+        const swotType = selected.id;
+        const blockingGates = data.manualGates.filter((g) => {
+          const task = data.tasks.find((t) => t.id === g.taskId);
+          return task && task.projectId === projectId && g.status === "waiting";
+        });
+        const swotData = {
+          strengths: [
+            p.settings.projectDescription
+              ? `项目目标明确：${p.settings.projectDescription.slice(0, 30)}`
+              : "项目已创建并配置工作流",
+            template ? `工作流已定义：${template.name}` : "工作流待配置",
+            projectTasks.length > 0 ? `${projectTasks.length} 项任务已规划` : "任务规划中",
+          ],
+          weaknesses: [
+            projectTasks.filter((t) => t.status === "failed").length > 0
+              ? `${projectTasks.filter((t) => t.status === "failed").length} 项任务失败`
+              : "暂无任务失败记录",
+            !p.settings.projectDescription ? "项目描述未填写" : "项目描述已完善",
+            p.healthScore !== undefined && p.healthScore < 50 ? `健康分偏低（${p.healthScore}）` : "项目健康状态正常",
+          ],
+          opportunities: [
+            roleData.length > 0 ? `${roleData.length} 个角色可协同工作` : "角色体系可扩展",
+            phases.length > 0 ? `${phases.length} 个流程阶段可优化` : "流程可设计优化",
+            "AI 辅助决策可提升效率",
+          ],
+          threats: [
+            computedRisks.filter((r) => r.level === "high" || r.level === "critical").length > 0
+              ? `${computedRisks.filter((r) => r.level === "high" || r.level === "critical").length} 项高风险需关注`
+              : "当前风险可控",
+            blockingGates.length > 0 ? `${blockingGates.length} 个 Gate 等待决策` : "无阻塞决策",
+            p.settings.riskSummary ?? "风险摘要未设置",
+          ],
+        };
+        const swotTitles: Record<string, string> = {
+          "swot-s": "优势 (Strengths)",
+          "swot-w": "劣势 (Weaknesses)",
+          "swot-o": "机会 (Opportunities)",
+          "swot-t": "威胁 (Threats)",
+        };
+        const swotDescriptions: Record<string, string[]> = {
+          "swot-s": swotData.strengths,
+          "swot-w": swotData.weaknesses,
+          "swot-o": swotData.opportunities,
+          "swot-t": swotData.threats,
+        };
+        return (
+          <>
+            <div className="pd-drawer-section">
+              <h4>{swotTitles[swotType] ?? "SWOT 分析"}</h4>
+              <ul style={{ paddingLeft: "16px", color: "var(--text)" }}>
+                {(swotDescriptions[swotType] ?? []).map((item, i) => (
+                  <li key={i} style={{ marginBottom: "4px" }}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          </>
+        );
+      }
       const risk = computedRisks.find((r) => r.id === selected.id);
       if (!risk) return <p style={{ color: "var(--muted)" }}>风险信息不可用</p>;
       return (
@@ -1590,8 +1692,8 @@ export function ProjectDetailPage({ data, projectId, onBack, onEnterWorkbench }:
     if (selected.type === "role") {
       return (
         <>
-          <button className="btn" type="button">编辑提示词</button>
-          <button className="btn" type="button">查看记忆</button>
+          <button className="btn" type="button" onClick={() => setPromptModalOpen(true)}>编辑提示词</button>
+          <button className="btn" type="button" onClick={() => setMemoryModalOpen(true)}>查看记忆</button>
         </>
       );
     }
@@ -1624,7 +1726,13 @@ export function ProjectDetailPage({ data, projectId, onBack, onEnterWorkbench }:
           <div className="pd-overview-left">
             <div className="pd-title-zone">
               <div className="pd-title-icon">
-                <Star size={30} />
+                <Star
+                  size={30}
+                  className={`pd-star-btn ${starred ? "starred" : ""}`}
+                  fill={starred ? "#f0b34d" : "none"}
+                  onClick={handleToggleStar}
+                  style={{ cursor: "pointer" }}
+                />
               </div>
               <div className="pd-title-content">
                 <div className="pd-project-title-row">
@@ -1842,6 +1950,75 @@ export function ProjectDetailPage({ data, projectId, onBack, onEnterWorkbench }:
                 <p className="pd-priority-empty">暂无任务可调整。</p>
               )}
             </div>
+          </section>
+        </div>
+      )}
+
+      {/* Prompt Editor Modal */}
+      {promptModalOpen && (
+        <div className="pd-modal-backdrop" role="presentation" onClick={() => setPromptModalOpen(false)}>
+          <section className="pd-priority-modal" role="dialog" aria-modal="true" aria-labelledby="pd-prompt-title" onClick={(event) => event.stopPropagation()}>
+            <header className="pd-diff-modal-head">
+              <div>
+                <h2 id="pd-prompt-title">编辑提示词</h2>
+                <p>角色: {selected.type === "role" ? data.roles.find(r => r.id === selected.id)?.name ?? "未知" : ""}</p>
+              </div>
+              <button type="button" onClick={() => setPromptModalOpen(false)} aria-label="关闭提示词弹窗">×</button>
+            </header>
+            <div className="pd-priority-modal-body">
+              <div style={{ padding: "12px", color: "#8b9db5" }}>
+                <textarea
+                  style={{
+                    width: "100%",
+                    minHeight: "200px",
+                    background: "var(--surface-2)",
+                    border: "1px solid var(--soft)",
+                    borderRadius: "6px",
+                    padding: "12px",
+                    color: "var(--text)",
+                    fontFamily: "inherit",
+                    fontSize: "13px",
+                    resize: "vertical"
+                  }}
+                  placeholder="输入角色提示词..."
+                  defaultValue={selected.type === "role" ? (data.roles.find(r => r.id === selected.id)?.roleMarkdown ?? data.roles.find(r => r.id === selected.id)?.description ?? "") : ""}
+                />
+              </div>
+            </div>
+            <footer className="pd-diff-modal-foot">
+              <button type="button" onClick={() => setPromptModalOpen(false)}>取消</button>
+              <button type="button" className="primary" onClick={() => { setPromptModalOpen(false); }}>保存</button>
+            </footer>
+          </section>
+        </div>
+      )}
+
+      {/* Memory Modal */}
+      {memoryModalOpen && (
+        <div className="pd-modal-backdrop" role="presentation" onClick={() => setMemoryModalOpen(false)}>
+          <section className="pd-priority-modal" role="dialog" aria-modal="true" aria-labelledby="pd-memory-title" onClick={(event) => event.stopPropagation()}>
+            <header className="pd-diff-modal-head">
+              <div>
+                <h2 id="pd-memory-title">查看记忆</h2>
+                <p>角色: {selected.type === "role" ? data.roles.find(r => r.id === selected.id)?.name ?? "未知" : ""}</p>
+              </div>
+              <button type="button" onClick={() => setMemoryModalOpen(false)} aria-label="关闭记忆弹窗">×</button>
+            </header>
+            <div className="pd-priority-modal-body">
+              <div style={{ padding: "12px", color: "#8b9db5" }}>
+                <p style={{ marginBottom: "8px" }}>角色记忆条目:</p>
+                <div style={{ background: "var(--surface-2)", border: "1px solid var(--soft)", borderRadius: "6px", padding: "12px" }}>
+                  {selected.type === "role" ? (
+                    <span style={{ color: "var(--muted)" }}>暂无记忆数据</span>
+                  ) : (
+                    <span style={{ color: "var(--muted)" }}>请先选择一个角色</span>
+                  )}
+                </div>
+              </div>
+            </div>
+            <footer className="pd-diff-modal-foot">
+              <button type="button" onClick={() => setMemoryModalOpen(false)}>关闭</button>
+            </footer>
           </section>
         </div>
       )}

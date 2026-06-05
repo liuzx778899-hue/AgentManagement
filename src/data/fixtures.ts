@@ -46,6 +46,7 @@ export const workbenchData: WorkbenchData = {
         riskSummary: "个人本地 MVP，暂不接入后端、真实 runner、团队权限或桌面客户端。",
       },
       workflowTemplateId: "software-dev-v1",
+      starred: true,
       remoteRepo: {
         platform: "github",
         credentialId: "git-gh-personal",
@@ -102,6 +103,7 @@ AI 软件项目经理工作台，第一版是个人本地 Web MVP。
         riskSummary: "团队项目，涉及后端 API 和数据库，需要团队权限和 CI/CD 配置。",
       },
       workflowTemplateId: "software-dev-v1",
+      starred: true,
       remoteRepo: {
         platform: "github",
         credentialId: "git-gh-company",

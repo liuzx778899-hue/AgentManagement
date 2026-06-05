@@ -1,0 +1,17 @@
+﻿docs
+mockups
+public\mockups
+D:\work\vibecode\AgentDevelop\after-fix.yaml
+D:\work\vibecode\AgentDevelop\CLAUDE.md
+D:\work\vibecode\AgentDevelop\develop-cc1.md
+D:\work\vibecode\AgentDevelop\e2e-debug.mjs
+D:\work\vibecode\AgentDevelop\e2e-full-test.mjs
+D:\work\vibecode\AgentDevelop\e2e-interaction-test.mjs
+D:\work\vibecode\AgentDevelop\e2e-test.mjs
+D:\work\vibecode\AgentDevelop\e2e-workflow-roles.mjs
+D:\work\vibecode\AgentDevelop\fix-check.yaml
+D:\work\vibecode\AgentDevelop\minimap-check.yml
+D:\work\vibecode\AgentDevelop\README.md
+D:\work\vibecode\AgentDevelop\server-55179.err.log
+D:\work\vibecode\AgentDevelop\server-55179.out.log
+D:\work\vibecode\AgentDevelop\test-cc1.md

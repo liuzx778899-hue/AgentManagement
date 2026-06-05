@@ -9,6 +9,7 @@ export interface Task {
   launchStrategy: "worktree" | "direct";
   status: "draft" | "queued" | "running" | "gate" | "done" | "failed";
   activeRunId: string | null;
+  phase?: string;
   createdAt: string;
   updatedAt: string;
 }

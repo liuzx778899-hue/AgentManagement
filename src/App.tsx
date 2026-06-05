@@ -69,6 +69,11 @@ function AppContent() {
     setView("workflows");
   };
 
+  const enterAiWorkflowDesign = () => {
+    // Navigate to workflows with AI mode
+    window.location.hash = "#workflows?mode=ai";
+  };
+
   const contextMode = view === "workflows" ? "流程设计模式" : undefined;
 
   return (
@@ -110,6 +115,7 @@ function AppContent() {
             data={data}
             onNavigate={setView}
             onEnterWorkflowDesign={enterWorkflowDesign}
+            onEnterAiWorkflowDesign={enterAiWorkflowDesign}
             onDeleteTemplate={deleteWorkflowTemplate}
             onUpdateTemplate={updateWorkflowTemplate}
           />

@@ -16,6 +16,8 @@ import {
   GitBranch,
   ArrowUp,
   ArrowDown,
+  Play,
+  FolderOpen,
 } from "lucide-react";
 import type { Project, WorkbenchData, ManualGate } from "../domain/workbench";
 import { useLocalServices } from "../hooks/useLocalServices";
@@ -306,9 +308,9 @@ export function ProjectCard({ project, data, onClick, onGateClick, onDelete, onE
 
       {/* Actions row */}
       <div className="pm-v2-pc-actions">
-        <button className="pm-v2-btn" onClick={onClick}><ArrowRight size={12} />进入详情</button>
+        <button className="pm-v2-btn" onClick={onClick}><FolderOpen size={14} />进入详情</button>
         <button className="pm-v2-btn" onClick={handleWorkbenchClick}>
-          <ArrowRight size={12} />进入工作台
+          <Play size={14} />进入工作台
         </button>
       </div>
 

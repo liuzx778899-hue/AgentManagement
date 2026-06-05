@@ -1,0 +1,28 @@
+{
+  "id": "bdefd5a0-0cfb-44fd-a862-fab872e952e5",
+  "name": "AgentManagement",
+  "repoPath": "D:\\work\\vibecode\\AgentDevelop",
+  "defaultBranch": "main",
+  "worktreeRoot": "D:\\work\\vibecode\\AgentDevelop\\.worktrees",
+  "scope": "personal",
+  "sourceType": "claude-code",
+  "phase": "开发中",
+  "riskLevel": "low",
+  "healthScore": 85,
+  "permissions": {
+    "permissionLevel": "owner"
+  },
+  "settings": {
+    "installCommand": "npm install",
+    "testCommand": "npm test",
+    "buildCommand": "npm run build",
+    "previewCommand": "npm run preview",
+    "detectedStack": "React + TypeScript + Vite",
+    "riskSummary": "项目健康，测试覆盖良好"
+  },
+  "workflowTemplateId": "software-dev-v1",
+  "createdAt": "2026-06-04T13:52:08.281Z",
+  "updatedAt": "2026-06-04T13:52:08.281Z",
+  "version": "1.0",
+  "persistedAt": "2026-06-04T13:52:08.281Z"
+}

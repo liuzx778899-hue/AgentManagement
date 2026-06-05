@@ -44,6 +44,7 @@ export interface Project {
   runStatus?: string;
   status?: "running" | "waiting" | "completed" | "paused";
   progress?: number;
+  starred?: boolean;
   createdAt: string;
   updatedAt: string;
 }

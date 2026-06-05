@@ -1,0 +1,501 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - complementary [ref=e4]:
+      - generic [ref=e5]:
+        - img [ref=e7]
+        - generic [ref=e10]: Agent 工程管理系统
+      - navigation [ref=e11]:
+        - button "工作台" [ref=e12] [cursor=pointer]:
+          - img [ref=e14]
+          - generic [ref=e17]: 工作台
+        - button "流程管理" [ref=e18] [cursor=pointer]:
+          - img [ref=e20]
+          - generic [ref=e24]: 流程管理
+        - button "项目管理" [ref=e25] [cursor=pointer]:
+          - img [ref=e27]
+          - generic [ref=e32]: 项目管理
+        - button "记忆管理" [ref=e33] [cursor=pointer]:
+          - img [ref=e35]
+          - generic [ref=e37]: 记忆管理
+        - button "设置中心" [ref=e38] [cursor=pointer]:
+          - img [ref=e40]
+          - generic [ref=e43]: 设置中心
+      - button "收起侧边栏" [ref=e44] [cursor=pointer]:
+        - img [ref=e45]
+    - generic [ref=e47]:
+      - banner [ref=e48]:
+        - generic [ref=e49]:
+          - generic [ref=e50]: AgentDevelop
+          - generic [ref=e51]: /
+          - generic [ref=e52]: 项目管理
+        - generic [ref=e54]: 个人本地版
+      - main [ref=e55]:
+        - generic [ref=e56]:
+          - generic [ref=e57]:
+            - generic [ref=e58]:
+              - generic [ref=e59] [cursor=pointer]:
+                - img [ref=e60]
+                - text: 全部项目组合
+                - img [ref=e64]
+              - generic [ref=e66] [cursor=pointer]:
+                - text: 本周视图
+                - img [ref=e67]
+              - generic [ref=e69] [cursor=pointer]:
+                - text: 按风险优先
+                - img [ref=e70]
+              - textbox "搜索项目、Owner、阶段..." [ref=e72]
+            - generic [ref=e73]:
+              - button "检查全部进度" [ref=e74] [cursor=pointer]:
+                - img [ref=e75]
+                - text: 检查全部进度
+              - button "新建项目" [ref=e80] [cursor=pointer]:
+                - img [ref=e81]
+                - text: 新建项目
+              - button "导入已有项目" [ref=e82] [cursor=pointer]:
+                - img [ref=e83]
+                - text: 导入已有项目
+              - button "AI 建项" [ref=e86] [cursor=pointer]:
+                - img [ref=e87]
+                - text: AI 建项
+          - generic [ref=e89]:
+            - generic [ref=e90]:
+              - generic [ref=e92]: "64"
+              - generic [ref=e93]:
+                - generic [ref=e94]: 项目组合健康度
+                - generic [ref=e95]: 2 个项目需关注
+            - generic [ref=e96]:
+              - generic [ref=e97]: 项目总数
+              - strong [ref=e98]: "4"
+              - generic [ref=e99]: 1 个重点项目
+            - generic [ref=e100]:
+              - generic [ref=e101]: 运行中
+              - strong [ref=e102]: "2"
+              - generic [ref=e103]: 平均进度 —
+            - generic [ref=e104]:
+              - generic [ref=e105]: 等待确认
+              - strong [ref=e106]: "3"
+              - generic [ref=e107]: Gate / 计划变更
+            - generic [ref=e108]:
+              - generic [ref=e109]: 高风险
+              - strong [ref=e110]: "2"
+              - generic [ref=e111]: 权限与测试覆盖
+            - generic [ref=e112]:
+              - generic [ref=e113]: Gate 阻塞
+              - strong [ref=e114]: "1"
+              - generic [ref=e115]: 需人工确认
+            - generic [ref=e116]:
+              - generic [ref=e117]: 今日同步
+              - strong [ref=e118]: "0"
+              - generic [ref=e119]: 发现变更 +2
+          - generic [ref=e120]:
+            - generic [ref=e121]:
+              - img [ref=e123]
+              - generic [ref=e125]:
+                - heading "今日必须决策" [level=3] [ref=e126]
+                - paragraph [ref=e127]: AgentDevelop 流程草案是否应用，Stock Agent 是否先暂停工程层。
+              - generic [ref=e128]:
+                - text: "1"
+                - generic [ref=e129]: 待拍板
+            - generic [ref=e130]:
+              - img [ref=e132]
+              - generic [ref=e134]:
+                - heading "角色资源负载" [level=3] [ref=e135]
+                - paragraph [ref=e136]: 前端工程师 82%，测试工程师 46%，暂无单角色严重过载。
+              - generic [ref=e137]:
+                - text: 82%
+                - generic [ref=e138]: 最高负载
+            - generic [ref=e139]:
+              - img [ref=e141]
+              - generic [ref=e144]:
+                - heading "计划偏差" [level=3] [ref=e145]
+                - paragraph [ref=e146]: Stock Agent 落后 2 天；Docs Automation 需求确认不足。
+              - generic [ref=e147]:
+                - text: "-2d"
+                - generic [ref=e148]: 最大偏差
+            - generic [ref=e149]:
+              - img [ref=e151]
+              - generic [ref=e153]:
+                - heading "AI 建议下一步" [level=3] [ref=e154]
+                - paragraph [ref=e155]: 先处理 2 个 Gate，再启动全量进度 Check，避免计划状态误判。
+              - button "查看" [ref=e156] [cursor=pointer]
+          - generic [ref=e157]:
+            - generic [ref=e159]:
+              - generic [ref=e160]:
+                - generic [ref=e161]:
+                  - heading "项目组合看板" [level=2] [ref=e162]
+                  - paragraph [ref=e163]: 以风险、阶段、Gate 和同步状态管理多个项目
+                - generic [ref=e164]:
+                  - button "全部状态" [ref=e165] [cursor=pointer]
+                  - button "卡片视图" [ref=e166] [cursor=pointer]
+              - generic [ref=e167]:
+                - article [ref=e168] [cursor=pointer]:
+                  - generic [ref=e169]:
+                    - generic [ref=e170]:
+                      - generic [ref=e171]: AG
+                      - text: AgentDevelop
+                    - generic [ref=e172]:
+                      - button "待决策" [ref=e173]:
+                        - img [ref=e174]
+                        - generic [ref=e176]: 待决策
+                      - generic [ref=e177]: 等待确认
+                  - generic [ref=e179]:
+                    - generic [ref=e180]: Phase 1 Web MVP
+                    - strong [ref=e181]: 0%
+                  - generic [ref=e183]:
+                    - generic [ref=e184]:
+                      - img [ref=e185]
+                      - text: 健康分
+                      - generic [ref=e187]: "76"
+                    - generic [ref=e188]: 中风险
+                  - generic [ref=e189]:
+                    - generic [ref=e190]:
+                      - generic [ref=e191]:
+                        - img [ref=e192]
+                        - text: 当前里程碑
+                      - strong [ref=e194]: Phase 1 Web MVP 收尾
+                    - generic [ref=e195]:
+                      - generic [ref=e196]:
+                        - img [ref=e197]
+                        - text: 下一验收点
+                      - strong [ref=e199]: 浏览器全流程验收
+                  - generic [ref=e200]:
+                    - generic [ref=e201]:
+                      - text: 运行
+                      - generic [ref=e202]: "0"
+                    - generic [ref=e203]:
+                      - text: Gate
+                      - generic [ref=e204]: "1"
+                    - generic [ref=e205]:
+                      - text: TODO
+                      - generic [ref=e206]: "0"
+                    - generic [ref=e207]:
+                      - text: 待确认
+                      - generic [ref=e208]: "1"
+                    - generic [ref=e209]: 同步 5天前
+                    - generic [ref=e210]:
+                      - text: 变更
+                      - generic [ref=e211]: "5"
+                  - generic [ref=e212]:
+                    - button "进入详情" [ref=e213]:
+                      - img [ref=e214]
+                      - text: 进入详情
+                    - button "进入工作台" [ref=e216]:
+                      - img [ref=e217]
+                      - text: 进入工作台
+                  - button "删除项目" [ref=e219]:
+                    - img [ref=e220]
+                - article [ref=e223] [cursor=pointer]:
+                  - generic [ref=e224]:
+                    - generic [ref=e225]:
+                      - generic [ref=e226]: 智能
+                      - text: 智能客服平台
+                    - generic [ref=e227]:
+                      - button "待决策" [ref=e228]:
+                        - img [ref=e229]
+                        - generic [ref=e231]: 待决策
+                      - generic [ref=e232]: 运行中
+                  - generic [ref=e235]:
+                    - generic [ref=e236]: Phase 2 核心功能
+                    - strong [ref=e237]: 0%
+                  - generic [ref=e239]:
+                    - generic [ref=e240]:
+                      - img [ref=e241]
+                      - text: 健康分
+                      - generic [ref=e243]: "62"
+                    - generic [ref=e244]: 高风险
+                  - generic [ref=e245]:
+                    - generic [ref=e246]:
+                      - generic [ref=e247]:
+                        - img [ref=e248]
+                        - text: 当前里程碑
+                      - strong [ref=e250]: API 网关联调
+                    - generic [ref=e251]:
+                      - generic [ref=e252]:
+                        - img [ref=e253]
+                        - text: 下一验收点
+                      - strong [ref=e255]: 端到端集成测试
+                  - generic [ref=e256]:
+                    - generic [ref=e257]:
+                      - text: 运行
+                      - generic [ref=e258]: "1"
+                    - generic [ref=e259]:
+                      - text: Gate
+                      - generic [ref=e260]: "0"
+                    - generic [ref=e261]:
+                      - text: TODO
+                      - generic [ref=e262]: "1"
+                    - generic [ref=e263]:
+                      - text: 待确认
+                      - generic [ref=e264]: "1"
+                    - generic [ref=e265]: 同步 3天前
+                    - generic [ref=e266]:
+                      - text: 变更
+                      - generic [ref=e267]: "12"
+                  - generic [ref=e268]:
+                    - button "进入详情" [ref=e269]:
+                      - img [ref=e270]
+                      - text: 进入详情
+                    - button "进入工作台" [ref=e272]:
+                      - img [ref=e273]
+                      - text: 进入工作台
+                  - button "删除项目" [ref=e275]:
+                    - img [ref=e276]
+                - article [ref=e279] [cursor=pointer]:
+                  - generic [ref=e280]:
+                    - generic [ref=e281]:
+                      - generic [ref=e282]: DO
+                      - text: Docs Automation
+                    - generic [ref=e284]: 运行中
+                  - generic [ref=e287]:
+                    - generic [ref=e288]: Phase 1 基础功能
+                    - strong [ref=e289]: 0%
+                  - generic [ref=e291]:
+                    - generic [ref=e292]:
+                      - img [ref=e293]
+                      - text: 健康分
+                      - generic [ref=e295]: "72"
+                    - generic [ref=e296]: 低风险
+                  - generic [ref=e297]:
+                    - generic [ref=e298]:
+                      - generic [ref=e299]:
+                        - img [ref=e300]
+                        - text: 当前里程碑
+                      - strong [ref=e302]: Markdown 渲染引擎完成
+                    - generic [ref=e303]:
+                      - generic [ref=e304]:
+                        - img [ref=e305]
+                        - text: 下一验收点
+                      - strong [ref=e307]: API 文档自动生成
+                  - generic [ref=e308]:
+                    - generic [ref=e309]:
+                      - text: 运行
+                      - generic [ref=e310]: "1"
+                    - generic [ref=e311]:
+                      - text: Gate
+                      - generic [ref=e312]: "0"
+                    - generic [ref=e313]:
+                      - text: TODO
+                      - generic [ref=e314]: "1"
+                    - generic [ref=e315]:
+                      - text: 待确认
+                      - generic [ref=e316]: "0"
+                    - generic [ref=e317]: 同步 4天前
+                    - generic [ref=e318]:
+                      - text: 变更
+                      - generic [ref=e319]: "2"
+                  - generic [ref=e320]:
+                    - button "进入详情" [ref=e321]:
+                      - img [ref=e322]
+                      - text: 进入详情
+                    - button "进入工作台" [ref=e324]:
+                      - img [ref=e325]
+                      - text: 进入工作台
+                  - button "删除项目" [ref=e327]:
+                    - img [ref=e328]
+                - article [ref=e331] [cursor=pointer]:
+                  - generic [ref=e332]:
+                    - generic [ref=e333]:
+                      - generic [ref=e334]: IN
+                      - text: Internal CLI Tools
+                    - generic [ref=e335]:
+                      - button "待决策" [ref=e336]:
+                        - img [ref=e337]
+                        - generic [ref=e339]: 待决策
+                      - generic [ref=e340]: 等待确认
+                  - generic [ref=e342]:
+                    - generic [ref=e343]: Phase 0 概念验证
+                    - strong [ref=e344]: 0%
+                  - generic [ref=e346]:
+                    - generic [ref=e347]:
+                      - img [ref=e348]
+                      - text: 健康分
+                      - generic [ref=e350]: "45"
+                    - generic [ref=e351]: 高风险
+                  - generic [ref=e352]:
+                    - generic [ref=e353]:
+                      - generic [ref=e354]:
+                        - img [ref=e355]
+                        - text: 当前里程碑
+                      - strong [ref=e357]: CLI 框架搭建
+                    - generic [ref=e358]:
+                      - generic [ref=e359]:
+                        - img [ref=e360]
+                        - text: 下一验收点
+                      - strong [ref=e362]: 首个命令原型完成
+                  - generic [ref=e363]:
+                    - generic [ref=e364]:
+                      - text: 运行
+                      - generic [ref=e365]: "0"
+                    - generic [ref=e366]:
+                      - text: Gate
+                      - generic [ref=e367]: "0"
+                    - generic [ref=e368]:
+                      - text: TODO
+                      - generic [ref=e369]: "1"
+                    - generic [ref=e370]:
+                      - text: 待确认
+                      - generic [ref=e371]: "1"
+                    - generic [ref=e372]: 同步 3天前
+                    - generic [ref=e373]:
+                      - text: 变更
+                      - generic [ref=e374]: "8"
+                  - generic [ref=e375]:
+                    - button "进入详情" [ref=e376]:
+                      - img [ref=e377]
+                      - text: 进入详情
+                    - button "进入工作台" [ref=e379]:
+                      - img [ref=e380]
+                      - text: 进入工作台
+                  - button "删除项目" [ref=e382]:
+                    - img [ref=e383]
+              - generic [ref=e386]:
+                - generic [ref=e387]: 共 4 个项目
+                - generic [ref=e388]: 10 条/页
+            - complementary [ref=e389]:
+              - generic [ref=e390]:
+                - generic [ref=e391]:
+                  - generic [ref=e392]:
+                    - heading "AI 项目管家" [level=2] [ref=e393]
+                    - paragraph [ref=e394]: 根据协同文件和工作台状态生成管理建议
+                  - button "同步" [ref=e395] [cursor=pointer]
+                - generic [ref=e396]:
+                  - generic [ref=e397]:
+                    - generic [ref=e398]: 高
+                    - generic [ref=e399]:
+                      - heading "Stock Agent 测试覆盖不足" [level=3] [ref=e400]
+                      - paragraph [ref=e401]: 最近同步发现高风险，建议先补测试再进入工程层。
+                    - generic [ref=e402]: 需确认
+                  - generic [ref=e403]:
+                    - generic [ref=e404]: 中
+                    - generic [ref=e405]:
+                      - heading "AgentDevelop Gate 待处理" [level=3] [ref=e406]
+                      - paragraph [ref=e407]: 前端页面已成型，需确认流程草案是否应用。
+                    - generic [ref=e408]: Gate
+              - generic [ref=e409]:
+                - generic [ref=e411]:
+                  - heading "风险与阶段分布" [level=2] [ref=e412]
+                  - paragraph [ref=e413]: 跨项目健康、阶段和风险热力图
+                - generic [ref=e414]:
+                  - generic [ref=e415]:
+                    - heading "阶段分布" [level=3] [ref=e416]
+                    - generic [ref=e417]:
+                      - generic [ref=e418]:
+                        - generic [ref=e419]: Phase 1
+                        - generic [ref=e422]: "4"
+                      - generic [ref=e423]:
+                        - generic [ref=e424]: Phase 2
+                        - generic [ref=e427]: "2"
+                      - generic [ref=e428]:
+                        - generic [ref=e429]: 规划中
+                        - generic [ref=e432]: "2"
+                  - generic [ref=e433]:
+                    - heading "风险热力" [level=3] [ref=e434]
+                    - generic [ref=e435]:
+                      - generic [ref=e436]: "3"
+                      - generic [ref=e437]: "2"
+                      - generic [ref=e438]: "1"
+                      - generic [ref=e439]: "1"
+                      - generic [ref=e440]: "1"
+                      - generic [ref=e441]: "0"
+                      - generic [ref=e442]: "0"
+                      - generic [ref=e443]: "0"
+                      - generic [ref=e444]: "0"
+                - generic [ref=e445]:
+                  - generic [ref=e446]:
+                    - time [ref=e447]: 05-20
+                    - strong [ref=e448]: AgentDevelop 完成 AI 流程设计对齐
+                    - generic [ref=e449]: 今天
+                  - generic [ref=e450]:
+                    - time [ref=e451]: 05-21
+                    - strong [ref=e452]: Stock Agent 工程层风险复核
+                    - generic [ref=e453]: 明天
+                  - generic [ref=e454]:
+                    - time [ref=e455]: 05-23
+                    - strong [ref=e456]: Docs Automation 计划确认
+                    - generic [ref=e457]: 本周
+              - generic [ref=e458]:
+                - generic [ref=e460]:
+                  - heading "最近变更" [level=2] [ref=e461]
+                  - paragraph [ref=e462]: 来自 Check、协同文件和工作台快照
+                - generic [ref=e463]:
+                  - generic [ref=e464]:
+                    - generic [ref=e466]:
+                      - strong [ref=e467]: AI 流程设计 HTML 已更新
+                      - text: 节点比例、右侧差异面板密度已同步
+                    - time [ref=e468]: 15:02
+                  - generic [ref=e469]:
+                    - generic [ref=e471]:
+                      - strong [ref=e472]: 项目管理概览需重设计
+                      - text: 旧版只覆盖入口和卡片，缺少组合治理
+                    - time [ref=e473]: 14:58
+                  - generic [ref=e474]:
+                    - generic [ref=e476]:
+                      - strong [ref=e477]: 新增两个项目管理资产
+                      - text: 概览图与 AI 建项图已拆分
+                    - time [ref=e478]: 14:50
+          - generic [ref=e484]:
+            - generic [ref=e485]:
+              - heading "新建项目" [level=2] [ref=e486]
+              - button "×" [ref=e487] [cursor=pointer]
+            - generic [ref=e489]:
+              - generic [ref=e490]:
+                - button "01 项目信息" [ref=e491] [cursor=pointer]:
+                  - generic [ref=e492]: "01"
+                  - generic [ref=e493]: 项目信息
+                - button "02 流程模板" [ref=e494] [cursor=pointer]:
+                  - generic [ref=e495]: "02"
+                  - generic [ref=e496]: 流程模板
+                - button "03 能力授权" [ref=e497] [cursor=pointer]:
+                  - generic [ref=e498]: "03"
+                  - generic [ref=e499]: 能力授权
+                - button "04 确认创建" [ref=e500] [cursor=pointer]:
+                  - generic [ref=e501]: "04"
+                  - generic [ref=e502]: 确认创建
+              - generic [ref=e521]:
+                - heading "选择流程模板" [level=2] [ref=e522]
+                - paragraph [ref=e523]: 流程模板中已绑定角色和模型，无需额外配置。点击卡片或按钮选择要使用的流程。
+                - button "软件 软件开发完整流程 v1 5 步骤 4 决策 已选择" [ref=e525] [cursor=pointer]:
+                  - generic [ref=e526]: 软件
+                  - generic [ref=e527]:
+                    - generic [ref=e528]: 软件开发完整流程
+                    - generic [ref=e529]:
+                      - generic [ref=e530]: v1
+                      - generic [ref=e531]: 5 步骤
+                      - generic [ref=e532]: 4 决策
+                  - button "已选择" [ref=e533]
+                - generic [ref=e534]:
+                  - heading "包含步骤" [level=3] [ref=e535]
+                  - generic [ref=e536]:
+                    - generic [ref=e537]: "01"
+                    - generic [ref=e538]: 需求分析
+                    - generic [ref=e539]: 产品经理
+                    - generic [ref=e540]: DeepSeek
+                    - generic [ref=e541]: 决策
+                  - generic [ref=e542]:
+                    - generic [ref=e543]: "02"
+                    - generic [ref=e544]: UI/UX 设计
+                    - generic [ref=e545]: UI/UX 设计师
+                    - generic [ref=e546]: DeepSeek
+                    - generic [ref=e547]: 决策
+                  - generic [ref=e548]:
+                    - generic [ref=e549]: "03"
+                    - generic [ref=e550]: 前端开发
+                    - generic [ref=e551]: 前端工程师
+                    - generic [ref=e552]: OpenAI
+                  - generic [ref=e553]:
+                    - generic [ref=e554]: "04"
+                    - generic [ref=e555]: 代码审查
+                    - generic [ref=e556]: 代码审查员
+                    - generic [ref=e557]: DeepSeek
+                    - generic [ref=e558]: 决策
+                  - generic [ref=e559]:
+                    - generic [ref=e560]: "05"
+                    - generic [ref=e561]: 测试验证
+                    - generic [ref=e562]: 测试工程师
+                    - generic [ref=e563]: DeepSeek
+                    - generic [ref=e564]: 决策
+              - generic [ref=e519]:
+                - button "上一步" [ref=e565] [cursor=pointer]
+                - button "下一步" [active] [ref=e520] [cursor=pointer]
+  - button "打开工程助手" [ref=e480] [cursor=pointer]:
+    - img [ref=e481]

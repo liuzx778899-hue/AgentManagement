@@ -1,0 +1,13 @@
+{
+  "id": "41ee4345-123e-4ffa-be6a-53251b83c1b5",
+  "kind": "project",
+  "scope": "project",
+  "projectId": "bdefd5a0-0cfb-44fd-a862-fab872e952e5",
+  "roleId": null,
+  "taskId": null,
+  "title": "项目架构决策",
+  "body": "采用 React + TypeScript + Vite 架构，使用 Vitest 进行单元测试，Playwright 进行E2E测试。",
+  "citation": [],
+  "createdAt": "2026-06-04T13:52:08.281Z",
+  "updatedAt": "2026-06-04T13:52:08.281Z"
+}

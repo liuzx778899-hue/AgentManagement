@@ -1,0 +1,261 @@
+{
+  "main": {
+    "id": "4cb059027b09a9d7",
+    "type": "split",
+    "children": [
+      {
+        "id": "5229147b3c3fe161",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "acf4e8c8f2492d84",
+            "type": "leaf",
+            "state": {
+              "type": "empty",
+              "state": {},
+              "icon": "lucide-file",
+              "title": "新标签页"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "9efbee359762adc3",
+    "type": "split",
+    "children": [
+      {
+        "id": "ebcd47cc7f3432d7",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "6bddcc45848dc1c1",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": true
+              },
+              "icon": "lucide-folder-closed",
+              "title": "文件列表"
+            }
+          },
+          {
+            "id": "b04e8e3c8680a6e9",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "搜索"
+            }
+          },
+          {
+            "id": "c2b0d8de7d6b8729",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "书签"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "c098c58927413887",
+    "type": "split",
+    "children": [
+      {
+        "id": "56ffd1c666ec2130",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "5971404a540001b4",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "反向链接"
+            }
+          },
+          {
+            "id": "902db78540562519",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "出链"
+            }
+          },
+          {
+            "id": "fdd222a25ad83486",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "标签"
+            }
+          },
+          {
+            "id": "c24c277936dd8462",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "添加笔记属性"
+            }
+          },
+          {
+            "id": "5d48ca7e27a5ccff",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "README.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "README 的大纲"
+            }
+          },
+          {
+            "id": "d63afadc86bcf9b4",
+            "type": "leaf",
+            "state": {
+              "type": "empty",
+              "state": {},
+              "icon": "lucide-file",
+              "title": "新标签页"
+            }
+          },
+          {
+            "id": "ba9722b948a6098e",
+            "type": "leaf",
+            "state": {
+              "type": "empty",
+              "state": {},
+              "icon": "lucide-file",
+              "title": "新标签页"
+            }
+          },
+          {
+            "id": "7a921d29c8da93cd",
+            "type": "leaf",
+            "state": {
+              "type": "graph-analysis",
+              "state": {},
+              "icon": "GA-ICON",
+              "title": "Graph Analysis"
+            }
+          }
+        ],
+        "currentTab": 7
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:打开快速切换": false,
+      "graph:查看关系图谱": false,
+      "canvas:新建白板": false,
+      "daily-notes:打开/创建今天的日记": false,
+      "templates:插入模板": false,
+      "command-palette:打开命令面板": false,
+      "bases:新建数据库": false
+    }
+  },
+  "active": "acf4e8c8f2492d84",
+  "lastOpenFiles": [
+    "design/assets/current/workflow-conventional-design-v2-final.png",
+    "design/assets/current/workbench-v1.png",
+    "design/assets/current/workflow-builder-dual-mode-v1.png",
+    "design/assets/current/README.md",
+    "design/assets/current/project-management-overview-v1.png",
+    "design/assets/current/project-management-overview-ai-briefing-v1.png",
+    "design/assets/current/project-detail-trace-drawer-v1.png",
+    "design/assets/current/project-detail-gantt-v1.png",
+    "design/assets/current/memory-management-knowledge-center-v1.png",
+    "design/assets/current/ai-workflow-design-v1-final.png",
+    "design/assets/current/ai-project-initiation-v2-final.png",
+    "design/assets/current/ai-project-initiation-from-overview-v1.png",
+    "design/assets/current",
+    "superpowers/status/2026-05-17-audit-resolution.md",
+    "superpowers/status/2026-05-16-product-readiness-audit.md",
+    "superpowers/status/2026-05-15-agent-workbench-checkpoint.md",
+    "superpowers/specs/2026-05-30-local-api-server-design.md",
+    "superpowers/specs/2026-05-30-issue-workflow.md",
+    "superpowers/specs/2026-05-16-workflow-canvas-design.md",
+    "superpowers/specs/2026-05-16-role-markdown-mod-plan.md",
+    "superpowers/specs/2026-05-16-role-markdown-design.md",
+    "superpowers/specs/2026-05-16-project-workspace-v2-design.md",
+    "superpowers/specs/2026-05-16-project-md-system-design.md",
+    "superpowers/specs/2026-05-16-project-management-v2-design.md",
+    "superpowers/specs/2026-05-16-project-management-v3-design.md",
+    "superpowers/specs/2026-05-16-ai-assistant-settings-design.md",
+    "superpowers/specs/2026-05-16-ai-assistant-design.md",
+    "superpowers/specs/2026-05-15-workflow-consolidation-design.md",
+    "superpowers/specs/2026-05-15-project-management-merge-design.md",
+    "superpowers/specs/2026-05-15-v1-product-flow.md",
+    "superpowers/specs/2026-05-15-im-adapter-design.md",
+    "superpowers/specs/2026-05-15-git-devops-integration-design.md",
+    "superpowers/specs/2026-05-15-frontend-engineering-standards-design.md",
+    "superpowers/specs/2026-05-15-agent-workbench-ui-design.md",
+    "superpowers/plans/2026-05-30-phase3-ui-integration.md",
+    "superpowers/plans/2026-05-30-phase2-engineering-layer.md",
+    "superpowers/plans/2026-05-16-workflow-canvas.md",
+    "superpowers/status",
+    "superpowers/specs",
+    "superpowers/plans",
+    "superpowers",
+    "generated/superpowers/status",
+    "generated/superpowers/specs",
+    "generated/superpowers/plans",
+    "generated/superpowers",
+    "generated",
+    "未命名.canvas"
+  ]
+}

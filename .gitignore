@@ -18,6 +18,8 @@ dist/
 .worktrees/
 skills-lock.json
 screenshots/
+test-screenshots/
+mockups/
 *.log
 *.err.log
 *.out.log
@@ -26,6 +28,11 @@ vite.config.js
 vite.config.d.ts
 
 # Local visual QA artifacts generated at the repository root.
+/*.md
+!/README.md
+/*.mjs
+/*.html
+!/index.html
 /*.png
 /*.jpg
 /*.jpeg
@@ -35,3 +42,6 @@ vite.config.d.ts
 
 # Local one-off automation scripts that should not enter the product repo.
 /glm-monitor.*
+
+# Local documentation backup archives.
+docs/archive/backups/*.zip
