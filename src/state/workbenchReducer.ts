@@ -37,7 +37,9 @@ export function workbenchReducer(state: WorkbenchData, action: WorkbenchAction):
             ),
             {
               id: newRunId,
+              projectId: existingRun.projectId,
               taskId: existingRun.taskId,
+              workflowTemplateId: existingRun.workflowTemplateId,
               roleId: existingRun.roleId,
               modelProviderId: existingRun.modelProviderId,
               modelName: existingRun.modelName,
@@ -73,7 +75,9 @@ export function workbenchReducer(state: WorkbenchData, action: WorkbenchAction):
         ...state.agentRuns.map((r) => (r.id === action.runId ? { ...r, status: "failed" as const, finishedAt: now } : r)),
         {
           id: newRunId,
+          projectId: run.projectId,
           taskId: run.taskId,
+          workflowTemplateId: run.workflowTemplateId,
           roleId: action.newRoleId,
           modelProviderId: run.modelProviderId,
           modelName: run.modelName,

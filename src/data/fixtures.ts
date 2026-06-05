@@ -949,7 +949,9 @@ AI 软件项目经理工作台，第一版是个人本地 Web MVP。
   agentRuns: [
     {
       id: "run-001",
+      projectId: "project-001",
       taskId: "task-001",
+      workflowTemplateId: "workflow-001",
       workflowStepId: "step-001",
       assignmentId: "step-001-assign-0",
       roleId: "role-001",
@@ -968,7 +970,9 @@ AI 软件项目经理工作台，第一版是个人本地 Web MVP。
     },
     {
       id: "run-002",
+      projectId: "project-001",
       taskId: "task-002",
+      workflowTemplateId: "workflow-001",
       workflowStepId: "step-003",
       assignmentId: "step-003-assign-0",
       roleId: "role-003",
@@ -986,7 +990,9 @@ AI 软件项目经理工作台，第一版是个人本地 Web MVP。
     },
     {
       id: "run-003",
+      projectId: "project-001",
       taskId: "task-003",
+      workflowTemplateId: "workflow-001",
       workflowStepId: "step-002",
       assignmentId: "step-002-assign-0",
       roleId: "role-003",
@@ -1004,7 +1010,9 @@ AI 软件项目经理工作台，第一版是个人本地 Web MVP。
     },
     {
       id: "run-004",
+      projectId: "project-002",
       taskId: "task-004",
+      workflowTemplateId: "workflow-002",
       workflowStepId: "step-001",
       assignmentId: "step-001-assign-0",
       roleId: "role-001",

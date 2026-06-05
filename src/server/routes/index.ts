@@ -10,6 +10,7 @@ import { rolesRouter } from './roles';
 import { capabilitiesRouter } from './capabilities';
 import { tasksRouter } from './tasks';
 import { workflowEventsRouter } from './workflowEvents';
+import { workbenchRunsRouter } from './workbenchRuns';
 import { createAgentServiceRouter } from './agent-service';
 import { requestTracing } from '../middleware/requestTracing';
 
@@ -28,6 +29,7 @@ export function createRouter(): Router {
   router.use('/capabilities', capabilitiesRouter);
   router.use('/tasks', tasksRouter);
   router.use('/workflow-events', workflowEventsRouter);
+  router.use('/workbench-runs', workbenchRunsRouter);
 
   // Agent Service API (v1) with request tracing
   router.use('/v1', requestTracing, createAgentServiceRouter());
