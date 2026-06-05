@@ -28,7 +28,7 @@ export function ProjectManagement({ data, onEnterProject, onEnterDetail, onEnter
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Filter states
-  const [portfolio, setPortfolio] = useState("全部项目组合");
+  const [portfolio, setPortfolio] = useState("全部项目");
   const [viewMode, setViewMode] = useState("本周视图");
   const [sortBy, setSortBy] = useState("按风险优先");
   // Esc key to close overlays
@@ -51,7 +51,10 @@ export function ProjectManagement({ data, onEnterProject, onEnterDetail, onEnter
     return () => document.removeEventListener("mousedown", handler);
   }, [activeDropdown]);
 
-  const portfolioOptions = ["全部项目组合", "重点项目", "AgentManagement 相关", "测试项目"];
+  const portfolioOptions = useMemo(() => {
+    const projectNames = data.projects.map(p => p.name.trim());
+    return ["全部项目", "🌟 重点项目", ...projectNames];
+  }, [data.projects]);
   const viewOptions = ["本周视图", "本月视图", "全部视图", "自定义范围"];
   const sortOptions = ["按风险优先", "按进度排序", "按健康分排序", "按更新时间"];
 
@@ -64,15 +67,13 @@ export function ProjectManagement({ data, onEnterProject, onEnterDetail, onEnter
   const filteredProjects = useMemo(() => {
     let result = [...data.projects];
 
-    // Portfolio filter
-    if (portfolio === "重点项目") {
+    // Portfolio filter - 按项目名称筛选
+    if (portfolio === "🌟 重点项目") {
       result = result.filter(p => p.starred === true);
-    } else if (portfolio === "AgentManagement 相关") {
-      result = result.filter(p => p.repoPath.toLowerCase().includes("agentmanagement") || p.repoPath.toLowerCase().includes("agentdevelop"));
-    } else if (portfolio === "测试项目") {
-      result = result.filter(p => p.name.toLowerCase().includes("测试") || p.name.toLowerCase().includes("test"));
+    } else if (portfolio !== "全部项目") {
+      result = result.filter(p => p.name.trim() === portfolio);
     }
-    // "全部项目组合" shows all
+    // "全部项目" shows all
 
     // View mode filter - only filter if user explicitly changes from default
     const now = new Date();

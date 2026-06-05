@@ -18,6 +18,9 @@ import {
 } from "lucide-react";
 import type { WorkbenchData, WorkflowStep } from "../domain/workbench";
 import { useWorkbenchState } from "../App";
+import { projectApi } from "../services/api/projectApi";
+import { useWorkbenchDispatch } from "../state/WorkbenchProvider";
+import { addProject as addProjectAction, addWorkflowTemplate as addWorkflowTemplateAction } from "../state/workbenchActions";
 
 interface AiProjectBriefingProps {
   data: WorkbenchData;

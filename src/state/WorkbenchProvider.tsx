@@ -16,6 +16,7 @@ import type {
 } from "../domain/workbench";
 import type { RunnerProfile } from "../domain/runner";
 import { workbenchReducer } from "./workbenchReducer";
+import type { WorkbenchAction } from "./workbenchActions";
 import {
   updateGateStatus as updateGateStatusAction,
   reassignAgentRun as reassignAgentRunAction,
@@ -181,10 +182,17 @@ interface WorkbenchState {
 }
 
 export const WorkbenchContext = createContext<WorkbenchState | null>(null);
+export const WorkbenchDispatchContext = createContext<React.Dispatch<WorkbenchAction> | null>(null);
 
 export function useWorkbenchState(): WorkbenchState {
   const ctx = useContext(WorkbenchContext);
   if (!ctx) throw new Error("useWorkbenchState must be used within WorkbenchProvider");
+  return ctx;
+}
+
+export function useWorkbenchDispatch(): React.Dispatch<WorkbenchAction> {
+  const ctx = useContext(WorkbenchDispatchContext);
+  if (!ctx) throw new Error("useWorkbenchDispatch must be used within WorkbenchProvider");
   return ctx;
 }
 
@@ -621,5 +629,9 @@ export function WorkbenchProvider({ children }: WorkbenchProviderProps) {
     ]
   );
 
-  return <WorkbenchContext.Provider value={state}>{children}</WorkbenchContext.Provider>;
+  return (
+    <WorkbenchDispatchContext.Provider value={dispatch}>
+      <WorkbenchContext.Provider value={state}>{children}</WorkbenchContext.Provider>
+    </WorkbenchDispatchContext.Provider>
+  );
 }

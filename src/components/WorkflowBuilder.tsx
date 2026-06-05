@@ -1488,6 +1488,26 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
     return (p.get("mode") === "ai" ? "ai" : "manual") as "manual" | "ai";
   });
 
+  // Sync mode from URL hash changes (when navigating from workflow management page)
+  useEffect(() => {
+    const syncMode = () => {
+      const p = new URLSearchParams(window.location.hash.split("?")[1] || "");
+      const urlMode = p.get("mode");
+      if (urlMode === "ai" && mode !== "ai") setMode("ai");
+      else if (urlMode === "manual" && mode !== "manual") setMode("manual");
+    };
+    syncMode();
+    window.addEventListener("hashchange", syncMode);
+    return () => window.removeEventListener("hashchange", syncMode);
+  }, [mode]);
+
+  // Wrapper to update both mode state and URL
+  const switchMode = (newMode: "manual" | "ai") => {
+    setMode(newMode);
+    const hash = window.location.hash.split("?")[0];
+    window.history.replaceState(null, "", window.location.pathname + `${hash}?mode=${newMode}`);
+  };
+
   // AI 流程设计状态（提升到父组件，切换页面时不丢失）
   const [aiChatMessages, setAiChatMessages] = useState<{ id: number; author: string; text: string; isUser: boolean; time: string }[]>([]);
   const [aiMaterials, setAiMaterials] = useState<{ name: string; ext: string }[]>([]);
@@ -1777,10 +1797,10 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
         <div className="wf-v2-topbar-left">
           <nav className="wf-v2-breadcrumb">
             <div className="wf-v2-mode-switch">
-              <button className={`wf-v2-mode-btn${mode === "manual" ? " active" : ""}`} onClick={() => setMode("manual")}>
+              <button className={`wf-v2-mode-btn${mode === "manual" ? " active" : ""}`} onClick={() => switchMode("manual")}>
                 <List size={14} /> 常规流程设计
               </button>
-              <button className={`wf-v2-mode-btn${mode === "ai" ? " active" : ""}`} onClick={() => { setMode("ai"); closeStepInspector(); }}>
+              <button className={`wf-v2-mode-btn${mode === "ai" ? " active" : ""}`} onClick={() => { switchMode("ai"); closeStepInspector(); }}>
                 <Sparkles size={14} /> AI 流程设计
               </button>
             </div>
@@ -1836,16 +1856,18 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
             </button>
           )}
           <button className="wf-v2-btn" onClick={() => {
-            if (!selectedTemplate || mode === "ai") return;
+            const stepsToValidate = mode === "ai" ? aiDraftSteps : sortedSteps;
+            const templateName = mode === "ai" ? "AI 流程草案" : selectedTemplate?.name ?? "当前流程";
+            if (stepsToValidate.length === 0 && mode === "manual" && !selectedTemplate) return;
             const issues: string[] = [];
-            if (sortedSteps.length === 0) issues.push("流程没有任何步骤");
-            sortedSteps.forEach((s, i) => {
+            if (stepsToValidate.length === 0) issues.push("流程没有任何步骤");
+            stepsToValidate.forEach((s: WorkflowStep, i: number) => {
               if (!s.name?.trim()) issues.push(`步骤 ${i + 1} 缺少名称`);
               if (!s.roleId) issues.push(`步骤 ${i + 1}「${s.name}」未绑定角色`);
               if (!s.modelProviderId || !s.modelName) issues.push(`步骤 ${i + 1}「${s.name}」未配置模型`);
               if (!s.runnerId) issues.push(`步骤 ${i + 1}「${s.name}」未配置 Runner`);
             });
-            if (issues.length === 0) alert(`✓ 校验通过\n「${selectedTemplate.name}」共 ${sortedSteps.length} 个步骤，全部校验通过。`);
+            if (issues.length === 0) alert(`✓ 校验通过\n「${templateName}」共 ${stepsToValidate.length} 个步骤，全部校验通过。`);
             else alert(`⚠ 校验发现 ${issues.length} 个问题：\n\n${issues.join('\n')}`);
           }}>✓ 校验流程</button>
           <button className="wf-v2-btn wf-v2-btn-primary" disabled={mode === "manual" && templateEnabled} onClick={() => {

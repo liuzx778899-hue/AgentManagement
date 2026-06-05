@@ -71,7 +71,9 @@ function AppContent() {
 
   const enterAiWorkflowDesign = () => {
     // Navigate to workflows with AI mode
-    window.location.hash = "#workflows?mode=ai";
+    setSelectedWorkflowTemplateId(undefined);
+    setView("workflows");
+    window.history.replaceState(null, "", window.location.pathname + "#workflows?mode=ai");
   };
 
   const contextMode = view === "workflows" ? "流程设计模式" : undefined;

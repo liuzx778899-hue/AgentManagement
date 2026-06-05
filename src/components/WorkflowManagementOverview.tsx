@@ -384,14 +384,16 @@ export function WorkflowManagementOverview({ data, onNavigate, onEnterWorkflowDe
   };
 
   const handleCreateWorkflow = () => {
-    onNavigate?.("workflows");
+    window.history.replaceState(null, "", window.location.pathname + "#workflows?mode=manual");
+    window.dispatchEvent(new CustomEvent("navigate", { detail: { view: "workflows" } }));
   };
 
   const handleCreateAiWorkflow = () => {
     if (onEnterAiWorkflowDesign) {
       onEnterAiWorkflowDesign();
     } else {
-      onNavigate?.("workflows");
+      window.history.replaceState(null, "", window.location.pathname + "#workflows?mode=ai");
+      window.dispatchEvent(new CustomEvent("navigate", { detail: { view: "workflows" } }));
     }
   };
 

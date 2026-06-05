@@ -3,20 +3,31 @@ import {
   ArrowLeft,
   Activity,
   ShieldCheck,
-  CheckCircle2,
-  AlertTriangle,
-  Target,
-  FileText,
-  History,
-  Users,
-  GitBranch,
+  Star,
+  Save,
   ExternalLink,
+  CheckCircle2,
+  Play,
+  Pause,
+  AlertTriangle,
+  ChevronRight,
+  X,
+  MoreHorizontal,
+  FolderOpen,
+  GitBranch,
+  Clock,
+  Users,
+  FileText,
+  Zap,
+  Target,
+  History,
   RefreshCw,
   FolderGit2,
   GanttChartSquare,
-  Save,
-  Star,
 } from "lucide-react";
+import { projectApi } from "../services/api/projectApi";
+import { useWorkbenchDispatch } from "../state/WorkbenchProvider";
+import { updateProject } from "../state/workbenchActions";
 import type { WorkbenchData } from "../domain/workbench";
 
 // ── Types ──────────────────────────────────────────────────────────────
@@ -164,6 +175,7 @@ function formatDateShort(iso: string): string {
 // ── Component ──────────────────────────────────────────────────────────
 
 export function ProjectDetailPage({ data, projectId, onBack, onEnterWorkbench }: ProjectDetailPageProps) {
+  const dispatch = useWorkbenchDispatch();
   const [activeTab, setActiveTab] = useState<DetailTab>("overview");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -196,14 +208,22 @@ export function ProjectDetailPage({ data, projectId, onBack, onEnterWorkbench }:
 
   // Initialize starred state from project data
   useEffect(() => {
-    if (project?.starred) {
-      setStarred(project.starred);
-    }
+    setStarred(!!project?.starred);
   }, [project?.starred]);
 
-  // Handle star toggle
-  const handleToggleStar = () => {
-    setStarred((prev) => !prev);
+  // Handle star toggle with API persistence
+  const handleToggleStar = async () => {
+    const newStarred = !starred;
+    setStarred(newStarred);
+    // Update store immediately
+    dispatch(updateProject(projectId, { starred: newStarred }));
+    try {
+      await projectApi.update(projectId, { starred: newStarred });
+    } catch {
+      // Revert on failure
+      setStarred(!newStarred);
+      dispatch(updateProject(projectId, { starred: !newStarred }));
+    }
   };
 
   // Project tasks

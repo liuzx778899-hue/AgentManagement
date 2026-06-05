@@ -18,6 +18,7 @@ export interface UpdateProjectInput {
   defaultBranch?: string;
   worktreeRoot?: string;
   workflowTemplateId?: string;
+  starred?: boolean;
 }
 
 export interface ImportProjectInput {
