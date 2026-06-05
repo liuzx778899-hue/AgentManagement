@@ -22,7 +22,8 @@
   },
   "workflowTemplateId": "software-dev-v1",
   "createdAt": "2026-06-04T13:52:08.281Z",
-  "updatedAt": "2026-06-04T13:52:08.281Z",
+  "updatedAt": "2026-06-05T17:45:26.328Z",
   "version": "1.0",
-  "persistedAt": "2026-06-04T13:52:08.281Z"
+  "persistedAt": "2026-06-05T17:45:26.328Z",
+  "starred": false
 }

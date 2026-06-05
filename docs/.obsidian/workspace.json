@@ -11,10 +11,24 @@
             "id": "acf4e8c8f2492d84",
             "type": "leaf",
             "state": {
-              "type": "empty",
-              "state": {},
+              "type": "markdown",
+              "state": {
+                "file": "00-导航.md",
+                "mode": "source",
+                "source": false,
+                "backlinks": true,
+                "backlinkOpts": {
+                  "collapseAll": false,
+                  "extraContext": false,
+                  "sortOrder": "alphabetical",
+                  "showSearch": false,
+                  "searchQuery": "",
+                  "backlinkCollapsed": false,
+                  "unlinkedCollapsed": true
+                }
+              },
               "icon": "lucide-file",
-              "title": "新标签页"
+              "title": "00-导航"
             }
           }
         ]
@@ -36,8 +50,8 @@
             "state": {
               "type": "file-explorer",
               "state": {
-                "sortOrder": "alphabetical",
-                "autoReveal": true
+                "sortOrder": "alphabeticalReverse",
+                "autoReveal": false
               },
               "icon": "lucide-folder-closed",
               "title": "文件列表"
@@ -183,6 +197,26 @@
             "id": "7a921d29c8da93cd",
             "type": "leaf",
             "state": {
+              "type": "empty",
+              "state": {},
+              "icon": "lucide-file",
+              "title": "新标签页"
+            }
+          },
+          {
+            "id": "7bbadc37b9508448",
+            "type": "leaf",
+            "state": {
+              "type": "empty",
+              "state": {},
+              "icon": "lucide-file",
+              "title": "新标签页"
+            }
+          },
+          {
+            "id": "b1cee6fc6207a0de",
+            "type": "leaf",
+            "state": {
               "type": "graph-analysis",
               "state": {},
               "icon": "GA-ICON",
@@ -190,7 +224,7 @@
             }
           }
         ],
-        "currentTab": 7
+        "currentTab": 9
       }
     ],
     "direction": "horizontal",
@@ -210,52 +244,52 @@
   },
   "active": "acf4e8c8f2492d84",
   "lastOpenFiles": [
-    "design/assets/current/workflow-conventional-design-v2-final.png",
-    "design/assets/current/workbench-v1.png",
-    "design/assets/current/workflow-builder-dual-mode-v1.png",
-    "design/assets/current/README.md",
-    "design/assets/current/project-management-overview-v1.png",
-    "design/assets/current/project-management-overview-ai-briefing-v1.png",
-    "design/assets/current/project-detail-trace-drawer-v1.png",
-    "design/assets/current/project-detail-gantt-v1.png",
-    "design/assets/current/memory-management-knowledge-center-v1.png",
-    "design/assets/current/ai-workflow-design-v1-final.png",
-    "design/assets/current/ai-project-initiation-v2-final.png",
-    "design/assets/current/ai-project-initiation-from-overview-v1.png",
-    "design/assets/current",
-    "superpowers/status/2026-05-17-audit-resolution.md",
-    "superpowers/status/2026-05-16-product-readiness-audit.md",
-    "superpowers/status/2026-05-15-agent-workbench-checkpoint.md",
-    "superpowers/specs/2026-05-30-local-api-server-design.md",
-    "superpowers/specs/2026-05-30-issue-workflow.md",
-    "superpowers/specs/2026-05-16-workflow-canvas-design.md",
-    "superpowers/specs/2026-05-16-role-markdown-mod-plan.md",
-    "superpowers/specs/2026-05-16-role-markdown-design.md",
-    "superpowers/specs/2026-05-16-project-workspace-v2-design.md",
-    "superpowers/specs/2026-05-16-project-md-system-design.md",
-    "superpowers/specs/2026-05-16-project-management-v2-design.md",
-    "superpowers/specs/2026-05-16-project-management-v3-design.md",
-    "superpowers/specs/2026-05-16-ai-assistant-settings-design.md",
-    "superpowers/specs/2026-05-16-ai-assistant-design.md",
-    "superpowers/specs/2026-05-15-workflow-consolidation-design.md",
-    "superpowers/specs/2026-05-15-project-management-merge-design.md",
-    "superpowers/specs/2026-05-15-v1-product-flow.md",
-    "superpowers/specs/2026-05-15-im-adapter-design.md",
-    "superpowers/specs/2026-05-15-git-devops-integration-design.md",
-    "superpowers/specs/2026-05-15-frontend-engineering-standards-design.md",
-    "superpowers/specs/2026-05-15-agent-workbench-ui-design.md",
+    "00-导航.md",
+    "README.md",
+    "backup/components/WorkflowEdge.tsx",
+    "backup/components/RunnerLogs.tsx",
+    "backup/components/RoleMdViewer.tsx",
+    "backup/components/PullRequestList.tsx",
+    "backup/components/IssueList.tsx",
+    "backup/components/CiPipelinePanel.tsx",
+    "backup/components/AiActions.tsx",
+    "frontend/FRONTEND_IMPLEMENTATION_PLAN.md",
+    "backup/components",
+    "backup",
+    "frontend",
+    "PRODUCT_ROADMAP_AND_ARCHITECTURE.md",
+    "CAPABILITY_CENTER_REQUIREMENTS.md",
+    "PHASE_2_BLUEPRINT.md",
+    "PHASE_1_WEB_MVP_EXECUTION_CONSTRAINTS.md",
+    "PROJECT_STATUS.md",
+    "LATEST_CONTEXT.md",
+    "HANDOFF_NEXT_TASKS.md",
+    "CODE_REVIEW_AND_FIX_REQUESTS.md",
+    "design/PAGE_SPEC.md",
+    "design/DESIGN_VS_IMPLEMENTATION_GAP.md",
+    "design/DESIGN_OVERVIEW.md",
+    "design/DESIGN_GAP_FIX_PLAN.md",
+    "design/assets/workflow-conventional-design-v2-final.png",
+    "design/assets/memory-management-knowledge-center-v1.png",
+    "design/assets/ai-workflow-design-v1-final.png",
+    "design/assets/ai-project-initiation-v2-final.png",
+    "design/assets/ai-project-initiation-from-overview-v1.png",
+    "SESSION_RECOVERY_PROJECT_DETAIL.md",
+    "MODIFICATION_LOG_2026-05-16.md",
+    "MIGRATION_LOG.md",
+    "GIT_WORKTREE_WORKFLOW.md",
+    "DESIGN_REVIEW_OPERATING_MODEL.md",
+    "design/mockups/workflow-spacing-after.png",
+    "design/mockups/workflow-conventional-design-v2-final-preview.png",
+    "design/mockups/workbench-v1-preview.png",
+    "design/mockups/ai-project-initiation-v2-final-preview.png",
     "superpowers/plans/2026-05-30-phase3-ui-integration.md",
-    "superpowers/plans/2026-05-30-phase2-engineering-layer.md",
-    "superpowers/plans/2026-05-16-workflow-canvas.md",
-    "superpowers/status",
-    "superpowers/specs",
-    "superpowers/plans",
-    "superpowers",
-    "generated/superpowers/status",
-    "generated/superpowers/specs",
-    "generated/superpowers/plans",
-    "generated/superpowers",
-    "generated",
+    "generated/superpowers/specs/2026-05-30-issue-workflow.md",
+    "generated/superpowers/specs/2026-05-15-agent-workbench-ui-design.md",
+    "generated/superpowers/specs/2026-05-15-frontend-engineering-standards-design.md",
+    "generated/superpowers/specs/2026-05-15-im-adapter-design.md",
+    "generated/superpowers/plans/2026-05-15-agent-workbench-mvp.md",
+    "design/assets/current/workflow-conventional-design-v2-final.png",
     "未命名.canvas"
   ]
 }
