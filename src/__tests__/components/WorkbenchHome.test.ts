@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { WorkflowStep, WorkflowStepAssignment } from '../../domain/workbench';
 import type { Task } from '../../domain/task';
 import { workbenchData } from '../../data/fixtures';
-import { getStepStatus, buildTabs } from '../../components/WorkbenchHome';
+import { getStepStatus, buildTabs, escapeHtml } from '../../components/WorkbenchHome';
 
 // Minimal mock data matching actual domain types
 const mockAssignment: WorkflowStepAssignment = {
@@ -83,6 +83,49 @@ describe('getStepStatus', () => {
     ];
     const result = getStepStatus(mockStep, tasks);
     expect(result).toEqual({ cls: 'run', label: '运行中' });
+  });
+
+  it('returns queued when task is queued', () => {
+    const tasks: Task[] = [{ ...mockTask, status: 'queued' }];
+    const result = getStepStatus(mockStep, tasks);
+    expect(result).toEqual({ cls: 'queued', label: '排队中' });
+  });
+
+  it('returns queued when task is draft', () => {
+    const tasks: Task[] = [{ ...mockTask, status: 'draft' }];
+    const result = getStepStatus(mockStep, tasks);
+    expect(result).toEqual({ cls: 'queued', label: '排队中' });
+  });
+
+  it('prioritizes running over failed', () => {
+    const tasks: Task[] = [
+      { ...mockTask, id: 'task-a', status: 'running' },
+      { ...mockTask, id: 'task-b', status: 'failed' },
+    ];
+    const result = getStepStatus(mockStep, tasks);
+    expect(result).toEqual({ cls: 'run', label: '运行中' });
+  });
+
+  it('handles undefined workflowStepId', () => {
+    const tasks: Task[] = [{ ...mockTask, workflowStepId: undefined }];
+    const result = getStepStatus(mockStep, tasks);
+    expect(result).toEqual({ cls: 'idle', label: '待开始' });
+  });
+});
+
+describe('escapeHtml', () => {
+  it('escapes HTML special characters', () => {
+    expect(escapeHtml('<script>alert("xss")</script>')).toBe(
+      '&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;'
+    );
+  });
+
+  it('escapes ampersands', () => {
+    expect(escapeHtml('a & b')).toBe('a &amp; b');
+  });
+
+  it('returns plain text unchanged', () => {
+    expect(escapeHtml('hello world')).toBe('hello world');
   });
 });
 

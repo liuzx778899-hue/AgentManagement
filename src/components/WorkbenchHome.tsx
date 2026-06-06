@@ -37,6 +37,15 @@ interface WorkbenchHomeProps {
   activeProjectId?: string;
 }
 
+// HTML 转义 - 防止 XSS
+export function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 interface TerminalTab {
   id: string;
   label: string;
@@ -56,11 +65,13 @@ export function getStepStatus(step: WorkflowStep, tasks: Task[]): { cls: string;
   const allDone = stepTasks.every(t => t.status === 'done');
   const hasFailed = stepTasks.some(t => t.status === 'failed');
   const inGate = stepTasks.some(t => t.status === 'gate');
+  const queued = stepTasks.some(t => t.status === 'queued' || t.status === 'draft');
 
-  if (hasFailed) return { cls: "error", label: "失败" };
-  if (inGate) return { cls: "wait", label: "等待 Gate" };
   if (running) return { cls: "run", label: "运行中" };
+  if (inGate) return { cls: "wait", label: "等待 Gate" };
+  if (hasFailed) return { cls: "error", label: "失败" };
   if (allDone) return { cls: "ok", label: "已完成" };
+  if (queued) return { cls: "queued", label: "排队中" };
   return { cls: "idle", label: "待开始" };
 }
 
@@ -73,7 +84,6 @@ export function buildTabs(data: WorkbenchData, tasks: Task[]): TerminalTab[] {
     const assignment = step.assignments?.[0];
     const role = assignment ? data.roles.find((item) => item.id === assignment.roleId) : undefined;
     const task = tasks.find(t => t.workflowStepId === step.id);
-    const run = task ? data.agentRuns.find(r => r.taskId === task.id && r.status === 'running') : undefined;
     const runnerId = assignment?.runnerId ?? 'runner-claude-code';
 
     return {
@@ -113,13 +123,14 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
   const [startingTask, setStartingTask] = useState<string | null>(null);
   const [gitStatus, setGitStatus] = useState<GitStatus | null>(null);
   const logPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const loadingRef = useRef<{ type: 'start' | 'stop' | 'complete'; taskId: string } | null>(null);
 
   // 获取活动 tab
   const activeTab = tabs.find((item) => item.id === activeTabId);
 
-  // 轮询日志
+  // 轮询日志 - running 时持续轮询，completed/failed 时加载一次
   useEffect(() => {
-    if (!activeTab?.taskId || activeTab.status !== 'running') {
+    if (!activeTab?.taskId) {
       if (logPollRef.current) {
         clearInterval(logPollRef.current);
         logPollRef.current = null;
@@ -127,7 +138,7 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
       return;
     }
 
-    const pollLogs = async () => {
+    const fetchLogs = async () => {
       try {
         const result = await workbenchRunApi.getLogs(activeTab.taskId!);
         if (result.ok && result.data) {
@@ -137,15 +148,23 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
           }));
         }
       } catch (error) {
-        console.error('Failed to poll logs:', error);
+        console.error('Failed to fetch logs:', error);
       }
     };
 
     // 初始加载
-    pollLogs();
+    fetchLogs();
 
-    // 每 2 秒轮询
-    logPollRef.current = setInterval(pollLogs, 2000);
+    if (activeTab.status === 'running') {
+      // running 时每 2 秒轮询
+      logPollRef.current = setInterval(fetchLogs, 2000);
+    } else {
+      // completed/failed 时清除轮询
+      if (logPollRef.current) {
+        clearInterval(logPollRef.current);
+        logPollRef.current = null;
+      }
+    }
 
     return () => {
       if (logPollRef.current) {
@@ -192,7 +211,7 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
 
     const fetchGitStatus = async () => {
       try {
-        const result = await gitApi.getStatus(project.repoPath!);
+        const result = await gitApi.getStatus(project.repoPath);
         if (result.ok && result.data) {
           setGitStatus(result.data);
         }
@@ -242,14 +261,14 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
 
   // 启动任务 - Issue #26
   const handleStartTask = useCallback(async (taskId: string) => {
-    if (startingTask) return;
+    if (loadingRef.current) return;
+    loadingRef.current = { type: 'start', taskId };
     setStartingTask(taskId);
 
     try {
       const result = await workbenchRunApi.startTask(taskId);
       if (result.ok) {
         setToast("任务已启动");
-        // 触发页面刷新
         window.dispatchEvent(new CustomEvent("refresh-workbench"));
       } else {
         setToast(result.error?.message || "启动失败");
@@ -257,13 +276,15 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
     } catch (error) {
       setToast(error instanceof Error ? error.message : "启动失败");
     } finally {
+      loadingRef.current = null;
       setStartingTask(null);
     }
-  }, [startingTask]);
+  }, []);
 
   // 停止任务 - Issue #26
   const handleStopTask = useCallback(async (taskId: string) => {
-    if (startingTask) return;
+    if (loadingRef.current) return;
+    loadingRef.current = { type: 'stop', taskId };
     setStartingTask(taskId);
 
     try {
@@ -277,17 +298,19 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
     } catch (error) {
       setToast(error instanceof Error ? error.message : "停止失败");
     } finally {
+      loadingRef.current = null;
       setStartingTask(null);
     }
-  }, [startingTask]);
+  }, []);
 
-  // 完成任务 - Issue #26
+  // 完成任务 - Issue #26 (走 workbenchRunApi.stopTask 完成流程)
   const handleCompleteTask = useCallback(async (taskId: string) => {
-    if (startingTask) return;
+    if (loadingRef.current) return;
+    loadingRef.current = { type: 'complete', taskId };
     setStartingTask(taskId);
 
     try {
-      const result = await taskApi.update(taskId, { status: 'done' });
+      const result = await workbenchRunApi.stopTask(taskId, { taskId, status: 'done' });
       if (result.ok) {
         setToast("任务已完成");
         window.dispatchEvent(new CustomEvent("refresh-workbench"));
@@ -297,9 +320,10 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
     } catch (error) {
       setToast(error instanceof Error ? error.message : "更新失败");
     } finally {
+      loadingRef.current = null;
       setStartingTask(null);
     }
-  }, [startingTask]);
+  }, []);
 
   if (!project) {
     return (
@@ -573,7 +597,8 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
                     __html:
                       `<span class="terminal-prompt">agentdev@AgentManagement</span>:<span class="terminal-path">~/AgentManagement</span>$ npm run dev\n\n` +
                       `> agentmanagement@0.1.0 dev\n> vite\n\n` +
-                      activeTabLogs.map(l => `[${l.timestamp}] ${l.content}`).join('\n') +
+                      activeTabLogs.map(l => `[${escapeHtml(l.timestamp)}] ${escapeHtml(l.content)}`).join('\n') +
+                      (activeTabLogs.length === 0 ? (activeTab.status === 'idle' ? '<span class="terminal-muted">等待任务启动...</span>' : '<span class="terminal-muted">暂无日志</span>') : '') +
                       `\n\n<span class="terminal-prompt">agentdev@AgentManagement</span>:<span class="terminal-path">~/AgentManagement</span>$ <span class="terminal-cursor"></span>`,
                   }}
                 />
