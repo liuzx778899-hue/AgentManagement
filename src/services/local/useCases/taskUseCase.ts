@@ -157,26 +157,64 @@ export async function createTasksFromWorkflow(
   const template = templateResult.data!;
   const now = new Date().toISOString();
 
-  // 为每个步骤创建任务
-  const tasks: Task[] = template.steps.map((step, index) => {
-    const taskId = generateTaskId();
+  // Issue #27/#41: 按 assignment 创建 task（不是按 step）
+  // 第一遍：生成所有 task，建立 assignmentId → taskId 映射
+  const assignmentIdToTaskId = new Map<string, string>();
+  let isFirstAssignment = true;
 
-    return {
-      id: taskId,
-      projectId,
-      goal: step.name,
-      acceptanceCriteria: [], // 初始为空，后续可以填充
-      workflowTemplateId,
-      roleAssignment: { [step.id]: step.assignments?.[0]?.roleId ?? '' },
-      capabilityAuthorization: [],
-      launchStrategy: 'direct',
-      // 第一个任务状态为 running，其余为 queued
-      status: index === 0 ? 'running' : 'queued',
-      activeRunId: null,
-      createdAt: now,
-      updatedAt: now,
-    };
-  });
+  const tasks: Task[] = template.steps.flatMap((step) =>
+    step.assignments.map((assignment) => {
+      const taskId = generateTaskId();
+      assignmentIdToTaskId.set(assignment.id, taskId);
+
+      const task: Task = {
+        id: taskId,
+        projectId,
+        goal: assignment.goal || step.name,
+        acceptanceCriteria: assignment.acceptanceCriteria || [],
+        workflowTemplateId,
+        workflowStepId: step.id,
+        assignmentId: assignment.id,
+        priority: step.order * 10,
+        roleAssignment: { [step.id]: assignment.roleId },
+        capabilityAuthorization: [],
+        launchStrategy: 'direct',
+        // 第一个 step 的第一个 assignment 为 running，其余为 queued
+        status: isFirstAssignment ? 'running' : 'queued',
+        activeRunId: null,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      isFirstAssignment = false;
+      return task;
+    })
+  );
+
+  // 第二遍：解析 dependsOnTaskIds 和 notifyTaskIds
+  for (const step of template.steps) {
+    for (const assignment of step.assignments) {
+      const taskId = assignmentIdToTaskId.get(assignment.id);
+      if (!taskId) continue;
+
+      const task = tasks.find(t => t.id === taskId);
+      if (!task) continue;
+
+      // 从 dependsOnAssignmentIds 解析到 dependsOnTaskIds
+      if (assignment.dependsOnAssignmentIds?.length) {
+        task.dependsOnTaskIds = assignment.dependsOnAssignmentIds
+          .map(id => assignmentIdToTaskId.get(id))
+          .filter((id): id is string => !!id);
+      }
+
+      // 从 notifyAssignmentIds 解析到 notifyTaskIds
+      if (assignment.notifyAssignmentIds?.length) {
+        task.notifyTaskIds = assignment.notifyAssignmentIds
+          .map(id => assignmentIdToTaskId.get(id))
+          .filter((id): id is string => !!id);
+      }
+    }
+  }
 
   // 批量保存任务
   const saveResult = await taskRepository.saveBatch(tasks);
@@ -188,11 +226,13 @@ export async function createTasksFromWorkflow(
     };
   }
 
+  const totalAssignments = template.steps.reduce((sum, s) => sum + s.assignments.length, 0);
+
   return {
     ok: true,
     data: tasks,
     diagnostics: [
-      `已根据工作流 "${template.name}" 创建 ${tasks.length} 个任务`,
+      `已根据工作流 "${template.name}" 创建 ${tasks.length} 个任务（${template.steps.length} 个步骤，${totalAssignments} 个 assignment）`,
       `第一个任务 "${tasks[0]?.goal}" 状态为 running`,
     ],
   };

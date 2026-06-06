@@ -266,6 +266,10 @@ export function AiProjectBriefing({ data: _data, onBack }: AiProjectBriefingProp
           acceptanceCriteria: [],
           inputs: index === 0 ? ["讨论上下文", "协同资料"] : ["上一步输出"],
           outputs: index === flowBindings.length - 1 ? ["验收报告", "创建前确认"] : [`${binding.step}输出`],
+          // Issue #27: 依赖和通知链接
+          dependsOnAssignmentIds: index > 0 ? [`ai-briefing-assignment-${index}`] : [],
+          notifyAssignmentIds: index < flowBindings.length - 1 ? [`ai-briefing-assignment-${index + 2}`] : [],
+          eventRoutes: [],
         }],
         inputs: index === 0 ? ["讨论上下文", "协同资料"] : ["上一步输出"],
         outputs: index === flowBindings.length - 1 ? ["验收报告", "创建前确认"] : [`${binding.step}输出`],

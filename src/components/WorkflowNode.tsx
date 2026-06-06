@@ -35,11 +35,12 @@ export function WorkflowNode({
   onDragOver,
   onDrop,
 }: WorkflowNodeProps) {
-  // Issue #41: 从 assignments 获取角色和模型
-  const assignment = step.assignments?.[0];
-  const role = useMemo(
-    () => (assignment ? data.roles.find((r) => r.id === assignment.roleId) : undefined),
-    [data.roles, assignment]
+  // Issue #27/#41: 从 assignments 获取角色和模型
+  const assignments = step.assignments ?? [];
+  const assignment = assignments[0]; // primary assignment for model info
+  const roles = useMemo(
+    () => assignments.map(a => data.roles.find((r) => r.id === a.roleId)).filter((r): r is NonNullable<typeof r> => !!r),
+    [data.roles, assignments]
   );
   const provider = useMemo(
     () => (assignment ? data.modelProviders.find((p) => p.id === assignment.modelProviderId) : undefined),
@@ -120,7 +121,13 @@ export function WorkflowNode({
           <div className="step-info">
             <div className="step-name">{step.name}</div>
             <div className="step-meta">
-              {role && <span className="badge badge-v">{role.name}</span>}
+              {roles.length <= 1 ? (
+                roles[0] && <span className="badge badge-v">{roles[0].name}</span>
+              ) : (
+                <span className="badge badge-v" title={roles.map(r => r.name).join(', ')}>
+                  {roles.length} 角色
+                </span>
+              )}
               {provider && <span className="badge badge-b">{provider.name} {modelLabel}</span>}
               <span className={`badge ${step.gateMode === "manual" ? "badge-o" : "badge-g"}`}>
                 {step.gateMode === "manual" && <ShieldAlert size={10} />}
