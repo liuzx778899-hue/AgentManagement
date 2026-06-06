@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import {
   Brain,
   Camera,
@@ -12,6 +12,7 @@ import {
   FolderGit2,
   GitBranch,
   Info,
+  Loader2,
   MoreHorizontal,
   PanelRightClose,
   PanelRightOpen,
@@ -19,11 +20,16 @@ import {
   Puzzle,
   RotateCcw,
   Save,
+  Square,
   Terminal,
   XCircle,
   Zap,
 } from "lucide-react";
-import type { WorkbenchData, WorkbenchView } from "../domain/workbench";
+import type { WorkbenchData, WorkbenchView, WorkflowStep } from "../domain/workbench";
+import type { Task } from "../domain/task";
+import { taskApi, workbenchRunApi, gitApi } from "../services/api";
+import type { GitStatus } from "../services/api/gitApi";
+import type { LogEntry } from "../types/localEngineering";
 
 interface WorkbenchHomeProps {
   data: WorkbenchData;
@@ -31,66 +37,123 @@ interface WorkbenchHomeProps {
   activeProjectId?: string;
 }
 
-interface MockTab {
+interface TerminalTab {
   id: string;
   label: string;
   runnerLabel: string;
-  content: string;
+  stepId: string;
+  taskId?: string;
+  logs: LogEntry[];
+  status: 'idle' | 'running' | 'completed' | 'failed';
 }
 
-function mockTabs(data: WorkbenchData): MockTab[] {
+// 根据真实任务状态计算步骤状态
+function getStepStatus(step: WorkflowStep, tasks: Task[]): { cls: string; label: string } {
+  const stepTasks = tasks.filter(t => t.workflowStepId === step.id);
+  if (stepTasks.length === 0) return { cls: "idle", label: "待开始" };
+
+  const running = stepTasks.some(t => t.status === 'running');
+  const allDone = stepTasks.every(t => t.status === 'done');
+  const hasFailed = stepTasks.some(t => t.status === 'failed');
+  const inGate = stepTasks.some(t => t.status === 'gate');
+
+  if (hasFailed) return { cls: "error", label: "失败" };
+  if (inGate) return { cls: "wait", label: "等待 Gate" };
+  if (running) return { cls: "run", label: "运行中" };
+  if (allDone) return { cls: "ok", label: "已完成" };
+  return { cls: "idle", label: "待开始" };
+}
+
+// 从 workflow steps 生成 terminal tabs
+function buildTabs(data: WorkbenchData, tasks: Task[]): TerminalTab[] {
   const template = data.workflowTemplates[0];
   if (!template) return [];
-  return template.steps.slice(0, 3).map((step, index) => {
-    // Issue #41: 从 assignments 获取角色
+
+  return template.steps.slice(0, 3).map((step) => {
     const assignment = step.assignments?.[0];
     const role = assignment ? data.roles.find((item) => item.id === assignment.roleId) : undefined;
-    const content =
-      index === 0
-        ? [
-            `<span class="green">RUN</span>  v1.6.0 /home/agentdev/AgentManagement`,
-            `  <span class="green">鉁?/span> src/utils/format.ts (18)`,
-            `  <span class="green">鉁?/span> src/components/__tests__/NavBar.spec.tsx (12)`,
-            `  <span class="green">鉁?/span> src/pages/__tests__/dashboard.spec.tsx (14)`,
-            "",
-            `Test Files  <span class="green">21 passed</span> (21)`,
-            `Tests      <span class="green">99 passed</span> (99)`,
-          ].join("\n")
-        : index === 1
-          ? [
-              `<span class="green">VITE v5.3.2</span>  ready in 362 ms`,
-              `  鉃? Local:   <span class="blue">http://localhost:5173/</span>`,
-              `  鉃? Network: <span class="blue">http://192.168.1.100:5173/</span>`,
-            ].join("\n")
-          : ["On branch main", "Your branch is up to date with 'origin/main'.", "nothing to commit, working tree clean"].join("\n");
+    const task = tasks.find(t => t.workflowStepId === step.id);
+    const run = task ? data.agentRuns.find(r => r.taskId === task.id && r.status === 'running') : undefined;
+    const runnerId = assignment?.runnerId ?? 'runner-claude-code';
 
     return {
       id: `tab-${step.id}`,
       label: role?.name ?? step.name,
-      runnerLabel: index === 2 ? "Codex CLI" : "Claude Code",
-      content,
+      runnerLabel: runnerId.includes('codex') ? 'Codex CLI' :
+                   runnerId.includes('cursor') ? 'Cursor CLI' :
+                   runnerId.includes('gemini') ? 'Gemini CLI' : 'Claude Code',
+      stepId: step.id,
+      taskId: task?.id,
+      logs: [],
+      status: task?.status === 'running' ? 'running' :
+              task?.status === 'done' ? 'completed' :
+              task?.status === 'failed' ? 'failed' : 'idle',
     };
   });
-}
-
-function stepStatus(index: number, gateMode: string) {
-  if (index <= 1) return { cls: "ok", label: "已完成" };
-  if (index === 2) return { cls: "run", label: "运行中" };
-  if (index === 3 && gateMode === "manual") return { cls: "wait", label: "等待 Gate" };
-  return { cls: "idle", label: "待开始" };
 }
 
 export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHomeProps) {
   const project = data.projects.find((item) => item.id === activeProjectId) ?? data.projects[0];
   const template = data.workflowTemplates[0];
-  const tabs = useMemo(() => mockTabs(data), [data]);
+
+  // 真实任务过滤
+  const projectTasks = useMemo(() => {
+    if (!project?.id) return [];
+    return data.tasks.filter(t => t.projectId === project.id);
+  }, [data.tasks, project?.id]);
+
+  const tabs = useMemo(() => buildTabs(data, projectTasks), [data, projectTasks]);
   const [activeTabId, setActiveTabId] = useState(tabs[0]?.id ?? "");
-  const activeTab = tabs.find((item) => item.id === activeTabId);
+  const [logs, setLogs] = useState<Record<string, LogEntry[]>>({});
   const [panelVisible, setPanelVisible] = useState(true);
   const [popover, setPopover] = useState<string | null>(null);
   const [popoverAnchor, setPopoverAnchor] = useState<{ left: number; bottom: number } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [startingTask, setStartingTask] = useState<string | null>(null);
+  const [gitStatus, setGitStatus] = useState<GitStatus | null>(null);
+  const logPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // 获取活动 tab
+  const activeTab = tabs.find((item) => item.id === activeTabId);
+
+  // 轮询日志
+  useEffect(() => {
+    if (!activeTab?.taskId || activeTab.status !== 'running') {
+      if (logPollRef.current) {
+        clearInterval(logPollRef.current);
+        logPollRef.current = null;
+      }
+      return;
+    }
+
+    const pollLogs = async () => {
+      try {
+        const result = await workbenchRunApi.getLogs(activeTab.taskId!);
+        if (result.ok && result.data) {
+          setLogs(prev => ({
+            ...prev,
+            [activeTab.id]: result.data!.logs,
+          }));
+        }
+      } catch (error) {
+        console.error('Failed to poll logs:', error);
+      }
+    };
+
+    // 初始加载
+    pollLogs();
+
+    // 每 2 秒轮询
+    logPollRef.current = setInterval(pollLogs, 2000);
+
+    return () => {
+      if (logPollRef.current) {
+        clearInterval(logPollRef.current);
+        logPollRef.current = null;
+      }
+    };
+  }, [activeTab?.taskId, activeTab?.status, activeTab?.id]);
 
   useEffect(() => {
     if (!tabs.some((tab) => tab.id === activeTabId)) {
@@ -104,15 +167,42 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
     return () => window.clearTimeout(timer);
   }, [toast]);
 
-  // 真实最近文件 - 从任务获取 (必须在条件返回之前声明)
+  // 真实最近文件 - 从 git status 获取 (必须在条件返回之前声明)
   const recentFiles = useMemo(() => {
+    // 优先从 git status 获取变更文件
+    if (gitStatus && !gitStatus.isClean) {
+      const files: string[] = [];
+      if (gitStatus.staged > 0) files.push(`${gitStatus.staged} staged files`);
+      if (gitStatus.unstaged > 0) files.push(`${gitStatus.unstaged} modified files`);
+      if (gitStatus.untracked > 0) files.push(`${gitStatus.untracked} untracked files`);
+      return files.slice(0, 3);
+    }
+    // 备选：从最近任务获取
     if (!project?.id) return [];
     const recentTasks = data.tasks
       .filter((t) => t.projectId === project.id)
       .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
       .slice(0, 3);
-    return recentTasks.map((t) => t.goal.slice(0, 30) + "...").filter(Boolean);
-  }, [data.tasks, project?.id]);
+    return recentTasks.map((t) => (t.goal?.slice(0, 30) ?? 'Untitled') + "...").filter(Boolean);
+  }, [gitStatus, data.tasks, project?.id]);
+
+  // 获取 git status
+  useEffect(() => {
+    if (!project?.repoPath) return;
+
+    const fetchGitStatus = async () => {
+      try {
+        const result = await gitApi.getStatus(project.repoPath!);
+        if (result.ok && result.data) {
+          setGitStatus(result.data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch git status:', error);
+      }
+    };
+
+    fetchGitStatus();
+  }, [project?.repoPath]);
 
   const closePopover = () => {
     setPopover(null);
@@ -146,9 +236,70 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
     setActionLoading(label);
     window.setTimeout(() => {
       setActionLoading(null);
-      setToast(`${label}瀹屾垚`);
+      setToast(`${label}完成`);
     }, 700);
   };
+
+  // 启动任务 - Issue #26
+  const handleStartTask = useCallback(async (taskId: string) => {
+    if (startingTask) return;
+    setStartingTask(taskId);
+
+    try {
+      const result = await workbenchRunApi.startTask(taskId);
+      if (result.ok) {
+        setToast("任务已启动");
+        // 触发页面刷新
+        window.dispatchEvent(new CustomEvent("refresh-workbench"));
+      } else {
+        setToast(result.error?.message || "启动失败");
+      }
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : "启动失败");
+    } finally {
+      setStartingTask(null);
+    }
+  }, [startingTask]);
+
+  // 停止任务 - Issue #26
+  const handleStopTask = useCallback(async (taskId: string) => {
+    if (startingTask) return;
+    setStartingTask(taskId);
+
+    try {
+      const result = await workbenchRunApi.stopTask(taskId, { taskId, status: 'stopped' });
+      if (result.ok) {
+        setToast("任务已停止");
+        window.dispatchEvent(new CustomEvent("refresh-workbench"));
+      } else {
+        setToast(result.error?.message || "停止失败");
+      }
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : "停止失败");
+    } finally {
+      setStartingTask(null);
+    }
+  }, [startingTask]);
+
+  // 完成任务 - Issue #26
+  const handleCompleteTask = useCallback(async (taskId: string) => {
+    if (startingTask) return;
+    setStartingTask(taskId);
+
+    try {
+      const result = await taskApi.update(taskId, { status: 'done' });
+      if (result.ok) {
+        setToast("任务已完成");
+        window.dispatchEvent(new CustomEvent("refresh-workbench"));
+      } else {
+        setToast(result.error?.message || "更新失败");
+      }
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : "更新失败");
+    } finally {
+      setStartingTask(null);
+    }
+  }, [startingTask]);
 
   if (!project) {
     return (
@@ -165,7 +316,7 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
   }
 
   const flowSteps = template?.steps ?? [];
-  const todos = data.tasks.filter((task) => task.status !== "done");
+  const todos = projectTasks.filter((task) => task.status !== "done");
   const activeRuns = data.agentRuns.filter((run) => run.status === "running" || run.status === "waiting_gate");
   const activeGate = data.manualGates.find((gate) => gate.status === "waiting");
   const projectMemories = data.memories.filter((memory) => memory.scope === "project");
@@ -176,6 +327,9 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
   const popoverPositionStyle = popoverAnchor
     ? { left: popoverAnchor.left, top: popoverAnchor.bottom + 8, right: "auto", bottom: "auto", display: "block" }
     : undefined;
+
+  // 获取当前 tab 的日志
+  const activeTabLogs = activeTab ? (logs[activeTab.id] || []) : [];
 
   const renderSelectPopover = () => {
     if (!["project-select", "branch-select", "worktree-select", "phase-select", "top-more"].includes(popover ?? "")) return null;
@@ -340,7 +494,8 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
               // Issue #41: 从 assignments 获取角色和模型
               const assignment = step.assignments?.[0];
               const role = assignment ? data.roles.find((item) => item.id === assignment.roleId) : undefined;
-              const status = stepStatus(index, step.gateMode);
+              // Issue #26: 使用真实任务状态
+              const status = getStepStatus(step, projectTasks);
               return (
                 <button
                   key={step.id}
@@ -418,7 +573,7 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
                     __html:
                       `<span class="terminal-prompt">agentdev@AgentManagement</span>:<span class="terminal-path">~/AgentManagement</span>$ npm run dev\n\n` +
                       `> agentmanagement@0.1.0 dev\n> vite\n\n` +
-                      activeTab.content +
+                      activeTabLogs.map(l => `[${l.timestamp}] ${l.content}`).join('\n') +
                       `\n\n<span class="terminal-prompt">agentdev@AgentManagement</span>:<span class="terminal-path">~/AgentManagement</span>$ <span class="terminal-cursor"></span>`,
                   }}
                 />
