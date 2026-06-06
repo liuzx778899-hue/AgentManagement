@@ -52,6 +52,16 @@ function AppContent() {
   const [workspaceProjectId, setWorkspaceProjectId] = useState<string | null>(null);
   const [detailProjectId, setDetailProjectId] = useState<string | null>(null);
   const [activeWorkbenchProjectId, setActiveWorkbenchProjectId] = useState<string | undefined>(undefined);
+
+  // Listen for switch-project event from WorkbenchHome
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const { projectId } = (e as CustomEvent).detail as { projectId: string };
+      setActiveWorkbenchProjectId(projectId);
+    };
+    window.addEventListener("switch-project", handler);
+    return () => window.removeEventListener("switch-project", handler);
+  }, []);
   const [selectedWorkflowTemplateId, setSelectedWorkflowTemplateId] = useState<string | undefined>(undefined);
   const { data, deleteWorkflowTemplate, updateWorkflowTemplate } = useWorkbenchState();
   const fallbackProjectId = data.projects[0]?.id;

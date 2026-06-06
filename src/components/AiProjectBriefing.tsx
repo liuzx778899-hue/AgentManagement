@@ -547,24 +547,26 @@ export function AiProjectBriefing({ data: _data, onBack }: AiProjectBriefingProp
 
     let assignmentCounter = 0;
     const steps: WorkflowStep[] = flowBindings.map((binding, index) => {
-      // Merge multi-role into single assignment to avoid task duplication
-      const primaryRole = rolesMap.get(binding.roles[0]);
-      assignmentCounter++;
-      const assignments = [{
-        id: `ai-briefing-assignment-${assignmentCounter}`,
-        order: 1,
-        roleId: primaryRole?.id ?? "",
-        modelProviderId: provider?.id ?? "",
-        modelName: binding.model || provider?.models?.[0]?.name || "",
-        runnerId: runner?.id,
-        goal: binding.step,
-        acceptanceCriteria: [],
-        inputs: index === 0 ? ["讨论上下文", "协同资料"] : ["上一步输出"],
-        outputs: index === flowBindings.length - 1 ? ["验收报告", "创建前确认"] : [`${binding.step}输出`],
-        dependsOnAssignmentIds: index > 0 ? [`ai-briefing-assignment-${assignmentCounter - 1}`] : [],
-        notifyAssignmentIds: index < flowBindings.length - 1 ? [`ai-briefing-assignment-${assignmentCounter + 1}`] : [],
-        eventRoutes: [],
-      }];
+      // Create one assignment per role, preserving multi-role info
+      const assignments = binding.roles.map((roleName, ri) => {
+        const role = rolesMap.get(roleName);
+        assignmentCounter++;
+        return {
+          id: `ai-briefing-assignment-${assignmentCounter}`,
+          order: ri + 1,
+          roleId: role?.id ?? "",
+          modelProviderId: provider?.id ?? "",
+          modelName: binding.model || provider?.models?.[0]?.name || "",
+          runnerId: runner?.id,
+          goal: binding.step,
+          acceptanceCriteria: [],
+          inputs: index === 0 && ri === 0 ? ["讨论上下文", "协同资料"] : ["上一步输出"],
+          outputs: index === flowBindings.length - 1 && ri === binding.roles.length - 1 ? ["验收报告", "创建前确认"] : [`${binding.step}输出`],
+          dependsOnAssignmentIds: index > 0 && ri === 0 ? [`ai-briefing-assignment-${assignmentCounter - binding.roles.length}`] : [],
+          notifyAssignmentIds: index < flowBindings.length - 1 && ri === binding.roles.length - 1 ? [`ai-briefing-assignment-${assignmentCounter + 1}`] : [],
+          eventRoutes: [],
+        };
+      });
 
       return {
         id: `ai-briefing-step-${index + 1}`,

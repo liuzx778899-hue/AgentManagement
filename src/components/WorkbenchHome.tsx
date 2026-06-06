@@ -77,35 +77,44 @@ export function getStepStatus(step: WorkflowStep, tasks: Task[]): { cls: string;
 }
 
 // 从 workflow steps 生成 terminal tabs
-export function buildTabs(data: WorkbenchData, tasks: Task[]): TerminalTab[] {
-  const template = data.workflowTemplates[0];
+export function buildTabs(data: WorkbenchData, tasks: Task[], templateId?: string): TerminalTab[] {
+  const template = templateId
+    ? data.workflowTemplates.find(t => t.id === templateId)
+    : data.workflowTemplates[0];
   if (!template) return [];
 
-  return template.steps.slice(0, 3).map((step) => {
-    const assignment = step.assignments?.[0];
-    const role = assignment ? data.roles.find((item) => item.id === assignment.roleId) : undefined;
-    const task = tasks.find(t => t.workflowStepId === step.id);
-    const runnerId = assignment?.runnerId ?? 'runner-claude-code';
+  return template.steps.flatMap((step) => {
+    const assignments = step.assignments ?? [];
+    // Find tasks for this step (one task per assignment)
+    const stepTasks = tasks.filter(t => t.workflowStepId === step.id);
+    return assignments.map((assignment, ai) => {
+      const role = data.roles.find(r => r.id === assignment.roleId);
+      const task = stepTasks.find(t => t.assignmentId === assignment.id) ?? stepTasks[ai];
+      const runnerId = assignment.runnerId ?? 'runner-claude-code';
 
-    return {
-      id: `tab-${step.id}`,
-      label: role?.name ?? step.name,
-      runnerLabel: runnerId.includes('codex') ? 'Codex CLI' :
-                   runnerId.includes('cursor') ? 'Cursor CLI' :
-                   runnerId.includes('gemini') ? 'Gemini CLI' : 'Claude Code',
-      stepId: step.id,
-      taskId: task?.id,
-      logs: [],
-      status: task?.status === 'running' ? 'running' :
-              task?.status === 'done' ? 'completed' :
-              task?.status === 'failed' ? 'failed' : 'idle',
-    };
+      return {
+        id: `tab-${step.id}-${ai}`,
+        label: role?.name ?? step.name,
+        runnerLabel: runnerId.includes('codex') ? 'Codex CLI' :
+                     runnerId.includes('cursor') ? 'Cursor CLI' :
+                     runnerId.includes('gemini') ? 'Gemini CLI' : 'Claude Code',
+        stepId: step.id,
+        taskId: task?.id,
+        logs: [],
+        status: task?.status === 'running' ? 'running' :
+                task?.status === 'done' ? 'completed' :
+                task?.status === 'failed' ? 'failed' : 'idle',
+      };
+    });
   });
 }
 
 export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHomeProps) {
   const project = data.projects.find((item) => item.id === activeProjectId) ?? data.projects[0];
-  const template = data.workflowTemplates[0];
+  const template = useMemo(() => {
+    if (!project?.workflowTemplateId) return null;
+    return data.workflowTemplates.find(t => t.id === project.workflowTemplateId) ?? null;
+  }, [data.workflowTemplates, project?.workflowTemplateId]);
 
   // 真实任务过滤
   const projectTasks = useMemo(() => {
@@ -113,7 +122,7 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
     return data.tasks.filter(t => t.projectId === project.id);
   }, [data.tasks, project?.id]);
 
-  const tabs = useMemo(() => buildTabs(data, projectTasks), [data, projectTasks]);
+  const tabs = useMemo(() => buildTabs(data, projectTasks, project?.workflowTemplateId), [data, projectTasks, project?.workflowTemplateId]);
   const [activeTabId, setActiveTabId] = useState(tabs[0]?.id ?? "");
   const [logs, setLogs] = useState<Record<string, LogEntry[]>>({});
   const [panelVisible, setPanelVisible] = useState(true);
@@ -121,6 +130,14 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
   const [popoverAnchor, setPopoverAnchor] = useState<{ left: number; bottom: number } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [customTabs, setCustomTabs] = useState<TerminalTab[]>([]);
+  const [customTabCounter, setCustomTabCounter] = useState(1);
+  const [closedRoleTabs, setClosedRoleTabs] = useState<Set<string>>(new Set());
+  const [showClosedRoles, setShowClosedRoles] = useState(false);
+  const promptEditRef = useRef<HTMLTextAreaElement | null>(null);
+  const [savingPrompt, setSavingPrompt] = useState(false);
+  const [showGitPanel, setShowGitPanel] = useState(false);
+  const gitPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [gitStatus, setGitStatus] = useState<GitStatus | null>(null);
   const logPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const loadingRef = useRef<{ type: 'start' | 'stop' | 'complete'; taskId: string } | null>(null);
@@ -319,6 +336,27 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
     }
   }, []);
 
+  const handleSavePrompt = async () => {
+    if (!currentRole) return;
+    const newMarkdown = promptEditRef.current?.value ?? "";
+    setSavingPrompt(true);
+    try {
+      const res = await fetch("/api/roles", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...currentRole, roleMarkdown: newMarkdown }),
+      });
+      if (res.ok) {
+        window.dispatchEvent(new CustomEvent("refresh-workbench"));
+        setToast("提示词已保存");
+      }
+    } catch (err) {
+      console.error("Failed to save prompt:", err);
+    }
+    setSavingPrompt(false);
+    setPopover(null);
+  };
+
   if (!project) {
     return (
       <div className="wb-cockpit">
@@ -339,9 +377,21 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
   const activeGate = data.manualGates.find((gate) => gate.status === "waiting");
   const projectMemories = data.memories.filter((memory) => memory.scope === "project");
 
-  const activeStep = flowSteps.find((step) => `tab-${step.id}` === activeTabId);
-  // Issue #41: 从 assignments 获取角色
-  const activeRole = activeStep?.assignments?.[0] ? data.roles.find((role) => role.id === activeStep.assignments?.[0]?.roleId) : null;
+  const activeStep = flowSteps.find((step) => activeTabId.startsWith(`tab-${step.id}`));
+  // Issue #41: 从 assignments 获取所有角色名
+  const activeRoleNames = activeStep?.assignments
+    ? activeStep.assignments.map(a => data.roles.find(r => r.id === a.roleId)?.name).filter(Boolean).join("、")
+    : null;
+  // Get current role from active tab's assignment
+  const currentRole = useMemo(() => {
+    if (!activeStep) return null;
+    const assignments = activeStep.assignments ?? [];
+    const match = activeTabId.match(/-(\d+)$/);
+    const ai = match ? parseInt(match[1], 10) : 0;
+    const assignment = assignments[ai] ?? assignments[0];
+    if (!assignment?.roleId) return null;
+    return data.roles.find(r => r.id === assignment.roleId) ?? null;
+  }, [activeStep, activeTabId, data.roles]);
   const popoverPositionStyle = popoverAnchor
     ? { left: popoverAnchor.left, top: popoverAnchor.bottom + 8, right: "auto", bottom: "auto", display: "block" }
     : undefined;
@@ -392,7 +442,11 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
               key={item.key}
               className="wb-popup-action"
               onClick={() => {
-                setToast(`${item.label}已选择`);
+                if (popover === "project-select") {
+                  window.dispatchEvent(new CustomEvent("switch-project", { detail: { projectId: item.key } }));
+                } else {
+                  setToast(`${item.label}已选择`);
+                }
                 closePopover();
               }}
               type="button"
@@ -413,27 +467,52 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
     if (!popover || ["project-select", "branch-select", "worktree-select", "phase-select", "top-more"].includes(popover)) return null;
     const config: Record<string, { title: string; lines: string[] }> = {
       context: { title: "步骤上下文", lines: [`当前步骤：${activeTab?.label ?? "-"}`, `Runner：${activeTab?.runnerLabel ?? "-"}`, "最近修改：2 个文件", "待办事项：4 项"] },
-      prompt: { title: "项目提示词", lines: ["目标：保持项目可运行、流程可闭环。", "约束：优先复用现有组件和交互。"] },
-      memory: { title: "角色记忆", lines: ["产品经理：确认验收标准。", "前端工程师：注意工作台右栏布局。"] },
+      prompt: { title: "角色提示词", lines: currentRole ? [currentRole.roleMarkdown || currentRole.description || "暂无提示词"] : ["请先选择一个角色"] },
+      memory: { title: "角色记忆", lines: currentRole ? projectMemories.filter(m => m.roleId === currentRole.id).map(m => `${m.title}: ${(m.body || "").slice(0, 50)}`) : ["请先选择一个角色"] },
       mcp: { title: "MCP", lines: ["Browser：已启用", "Local Shell：已启用"] },
       skills: { title: "Skills", lines: ["ui-ux-pro-max：已启用", "code-simplifier：可选"] },
-      git: { title: "Git", lines: [`当前分支：${project.defaultBranch ?? "main"}`, "状态：已保存"] },
+      git: { title: "Git", lines: [`当前分支：${project.defaultBranch ?? "main"}`, `最近提交：${gitStatus?.lastCommitMessage?.slice(0, 40) ?? "加载中..."}`] },
       shell: { title: "Local Shell", lines: ["PowerShell", "CMD"] },
       snapshot: { title: "快照", lines: ["创建当前工作区快照。"] },
     };
     const item = config[popover];
     if (!item) return null;
+    const isPrompt = popover === "prompt";
+    const isMemory = popover === "memory";
     return (
       <div className="wb-toolbar-popover-fixed" style={popoverPositionStyle} onClick={closePopover}>
-        <div className="wb-popover-card-backdrop" onClick={(event) => event.stopPropagation()}>
+        <div className="wb-popover-card-backdrop" onClick={(event) => event.stopPropagation()} style={isPrompt ? { width: 360, maxHeight: 400, overflow: "auto" } : undefined}>
           <div className="wb-popup-caret" />
           <h4>{item.title}</h4>
-          {item.lines.map((line) => (
-            <p key={line}>{line}</p>
-          ))}
-          <button className="btn ghost btn-sm" onClick={closePopover} type="button">
-            关闭
-          </button>
+          {isPrompt && currentRole ? (
+            <>
+              <textarea
+                ref={promptEditRef}
+                defaultValue={currentRole.roleMarkdown || currentRole.description || ""}
+                style={{
+                  width: "100%", minHeight: 150, background: "var(--bg-tertiary)", border: "1px solid var(--border-primary)",
+                  borderRadius: 4, color: "var(--text-primary)", fontFamily: "inherit", fontSize: 12,
+                  padding: 8, resize: "vertical", marginBottom: 8,
+                }}
+                placeholder="输入角色提示词..."
+              />
+              <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
+                <button className="btn ghost btn-sm" onClick={closePopover} type="button">关闭</button>
+                <button className="btn btn-sm primary" disabled={savingPrompt} onClick={handleSavePrompt} type="button">
+                  {savingPrompt ? "保存中..." : "保存"}
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              {item.lines.map((line) => (
+                <p key={line}>{line}</p>
+              ))}
+              <button className="btn ghost btn-sm" onClick={closePopover} type="button">
+                关闭
+              </button>
+            </>
+          )}
         </div>
       </div>
     );
@@ -505,30 +584,35 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
       <div className={`wb-content-area${!panelVisible ? " panel-hidden" : ""}`}>
         <section className="wb-flow-band">
           <div className="wb-flow-title">
-            角色流程运行带 <span>{flowSteps.length} 个角色 · {activeStep ? `${String(activeStep.order).padStart(2, "0")} ${activeRole?.name ?? activeStep.name}` : "未选择"} 运行中</span>
+            角色流程运行带 <span>{flowSteps.length} 个角色 · {activeStep ? `${String(activeStep.order).padStart(2, "0")} ${activeRoleNames ?? activeStep.name}` : "未选择"} 运行中</span>
           </div>
           <div className="wb-flow-scroll">
             {flowSteps.map((step, index) => {
-              // Issue #41: 从 assignments 获取角色和模型
-              const assignment = step.assignments?.[0];
-              const role = assignment ? data.roles.find((item) => item.id === assignment.roleId) : undefined;
+              // Issue #41: 从 assignments 获取所有角色
+              const assignments = step.assignments ?? [];
+              const roleNames = assignments
+                .map(a => data.roles.find(r => r.id === a.roleId)?.name)
+                .filter(Boolean)
+                .join("、") || "未绑定";
+              const firstAssignment = assignments[0];
+              const firstTabId = `tab-${step.id}-0`;
               // Issue #26: 使用真实任务状态
               const status = getStepStatus(step, projectTasks);
               return (
                 <button
                   key={step.id}
-                  className={`wb-flow-card ${status.cls}${`tab-${step.id}` === activeTabId ? " active" : ""}`}
-                  onClick={() => setActiveTabId(`tab-${step.id}`)}
+                  className={`wb-flow-card ${status.cls}${activeTabId.startsWith(`tab-${step.id}`) ? " active" : ""}`}
+                  onClick={() => setActiveTabId(firstTabId)}
                   type="button"
                 >
                   <div className="wb-flow-card-title">
                     <span>{String(step.order).padStart(2, "0")}</span>
                     <strong>{step.name}</strong>
                   </div>
-                  <p>{role?.name ?? "未绑定"} Agent</p>
-                  <div className="wb-flow-model">{assignment?.modelName || "DeepSeek / deepseek-v4-pro"}</div>
+                  <p>{roleNames} Agent</p>
+                  <div className="wb-flow-model">{firstAssignment?.modelName || "DeepSeek / deepseek-v4-pro"}</div>
                   <div className="wb-flow-footer">
-                    <span>{tabs[index % Math.max(tabs.length, 1)]?.runnerLabel ?? "Claude Code"}</span>
+                    <span>{tabs.find(t => t.stepId === step.id)?.runnerLabel ?? "Claude Code"}</span>
                     <b className={`wb-step-state ${status.cls}`}>{status.label}</b>
                   </div>
                 </button>
@@ -543,7 +627,7 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
               Terminal Workspace
               <span className="wb-run-meta">
                 <span className="wb-run-dot" />
-                运行中 · {activeRole?.name ?? activeTab?.label ?? "未选择"}
+                运行中 · {activeRoleNames ?? activeTab?.label ?? "未选择"}
               </span>
             </div>
             <div className="wb-ws-tools">
@@ -553,9 +637,8 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
                 ["prompt", FileText, "角色提示词"],
                 ["mcp", Puzzle, "MCP"],
                 ["skills", Zap, "Skills"],
-                ["git", GitBranch, "Git"],
                 ["shell", Terminal, "Local Shell"],
-                ["snapshot", Camera, "蹇収"],
+                ["snapshot", Camera, "快照"],
               ].map(([id, Icon, label]) => {
                 const ToolIcon = Icon as typeof Info;
                 return (
@@ -565,21 +648,109 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
                   </button>
                 );
               })}
-              <button className="wb-toolbar-btn" onClick={() => setToast("鏇村宸ュ叿寮€鍙戜腑")} type="button">
+              <button className="wb-toolbar-btn" onClick={() => setShowGitPanel(true)} type="button">
+                <GitBranch size={14} />
+                <span>Git</span>
+              </button>
+              <button className="wb-toolbar-btn" onClick={() => setToast("更多工具开发中")} type="button">
                 <MoreHorizontal size={14} />
               </button>
             </div>
           </div>
 
-          <div className="wb-terminal-tabs">
-            {tabs.map((tab) => (
-              <button key={tab.id} className={`wb-terminal-tab${activeTabId === tab.id ? " active" : ""}`} onClick={() => setActiveTabId(tab.id)} type="button">
-                {tab.label}
-              </button>
+          <div className="wb-terminal-tabs" style={{ overflowX: "auto", whiteSpace: "nowrap", flexWrap: "nowrap" }}>
+            {tabs.filter(t => !closedRoleTabs.has(t.id)).map((tab) => (
+              <div key={tab.id} style={{ display: "inline-flex", alignItems: "center", position: "relative" }}>
+                <button className={`wb-terminal-tab${activeTabId === tab.id ? " active" : ""}`} onClick={() => setActiveTabId(tab.id)} type="button">
+                  {tab.label}
+                </button>
+                <button
+                  className="wb-terminal-tab-close"
+                  onClick={() => {
+                    setClosedRoleTabs(prev => new Set([...prev, tab.id]));
+                    if (activeTabId === tab.id) {
+                      const remaining = [...tabs.filter(t => !closedRoleTabs.has(t.id) && t.id !== tab.id), ...customTabs];
+                      setActiveTabId(remaining[0]?.id ?? "");
+                    }
+                  }}
+                  title="关闭此窗口（可重新打开）"
+                  type="button"
+                  style={{ marginLeft: -6, marginRight: 2, cursor: "pointer", background: "none", border: "none", color: "var(--text-muted)", fontSize: 12, padding: "2px 4px" }}
+                >×</button>
+              </div>
             ))}
-            <button className="wb-terminal-tab plus" onClick={() => setToast("鏂板缓缁堢寮€鍙戜腑")} type="button">
+            {customTabs.map((tab) => (
+              <div key={tab.id} style={{ display: "inline-flex", alignItems: "center" }}>
+                <button className={`wb-terminal-tab custom${activeTabId === tab.id ? " active" : ""}`} onClick={() => setActiveTabId(tab.id)} type="button">
+                  {tab.label}
+                </button>
+                <button
+                  className="wb-terminal-tab-close"
+                  onClick={() => {
+                    setCustomTabs(prev => prev.filter(t => t.id !== tab.id));
+                    if (activeTabId === tab.id) {
+                      const remaining = [...tabs.filter(t => !closedRoleTabs.has(t.id)), ...customTabs.filter(t => t.id !== tab.id)];
+                      setActiveTabId(remaining[0]?.id ?? "");
+                    }
+                  }}
+                  title="删除此窗口"
+                  type="button"
+                  style={{ marginLeft: -6, marginRight: 2, cursor: "pointer", background: "none", border: "none", color: "var(--danger)", fontSize: 12, padding: "2px 4px" }}
+                >×</button>
+              </div>
+            ))}
+            <button
+              className="wb-terminal-tab plus"
+              onClick={() => {
+                const id = `custom-tab-${Date.now()}`;
+                const label = `终端 ${customTabCounter}`;
+                setCustomTabs(prev => [...prev, { id, label, runnerLabel: "本地", stepId: "", taskId: undefined, logs: [], status: "idle" }]);
+                setCustomTabCounter(c => c + 1);
+                setActiveTabId(id);
+              }}
+              type="button"
+            >
               +
             </button>
+            {closedRoleTabs.size > 0 && (
+              <div style={{ position: "relative" }}>
+                <button
+                  className="wb-terminal-tab"
+                  onClick={() => setShowClosedRoles(!showClosedRoles)}
+                  title="已关闭的角色窗口"
+                  type="button"
+                  style={{ fontSize: 11, opacity: 0.6 }}
+                >
+                  已关闭 ▾
+                </button>
+                {showClosedRoles && (
+                  <>
+                    <div style={{
+                      position: "fixed", top: 105, zIndex: 110,
+                      background: "#0d1723", border: "1px solid #26384d", borderRadius: 8,
+                      padding: 6, minWidth: 140, boxShadow: "0 4px 16px rgba(0,0,0,0.6)", marginBottom: 4,
+                    }}>
+                      {tabs.filter(t => closedRoleTabs.has(t.id)).map(t => (
+                        <button
+                          key={t.id}
+                          className="wb-popup-action"
+                          style={{ width: "100%", justifyContent: "flex-start", fontSize: 11 }}
+                          onClick={() => {
+                            setClosedRoleTabs(prev => { const next = new Set(prev); next.delete(t.id); return next; });
+                            setActiveTabId(t.id);
+                            setShowClosedRoles(false);
+                          }}
+                          type="button"
+                        >
+                          {t.label}
+                        </button>
+                      ))}
+                    </div>
+                    <div style={{ position: "fixed", inset: 0, zIndex: 109 }} onClick={() => setShowClosedRoles(false)} />
+                  </>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="wb-terminal-content">
@@ -680,7 +851,7 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
                   <span>当前角色记忆摘要</span>
                 </div>
                 <p style={{ color: "var(--text-secondary)", fontSize: 12, lineHeight: 1.5 }}>
-                  {activeRole?.name ?? "产品经理"}：角色约束已同步，继续关注验收标准、风险确认和执行反馈。
+                  {activeRoleNames ?? "产品经理"}：角色约束已同步，继续关注验收标准、风险确认和执行反馈。
                 </p>
               </div>
 
@@ -733,6 +904,87 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
 
       {renderSelectPopover()}
       {renderToolPopover()}
+
+      {/* Git Panel */}
+      {showGitPanel && (
+        <div className="wb-modal-backdrop" style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,0.5)" }} onClick={() => setShowGitPanel(false)}>
+          <div className="wb-git-panel" style={{
+            position: "absolute", right: 20, top: 40, bottom: 20, width: 420,
+            background: "#0d1723", border: "1px solid #26384d", borderRadius: 12,
+            boxShadow: "0 8px 32px rgba(0,0,0,0.7)", display: "flex", flexDirection: "column", overflow: "hidden",
+          }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderBottom: "1px solid var(--border-primary)" }}>
+              <h3 style={{ margin: 0, fontSize: 14, display: "flex", alignItems: "center", gap: 8 }}>
+                <GitBranch size={16} /> Git 状态
+              </h3>
+              <button onClick={() => setShowGitPanel(false)} style={{ background: "none", border: "none", color: "var(--text-secondary)", cursor: "pointer", fontSize: 18 }}>×</button>
+            </div>
+            <div style={{ flex: 1, overflow: "auto", padding: 16, display: "flex", flexDirection: "column", gap: 16 }}>
+              {/* Project Info */}
+              <div style={{ padding: 12, background: "var(--bg-tertiary)", borderRadius: 8, border: "1px solid var(--border-primary)" }}>
+                <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 4 }}>项目目录</div>
+                <div style={{ fontSize: 11, fontFamily: "var(--mono)", color: "var(--text-secondary)", wordBreak: "break-all" }}>{project.repoPath}</div>
+              </div>
+
+              {/* Branch & Status */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                <div style={{ padding: 10, background: "var(--bg-tertiary)", borderRadius: 8, border: "1px solid var(--border-primary)" }}>
+                  <div style={{ fontSize: 11, color: "var(--text-muted)" }}>分支</div>
+                  <div style={{ fontSize: 13, color: "var(--accent-blue)", fontFamily: "var(--mono)" }}>{project.defaultBranch ?? "main"}</div>
+                </div>
+                <div style={{ padding: 10, background: "var(--bg-tertiary)", borderRadius: 8, border: "1px solid var(--border-primary)" }}>
+                  <div style={{ fontSize: 11, color: "var(--text-muted)" }}>状态</div>
+                  <div style={{ fontSize: 13, color: gitStatus ? "var(--ok)" : "var(--text-muted)" }}>{gitStatus ? "已连接" : "未连接"}</div>
+                </div>
+              </div>
+
+              {/* Recent Commits */}
+              {/* Recent Commit */}
+              <div style={{ padding: 12, background: "var(--bg-tertiary)", borderRadius: 8, border: "1px solid var(--border-primary)" }}>
+                <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 8 }}>最近提交</div>
+                {gitStatus?.lastCommitMessage ? (
+                  <div>
+                    <div style={{ color: "var(--text-secondary)", fontFamily: "var(--mono)", fontSize: 11, wordBreak: "break-all" }}>{gitStatus.lastCommitMessage.slice(0, 80)}</div>
+                    <div style={{ color: "var(--text-muted)", fontSize: 10, marginTop: 4 }}>
+                      SHA: <span style={{ fontFamily: "var(--mono)" }}>{gitStatus.lastCommitSha?.slice(0, 7)}</span> · {gitStatus.lastCommitDate}
+                    </div>
+                  </div>
+                ) : <div style={{ fontSize: 12, color: "var(--text-muted)" }}>暂无提交记录</div>}
+              </div>
+
+              {/* Changes Summary */}
+              <div style={{ padding: 12, background: "var(--bg-tertiary)", borderRadius: 8, border: "1px solid var(--border-primary)" }}>
+                <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 8 }}>工作区状态</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: 18, color: "var(--ok)", fontFamily: "var(--mono)" }}>{gitStatus?.staged ?? 0}</div>
+                    <div style={{ fontSize: 10, color: "var(--text-muted)" }}>已暂存</div>
+                  </div>
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: 18, color: "var(--warn)", fontFamily: "var(--mono)" }}>{gitStatus?.unstaged ?? 0}</div>
+                    <div style={{ fontSize: 10, color: "var(--text-muted)" }}>未暂存</div>
+                  </div>
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: 18, color: "var(--text-muted)", fontFamily: "var(--mono)" }}>{gitStatus?.untracked ?? 0}</div>
+                    <div style={{ fontSize: 10, color: "var(--text-muted)" }}>未跟踪</div>
+                  </div>
+                </div>
+                <div style={{ marginTop: 8, fontSize: 11, color: gitStatus?.isClean ? "var(--ok)" : "var(--warn)" }}>
+                  {gitStatus ? (gitStatus.isClean ? "✓ 工作区干净" : `⚠ 超前 ${gitStatus.ahead} / 落后 ${gitStatus.behind}`) : "加载中..."}
+                </div>
+              </div>
+
+              {/* Remote Info */}
+              <div style={{ padding: 12, background: "var(--bg-tertiary)", borderRadius: 8, border: "1px solid var(--border-primary)" }}>
+                <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 8 }}>远程仓库</div>
+                <div style={{ fontSize: 12, color: "var(--text-secondary)", fontFamily: "var(--mono)" }}>
+                  {project.remoteRepo ? `${project.remoteRepo.platform}/${project.remoteRepo.repoOwner}/${project.remoteRepo.repoName}` : "未配置远程仓库"}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
