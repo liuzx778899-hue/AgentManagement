@@ -48,7 +48,7 @@ interface TerminalTab {
 }
 
 // 根据真实任务状态计算步骤状态
-function getStepStatus(step: WorkflowStep, tasks: Task[]): { cls: string; label: string } {
+export function getStepStatus(step: WorkflowStep, tasks: Task[]): { cls: string; label: string } {
   const stepTasks = tasks.filter(t => t.workflowStepId === step.id);
   if (stepTasks.length === 0) return { cls: "idle", label: "待开始" };
 
@@ -65,7 +65,7 @@ function getStepStatus(step: WorkflowStep, tasks: Task[]): { cls: string; label:
 }
 
 // 从 workflow steps 生成 terminal tabs
-function buildTabs(data: WorkbenchData, tasks: Task[]): TerminalTab[] {
+export function buildTabs(data: WorkbenchData, tasks: Task[]): TerminalTab[] {
   const template = data.workflowTemplates[0];
   if (!template) return [];
 
