@@ -16,10 +16,15 @@ export interface ApiResponse<T> {
 }
 
 let serverAvailable: boolean | null = null;
+let serverAvailableTime: number = 0;
+const SERVER_CHECK_TTL = 30_000; // 30 秒后失效，允许重试
 let abortController: AbortController | null = null;
 
 export async function checkServerAvailable(): Promise<boolean> {
-  if (serverAvailable !== null) return serverAvailable;
+  // 缓存有效期内直接返回
+  if (serverAvailable !== null && Date.now() - serverAvailableTime < SERVER_CHECK_TTL) {
+    return serverAvailable;
+  }
 
   // Cancel any previous pending request
   if (abortController) {
@@ -40,10 +45,12 @@ export async function checkServerAvailable(): Promise<boolean> {
     });
     clearTimeout(timeoutId);
     serverAvailable = response.ok;
+    serverAvailableTime = Date.now();
     return serverAvailable;
   } catch {
     clearTimeout(timeoutId);
     serverAvailable = false;
+    serverAvailableTime = Date.now();
     return false;
   }
 }
@@ -54,6 +61,7 @@ export function resetServerAvailability(): void {
     abortController = null;
   }
   serverAvailable = null;
+  serverAvailableTime = 0;
 }
 
 export async function apiCall<T>(
@@ -85,6 +93,8 @@ export async function apiCall<T>(
     const data = await response.json();
     return data as ApiResponse<T>;
   } catch (error) {
+    // 网络错误时重置缓存，下次调用会重试健康检查
+    serverAvailable = null;
     return {
       ok: false,
       error: {

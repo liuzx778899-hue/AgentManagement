@@ -365,6 +365,7 @@ export function AiProjectBriefing({ data: _data, onBack }: AiProjectBriefingProp
       setCreating(false);
 
       // Trigger a page reload to refresh all data from API
+      window.dispatchEvent(new CustomEvent("refresh-workbench"));
       window.dispatchEvent(new CustomEvent("navigate", { detail: { view: "project-management" } }));
     } catch (error) {
       console.error("Failed to create project:", error);

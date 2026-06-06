@@ -327,6 +327,37 @@ export function WorkbenchProvider({ children }: WorkbenchProviderProps) {
     };
   }, []);
 
+  // 监听 refresh-workbench 事件，重新加载数据
+  useEffect(() => {
+    const handleRefresh = async () => {
+      const available = await checkServerAvailable();
+      if (!available) return;
+
+      try {
+        const [projectsResult, tasksResult, workflowTemplatesResult] = await Promise.all([
+          projectApi.list(),
+          taskApi.list(),
+          workflowApi.listTemplates(),
+        ]);
+
+        if (projectsResult.ok && projectsResult.data) {
+          dispatch(setProjectsAction(projectsResult.data));
+        }
+        if (tasksResult.ok && tasksResult.data) {
+          dispatch(setTasksAction(tasksResult.data));
+        }
+        if (workflowTemplatesResult.ok && workflowTemplatesResult.data) {
+          dispatch(setWorkflowTemplatesAction(workflowTemplatesResult.data));
+        }
+      } catch (error) {
+        console.error('[WorkbenchProvider] Failed to refresh data:', error);
+      }
+    };
+
+    window.addEventListener('refresh-workbench', handleRefresh);
+    return () => window.removeEventListener('refresh-workbench', handleRefresh);
+  }, []);
+
   const updateGateStatus = useCallback((gateId: string, status: GateStatus) => {
     dispatch(updateGateStatusAction(gateId, status));
   }, []);
