@@ -43,7 +43,8 @@ export function escapeHtml(text: string): string {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 interface TerminalTab {
@@ -120,7 +121,6 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
   const [popoverAnchor, setPopoverAnchor] = useState<{ left: number; bottom: number } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [startingTask, setStartingTask] = useState<string | null>(null);
   const [gitStatus, setGitStatus] = useState<GitStatus | null>(null);
   const logPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const loadingRef = useRef<{ type: 'start' | 'stop' | 'complete'; taskId: string } | null>(null);
@@ -263,7 +263,6 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
   const handleStartTask = useCallback(async (taskId: string) => {
     if (loadingRef.current) return;
     loadingRef.current = { type: 'start', taskId };
-    setStartingTask(taskId);
 
     try {
       const result = await workbenchRunApi.startTask(taskId);
@@ -277,7 +276,6 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
       setToast(error instanceof Error ? error.message : "启动失败");
     } finally {
       loadingRef.current = null;
-      setStartingTask(null);
     }
   }, []);
 
@@ -285,7 +283,6 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
   const handleStopTask = useCallback(async (taskId: string) => {
     if (loadingRef.current) return;
     loadingRef.current = { type: 'stop', taskId };
-    setStartingTask(taskId);
 
     try {
       const result = await workbenchRunApi.stopTask(taskId, { taskId, status: 'stopped' });
@@ -299,7 +296,6 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
       setToast(error instanceof Error ? error.message : "停止失败");
     } finally {
       loadingRef.current = null;
-      setStartingTask(null);
     }
   }, []);
 
@@ -307,7 +303,6 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
   const handleCompleteTask = useCallback(async (taskId: string) => {
     if (loadingRef.current) return;
     loadingRef.current = { type: 'complete', taskId };
-    setStartingTask(taskId);
 
     try {
       const result = await workbenchRunApi.stopTask(taskId, { taskId, status: 'done' });
@@ -321,7 +316,6 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
       setToast(error instanceof Error ? error.message : "更新失败");
     } finally {
       loadingRef.current = null;
-      setStartingTask(null);
     }
   }, []);
 

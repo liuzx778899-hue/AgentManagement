@@ -124,6 +124,16 @@ describe('escapeHtml', () => {
     expect(escapeHtml('a & b')).toBe('a &amp; b');
   });
 
+  it('escapes single quotes', () => {
+    expect(escapeHtml("it's")).toBe('it&#39;s');
+  });
+
+  it('escapes all special characters together', () => {
+    expect(escapeHtml(`<div onclick="alert('xss')">`)).toBe(
+      '&lt;div onclick=&quot;alert(&#39;xss&#39;)&quot;&gt;'
+    );
+  });
+
   it('returns plain text unchanged', () => {
     expect(escapeHtml('hello world')).toBe('hello world');
   });
