@@ -26,7 +26,11 @@ export interface Task {
 
 export interface AgentRun {
   id: string;
+  /** 项目 ID - Issue #28 */
+  projectId: string;
   taskId: string;
+  /** 流程模板 ID - Issue #28 */
+  workflowTemplateId: string;
   /** 所属流程步骤 ID - Issue #41 */
   workflowStepId?: string;
   /** 所属 Assignment ID - Issue #41 */
