@@ -23,31 +23,59 @@ export function StepEditModal({
   onDelete,
   onClose,
 }: StepEditModalProps) {
-  // Issue #27: 支持多 assignment 查看/编辑
+  // Issue #27: 多 assignment 管理
+  const [localAssignments, setLocalAssignments] = useState(step.assignments ?? []);
   const [activeAssignmentIndex, setActiveAssignmentIndex] = useState(0);
-  const assignments = step.assignments ?? [];
+  const assignments = localAssignments;
   const activeAssignment = assignments[activeAssignmentIndex] ?? assignments[0];
 
   const [name, setName] = useState(step.name);
-  const [providerId, setProviderId] = useState(activeAssignment?.modelProviderId ?? '');
-  const [modelName, setModelName] = useState(activeAssignment?.modelName ?? '');
   const [gateMode, setGateMode] = useState<GateMode>(step.gateMode);
   const [failureStrategy, setFailureStrategy] = useState<FailureStrategy>(step.failureStrategy);
   const [inputs, setInputs] = useState(step.inputs.join(", "));
   const [outputs, setOutputs] = useState(step.outputs.join(", "));
+
+  // 当前活动 assignment 的表单状态
+  const [providerId, setProviderId] = useState(activeAssignment?.modelProviderId ?? '');
+  const [modelName, setModelName] = useState(activeAssignment?.modelName ?? '');
   const [runnerId, setRunnerId] = useState<string>(activeAssignment?.runnerId ?? "");
 
-  // 角色处理：从当前流程角色中查找
+  // 角色处理
   const getRoleNameFromId = (rid: string) => {
     if (!rid) return "";
     const role = (flowRoles ?? []).find(r => r.id === rid);
     return role?.name ?? rid;
   };
-  const [roleId, setRoleId] = useState(activeAssignment?.roleId || "");
-  const roleName = getRoleNameFromId(roleId);
+
+  // 其他步骤已分配的角色 ID（跨步骤去重）
+  const otherStepAssignedRoleIds = useMemo(() => {
+    const ids = new Set<string>();
+    template.steps.forEach((s) => {
+      if (s.id === step.id) return; // 排除当前步骤
+      (s.assignments ?? []).forEach((a) => {
+        if (a.roleId) ids.add(a.roleId);
+      });
+      // 兼容旧格式
+      if (s.roleId && !(s.assignments?.length)) ids.add(s.roleId);
+    });
+    return ids;
+  }, [template.steps, step.id]);
+
+  // 当前步骤已分配的角色 ID
+  const currentStepAssignedRoleIds = useMemo(() => {
+    return new Set(assignments.map(a => a.roleId).filter(Boolean));
+  }, [assignments]);
+
+  // 可选角色：排除当前步骤已选 + 其他步骤已选
+  const availableRoles = useMemo(() => {
+    return (flowRoles ?? []).filter(r => {
+      if (currentStepAssignedRoleIds.has(r.id)) return false;
+      if (otherStepAssignedRoleIds.has(r.id)) return false;
+      return true;
+    });
+  }, [flowRoles, currentStepAssignedRoleIds, otherStepAssignedRoleIds]);
 
   const enabledRunners = useMemo(() => (data.runnerProfiles ?? []).filter((runner) => runner.enabled), [data.runnerProfiles]);
-
   const sortedSteps = useMemo(() => [...template.steps].sort((a, b) => a.order - b.order), [template.steps]);
   const currentIndex = sortedSteps.findIndex((item) => item.id === step.id);
 
@@ -55,6 +83,8 @@ export function StepEditModal({
     () => data.modelProviders.find((provider) => provider.id === providerId),
     [data.modelProviders, providerId],
   );
+
+  const activeRoleName = getRoleNameFromId(activeAssignment?.roleId ?? "");
 
   const defaultStepMarkdown = useMemo(() => {
     const providerName = selectedProvider?.name ?? providerId;
@@ -67,10 +97,16 @@ export function StepEditModal({
       fallback: "回退到前一步",
     };
 
+    // 多角色时列出所有角色
+    const roleNames = assignments
+      .map(a => getRoleNameFromId(a.roleId))
+      .filter(Boolean)
+      .join("、");
+
     return [
       `# ${name}`,
       "",
-      `**执行角色：** ${roleName || "未绑定角色"}`,
+      `**执行角色：** ${roleNames || "未绑定角色"}`,
       `**模型：** ${providerName} / ${modelName}`,
       "",
       "## 输入",
@@ -82,7 +118,7 @@ export function StepEditModal({
       "## 失败策略",
       strategyLabel[failureStrategy] ?? failureStrategy,
     ].join("\n");
-  }, [name, roleId, roleName, providerId, modelName, inputs, outputs, failureStrategy, selectedProvider]);
+  }, [name, assignments, providerId, modelName, inputs, outputs, failureStrategy, selectedProvider]);
 
   const [stepMarkdown, setStepMarkdown] = useState(step.stepMarkdown || defaultStepMarkdown);
 
@@ -96,17 +132,66 @@ export function StepEditModal({
     setModelName("");
   };
 
+  // 切换到指定 assignment，更新表单状态
+  const switchToAssignment = (index: number) => {
+    setActiveAssignmentIndex(index);
+    const asgn = assignments[index];
+    if (asgn) {
+      setProviderId(asgn.modelProviderId ?? "");
+      setModelName(asgn.modelName ?? "");
+      setRunnerId(asgn.runnerId ?? "");
+    }
+  };
+
+  // 添加新角色分配（直接选角色即创建 assignment）
+  const handleAddRoleAssignment = (newRoleId: string) => {
+    const newAssignment = {
+      id: `assignment-${Date.now()}`,
+      order: assignments.length + 1,
+      roleId: newRoleId,
+      modelProviderId: data.modelProviders[0]?.id ?? "",
+      modelName: data.modelProviders[0]?.defaultModel ?? "",
+      goal: name.trim(),
+      acceptanceCriteria: [],
+      inputs: [],
+      outputs: [],
+    };
+    const newAssignments = [...assignments, newAssignment];
+    setLocalAssignments(newAssignments);
+    // 切换到新添加的 assignment
+    const newIndex = newAssignments.length - 1;
+    setActiveAssignmentIndex(newIndex);
+    setProviderId(newAssignment.modelProviderId);
+    setModelName(newAssignment.modelName);
+    setRunnerId("");
+  };
+
+  // 移除角色分配
+  const handleRemoveRoleAssignment = (index: number) => {
+    const newAssignments = assignments.filter((_, i) => i !== index);
+    setLocalAssignments(newAssignments);
+    if (newAssignments.length === 0) {
+      setActiveAssignmentIndex(0);
+      setProviderId(data.modelProviders[0]?.id ?? "");
+      setModelName(data.modelProviders[0]?.defaultModel ?? "");
+      setRunnerId("");
+    } else if (index === activeAssignmentIndex) {
+      switchToAssignment(Math.min(index, newAssignments.length - 1));
+    } else if (index < activeAssignmentIndex) {
+      setActiveAssignmentIndex(activeAssignmentIndex - 1);
+    }
+  };
+
   const handleSave = () => {
     if (readOnly) return;
     const parsedInputs = inputs.split(",").map((item) => item.trim()).filter(Boolean);
     const parsedOutputs = outputs.split(",").map((item) => item.trim()).filter(Boolean);
 
-    // Issue #27: 保留所有 assignments，只更新当前活动的 assignment
+    // 保留所有 assignments，只更新当前活动的 assignment
     const updatedAssignments = assignments.map((asgn, i) => {
       if (i === activeAssignmentIndex) {
         return {
           ...asgn,
-          roleId: roleId,
           modelProviderId: providerId,
           modelName,
           runnerId: runnerId || undefined,
@@ -118,12 +203,11 @@ export function StepEditModal({
       return asgn;
     });
 
-    // If no assignments exist, create one
     if (updatedAssignments.length === 0) {
       updatedAssignments.push({
         id: `assignment-${Date.now()}`,
         order: 1,
-        roleId: roleId,
+        roleId: "",
         modelProviderId: providerId,
         modelName,
         runnerId: runnerId || undefined,
@@ -168,24 +252,6 @@ export function StepEditModal({
         </div>
 
         <div className="modal-body step-edit-body">
-          {/* Issue #27: Assignment 切换器 */}
-          {assignments.length > 1 && (
-            <div style={{ display: "flex", gap: 4, marginBottom: 12, flexWrap: "wrap" }}>
-              {assignments.map((asgn, i) => {
-                const r = (flowRoles ?? []).find(role => role.id === asgn.roleId);
-                return (
-                  <button
-                    key={asgn.id}
-                    className={`btn btn-sm ${i === activeAssignmentIndex ? "primary" : "ghost"}`}
-                    onClick={() => setActiveAssignmentIndex(i)}
-                    type="button"
-                  >
-                    {r?.name ?? (asgn.roleId || `Assignment ${i + 1}`)}
-                  </button>
-                );
-              })}
-            </div>
-          )}
           <div className="step-edit-main">
             <div className="modal-body-grid step-edit-grid">
               <div className="form-field">
@@ -193,22 +259,85 @@ export function StepEditModal({
                 <input value={name} onChange={(event) => setName(event.target.value)} disabled={readOnly} />
               </div>
               <div className="form-field">
-                <label>执行角色</label>
-                <select
-                  value={roleId}
-                  disabled={readOnly}
-                  onChange={(event) => setRoleId(event.target.value)}
-                >
-                  <option value="">未绑定角色</option>
-                  {(flowRoles ?? []).map((role) => (
-                    <option key={role.id} value={role.id}>
-                      {role.name}
-                    </option>
-                  ))}
-                </select>
+                <label>
+                  执行角色
+                  {assignments.length > 1 && (
+                    <span style={{ marginLeft: 8, color: "var(--accent-purple)", fontSize: "0.85em" }}>
+                      ({assignments.length} 个)
+                    </span>
+                  )}
+                </label>
+                {/* 已分配角色标签列表 */}
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 4, minHeight: 24 }}>
+                  {assignments.filter(a => a.roleId).length === 0 && (
+                    <span style={{ fontSize: 12, color: "var(--text-muted)", fontStyle: "italic", lineHeight: "24px" }}>
+                      请从下方添加角色
+                    </span>
+                  )}
+                  {assignments.map((asgn, i) => {
+                    if (!asgn.roleId) return null;
+                    const isActive = i === activeAssignmentIndex;
+                    const rName = getRoleNameFromId(asgn.roleId);
+                    return (
+                      <span
+                        key={asgn.id}
+                        onClick={() => switchToAssignment(i)}
+                        style={{
+                          display: "inline-flex", alignItems: "center", gap: 3,
+                          padding: "2px 8px", borderRadius: 4, cursor: "pointer",
+                          fontSize: 12,
+                          background: isActive ? "var(--accent-blue)" : "var(--bg-tertiary)",
+                          color: isActive ? "#fff" : "var(--text-secondary)",
+                          border: isActive ? "1px solid var(--accent-blue)" : "1px solid var(--border-primary)",
+                          transition: "all 0.15s",
+                        }}
+                      >
+                        {rName}
+                        {!readOnly && (
+                          <X
+                            size={10}
+                            style={{ cursor: "pointer", opacity: 0.7 }}
+                            onClick={(e) => { e.stopPropagation(); handleRemoveRoleAssignment(i); }}
+                          />
+                        )}
+                      </span>
+                    );
+                  })}
+                </div>
+                {/* 添加角色下拉 */}
+                {!readOnly && availableRoles.length > 0 && (
+                  <select
+                    value=""
+                    onChange={(e) => {
+                      if (e.target.value) handleAddRoleAssignment(e.target.value);
+                    }}
+                    style={{
+                      width: "100%",
+                      fontSize: 12,
+                      padding: "4px 8px",
+                      background: "#0d1b2a",
+                      color: "var(--text-primary)",
+                      border: "1px solid var(--border-primary)",
+                      borderRadius: 4,
+                      cursor: "pointer",
+                    }}
+                  >
+                    <option value="">+ 添加角色...</option>
+                    {availableRoles.map((role) => (
+                      <option key={role.id} value={role.id}>{role.name}</option>
+                    ))}
+                  </select>
+                )}
               </div>
               <div className="form-field">
-                <label>绑定模型</label>
+                <label>
+                  绑定模型
+                  {assignments.length > 1 && activeRoleName && (
+                    <span style={{ marginLeft: 8, color: "var(--accent-blue)", fontSize: "0.8em" }}>
+                      ({activeRoleName})
+                    </span>
+                  )}
+                </label>
                 <select
                   value={`${providerId}/${modelName}`}
                   disabled={readOnly}

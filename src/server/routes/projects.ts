@@ -41,7 +41,7 @@ projectsRouter.get('/:id', async (req: Request, res: Response, next: NextFunctio
  */
 projectsRouter.post('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { name, repoPath, defaultBranch, worktreeRoot, scope, settings, workflowTemplateId } = req.body;
+    const { name, repoPath, defaultBranch, worktreeRoot, scope, settings, workflowTemplateId, sourceType, phase, healthScore, riskLevel } = req.body;
 
     // Validate required fields
     if (!name) {
@@ -89,6 +89,10 @@ projectsRouter.post('/', async (req: Request, res: Response, next: NextFunction)
         riskSummary: '',
       },
       workflowTemplateId: workflowTemplateId || 'default',
+      ...(sourceType ? { sourceType } : {}),
+      ...(phase ? { phase } : {}),
+      ...(typeof healthScore === 'number' ? { healthScore } : {}),
+      ...(riskLevel ? { riskLevel } : {}),
       createdAt: now,
       updatedAt: now,
     };

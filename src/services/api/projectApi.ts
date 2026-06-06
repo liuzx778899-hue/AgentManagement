@@ -10,6 +10,12 @@ export interface CreateProjectInput {
   defaultBranch: string;
   worktreeRoot: string;
   workflowTemplateId?: string;
+  scope?: 'personal' | 'team';
+  settings?: import('../../domain/project').ProjectSettings;
+  sourceType?: import('../../domain/project').ProjectSourceType;
+  phase?: string;
+  healthScore?: number;
+  riskLevel?: import('../../domain/project').RiskLevel;
 }
 
 export interface UpdateProjectInput {

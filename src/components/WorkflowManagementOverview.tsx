@@ -1,7 +1,11 @@
 import { useRef, useState, useMemo, useEffect } from "react";
 import {
+  Activity,
+  AlertTriangle,
   CheckCircle2,
+  ChevronDown,
   CircleAlert,
+  Clock,
   GitBranch,
   Loader2,
   Package,
@@ -57,7 +61,7 @@ interface WorkflowAsset {
   version: string;
   stepCount: number;
   steps: WorkflowStepDisplay[];
-  fullSteps: Array<{ id: string; name: string; roleId: string; modelProviderId?: string; modelName?: string; runnerId?: string }>;
+  fullSteps: Array<{ id: string; name: string; roleId?: string; modelProviderId?: string; modelName?: string; runnerId?: string }>;
   roleCoverage: RoleAvatar[];
   runnerCoverage: number;
   riskGap: string | null;
@@ -273,6 +277,7 @@ export function WorkflowManagementOverview({ data, onNavigate, onEnterWorkflowDe
   const [activeCategory, setActiveCategory] = useState<WorkflowCategory>("all");
   const [validating, setValidating] = useState(false);
 
+  const [searchQuery, setSearchQuery] = useState("");
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [categoryDraft, setCategoryDraft] = useState("");
   const [customCategories, setCustomCategories] = useState<string[]>([]);
@@ -280,6 +285,22 @@ export function WorkflowManagementOverview({ data, onNavigate, onEnterWorkflowDe
   const [statusOverrides, setStatusOverrides] = useState<Record<string, WorkflowAsset["status"]>>({});
   const [validationResults, setValidationResults] = useState<Record<string, string[]>>({});
   const importInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Toolbar dropdowns
+  const [sortField, setSortField] = useState<"default" | "name" | "updated" | "steps">("default");
+  const [openDropdown, setOpenDropdown] = useState<"flows" | "sort" | "category" | null>(null);
+  const toolbarRef = useRef<HTMLDivElement | null>(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (toolbarRef.current && !toolbarRef.current.contains(e.target as Node)) {
+        setOpenDropdown(null);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   // Convert workflow templates to workflow assets
   const workflowAssets = useMemo(() => {
@@ -334,8 +355,34 @@ export function WorkflowManagementOverview({ data, onNavigate, onEnterWorkflowDe
   }, [workflowAssets]);
 
   const filteredWorkflows = useMemo(
-    () => filterWorkflowsByCategory(visibleWorkflows, activeCategory),
-    [visibleWorkflows, activeCategory]
+    () => {
+      let result = filterWorkflowsByCategory(visibleWorkflows, activeCategory);
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        result = result.filter(w =>
+          w.name.toLowerCase().includes(q) ||
+          w.description.toLowerCase().includes(q) ||
+          w.roleCoverage.some(r => r.initials?.toLowerCase().includes(q))
+        );
+      }
+      // Apply sort
+      switch (sortField) {
+        case "name":
+          result = [...result].sort((a, b) => a.name.localeCompare(b.name, "zh"));
+          break;
+        case "updated":
+          result = [...result].sort((a, b) => new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime());
+          break;
+        case "steps":
+          result = [...result].sort((a, b) => b.stepCount - a.stepCount);
+          break;
+        default:
+          // default: keep original order
+          break;
+      }
+      return result;
+    },
+    [visibleWorkflows, activeCategory, searchQuery, sortField]
   );
 
   const visibleHealthCategories = useMemo(
@@ -346,27 +393,36 @@ export function WorkflowManagementOverview({ data, onNavigate, onEnterWorkflowDe
   // Handle "check all" action — validate every workflow
   const handleValidateAll = () => {
     setValidating(true);
-    const results: Record<string, string[]> = {};
-    workflowAssets.forEach((flow) => {
-      const issues: string[] = [];
-      if (flow.fullSteps.length === 0) issues.push("流程没有任何步骤");
-      flow.fullSteps.forEach((s, i) => {
-        if (!s.name?.trim()) issues.push(`步骤 ${i + 1} 缺少名称`);
-        if (!s.roleId) issues.push(`步骤 ${i + 1}「${s.name}」未绑定角色`);
-        if (!s.modelProviderId || !s.modelName) issues.push(`步骤 ${i + 1}「${s.name}」未配置模型`);
-        if (!s.runnerId) issues.push(`步骤 ${i + 1}「${s.name}」未配置 Runner`);
+    // 清除旧结果，让校验重新计算
+    setValidationResults({});
+    setTimeout(() => {
+      const results: Record<string, string[]> = {};
+      let totalIssues = 0;
+      workflowAssets.forEach((flow) => {
+        const issues: string[] = [];
+        if (flow.fullSteps.length === 0) issues.push("流程没有任何步骤");
+        flow.fullSteps.forEach((s, i) => {
+          if (!s.name?.trim()) issues.push(`步骤 ${i + 1} 缺少名称`);
+          if (!s.roleId) issues.push(`步骤 ${i + 1}「${s.name}」未绑定角色`);
+          if (!s.modelProviderId || !s.modelName) issues.push(`步骤 ${i + 1}「${s.name}」未配置模型`);
+          if (!s.runnerId) issues.push(`步骤 ${i + 1}「${s.name}」未配置 Runner`);
+        });
+        if (issues.length > 0) results[flow.id] = issues;
+        totalIssues += issues.length;
       });
-      if (issues.length > 0) results[flow.id] = issues;
-    });
-    setValidationResults(results);
-    setValidating(false);
+      setValidationResults(results);
+      setValidating(false);
+      // 显示校验结果摘要
+      const problemCount = Object.keys(results).length;
+      if (problemCount === 0) {
+        window.alert(`校验完成：${workflowAssets.length} 个流程全部通过，未发现问题。`);
+      } else {
+        window.alert(`校验完成：发现 ${problemCount} 个流程存在 ${totalIssues} 个问题。请在流程卡片查看详情。`);
+      }
+    }, 600);
   };
 
-  // Auto-validate on initial load
-  useEffect(() => {
-    handleValidateAll();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workflowAssets.length]);
+  // Removed auto-validate — only validate on user click
 
   // Handle entering workflow designer
   const handleEnterDesigner = (workflowId: string) => {
@@ -459,24 +515,107 @@ export function WorkflowManagementOverview({ data, onNavigate, onEnterWorkflowDe
 
   return (
     <div className="wmo-page">
-      {/* Header */}
-      <div className="wmo-header">
-        <div className="wmo-title">
-          <h1>流程管理</h1>
-          <p>统一管理流程模板、项目流程实例、角色绑定与版本变更。</p>
+      {/* ===== TOOLBAR (project management style) ===== */}
+      <div className="pm-v2-toolbar">
+        <div className="pm-v2-toolbar-left" ref={toolbarRef}>
+          {/* 全部流程 dropdown */}
+          <div className="pm-v2-select-wrapper">
+            <div
+              className={`pm-v2-select${openDropdown === "flows" ? " active" : ""}`}
+              onClick={() => setOpenDropdown(openDropdown === "flows" ? null : "flows")}
+            >
+              <GitBranch size={14} />全部流程<ChevronDown size={12} />
+            </div>
+            {openDropdown === "flows" && (
+              <div className="pm-v2-dropdown">
+                {workflowAssets.length === 0 ? (
+                  <div className="pm-v2-dropdown-item muted">暂无流程</div>
+                ) : (
+                  workflowAssets.map(w => (
+                    <div key={w.id} className="pm-v2-dropdown-item" onClick={() => { setOpenDropdown(null); }}>
+                      <span>{w.name}</span>
+                      <span className={`wmo-chip ${w.status === "enabled" ? "ok" : w.status === "draft" ? "warn" : ""}`} style={{ fontSize: 10, marginLeft: "auto" }}>
+                        {w.version}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* 按状态排序 dropdown */}
+          <div className="pm-v2-select-wrapper">
+            <div
+              className={`pm-v2-select${openDropdown === "sort" ? " active" : ""}`}
+              onClick={() => setOpenDropdown(openDropdown === "sort" ? null : "sort")}
+            >
+              按状态排序<ChevronDown size={12} />
+            </div>
+            {openDropdown === "sort" && (
+              <div className="pm-v2-dropdown">
+                {([
+                  { key: "default", label: "默认排序" },
+                  { key: "name", label: "按名称" },
+                  { key: "updated", label: "按更新时间" },
+                  { key: "steps", label: "按步骤数" },
+                ] as const).map(opt => (
+                  <div
+                    key={opt.key}
+                    className={`pm-v2-dropdown-item${sortField === opt.key ? " active" : ""}`}
+                    onClick={() => { setSortField(opt.key); setOpenDropdown(null); }}
+                  >
+                    {sortField === opt.key && <CheckCircle2 size={12} style={{ color: "var(--ok)" }} />}
+                    <span>{opt.label}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* 按类别筛选 dropdown */}
+          <div className="pm-v2-select-wrapper">
+            <div
+              className={`pm-v2-select${openDropdown === "category" ? " active" : ""}`}
+              onClick={() => setOpenDropdown(openDropdown === "category" ? null : "category")}
+            >
+              按类别筛选<ChevronDown size={12} />
+            </div>
+            {openDropdown === "category" && (
+              <div className="pm-v2-dropdown">
+                {ALL_CATEGORIES.map(cat => (
+                  <div
+                    key={cat.id}
+                    className={`pm-v2-dropdown-item${activeCategory === cat.id ? " active" : ""}`}
+                    onClick={() => { setActiveCategory(cat.id); setOpenDropdown(null); }}
+                  >
+                    {activeCategory === cat.id && <CheckCircle2 size={12} style={{ color: "var(--ok)" }} />}
+                    <span>{cat.name}</span>
+                    <span style={{ marginLeft: "auto", fontSize: 10, color: "var(--text-muted)" }}>{getCategoryCount(visibleWorkflows, cat.id)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <input
+            className="pm-v2-search"
+            placeholder="搜索流程名称、角色、项目关联..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+          />
         </div>
-        <div className="wmo-actions">
-          <button className="wmo-btn wmo-btn-good" onClick={handleValidateAll}>
-            <CheckCircle2 size={14} /> 检查全部流程
+        <div className="pm-v2-toolbar-right">
+          <button className="pm-v2-btn pm-v2-btn-ok" onClick={handleValidateAll}>
+            <CheckCircle2 size={14} />检查全部流程
           </button>
-          <button className="wmo-btn" onClick={handleCreateWorkflow}>
-            <Plus size={14} /> 新建常规流程
+          <button className="pm-v2-btn" onClick={handleCreateWorkflow}>
+            <Plus size={14} />新建常规流程
           </button>
-          <button className="wmo-btn wmo-btn-primary" onClick={handleCreateAiWorkflow}>
-            <Sparkles size={14} /> AI 生成流程
+          <button className="pm-v2-btn" onClick={handleImportWorkflow}>
+            <Download size={14} />导入流程
           </button>
-          <button className="wmo-btn" onClick={handleImportWorkflow}>
-            <Download size={14} /> 导入流程
+          <button className="pm-v2-btn pm-v2-btn-primary" onClick={handleCreateAiWorkflow}>
+            <Sparkles size={14} />AI 生成流程
           </button>
           <input
             ref={importInputRef}
@@ -493,154 +632,191 @@ export function WorkflowManagementOverview({ data, onNavigate, onEnterWorkflowDe
         </div>
       </div>
 
-      {/* KPI Stats */}
-      <div className="wmo-stats">
-        <div className="wmo-stat">
-          <KpiIcon type="total" />
+      {/* ===== KPI Stats ===== */}
+      <div className="pm-v2-kpis">
+        <div className="pm-v2-kpi pm-v2-kpi-health">
+          <div className="pm-v2-ring" style={{ background: `conic-gradient(var(--ok) 0 ${kpis.total > 0 ? Math.round((kpis.enabled / kpis.total) * 100) : 0}%, #263244 ${kpis.total > 0 ? Math.round((kpis.enabled / kpis.total) * 100) : 0}% 100%)` }}>
+            <span>{kpis.total > 0 ? Math.round((kpis.enabled / kpis.total) * 100) : 0}</span>
+          </div>
           <div>
-            <span>流程总数</span>
-            <strong>{kpis.total}</strong>
+            <label>流程组合健康度</label>
+            <small>{kpis.highRisk > 0 ? `${kpis.highRisk} 个流程需关注` : "所有流程状态正常"}</small>
           </div>
         </div>
-        <div className="wmo-stat">
-          <KpiIcon type="enabled" />
-          <div>
-            <span>启用中</span>
-            <strong>{kpis.enabled}</strong>
+        <div className="pm-v2-kpi"><label>流程总数</label><strong>{kpis.total}</strong><small>{kpis.enabled} 个已启用</small></div>
+        <div className="pm-v2-kpi"><label>绑定项目</label><strong>{kpis.boundProjects}</strong><small>关联项目数</small></div>
+        <div className="pm-v2-kpi"><label>待校验</label><strong style={{ color: "var(--warn)" }}>{kpis.pendingValidation}</strong><small>需人工确认</small></div>
+        <div className="pm-v2-kpi"><label>高风险</label><strong style={{ color: "var(--danger)" }}>{kpis.highRisk}</strong><small>角色/模型缺失</small></div>
+        <div className="pm-v2-kpi"><label>类别覆盖</label><strong>{healthPanel.categories.filter(c => c.count > 0).length}</strong><small>{healthPanel.categories.length} 个类别</small></div>
+        <div className="pm-v2-kpi"><label>版本状态</label><strong>{workflowAssets.filter(w => parseInt(w.version.replace(/[^0-9]/g, "")) >= 2).length}</strong><small>高版本流程</small></div>
+      </div>
+
+      {/* ===== COMMANDER STRIP ===== */}
+      <div className="pm-v2-commander">
+        <div className="pm-v2-commander-left">
+          <div className="pm-v2-commander-card">
+            <div className="pm-v2-commander-icon"><AlertTriangle size={18} /></div>
+            <div>
+              <h3>待校验流程</h3>
+              <p>{kpis.pendingValidation > 0 ? `${kpis.pendingValidation} 个流程需校验` : "暂无待处理校验"}</p>
+            </div>
+            <div className="pm-v2-commander-metric">{kpis.pendingValidation}<span>待校验</span></div>
+          </div>
+          <div className="pm-v2-commander-card ok">
+            <div className="pm-v2-commander-icon"><Activity size={18} /></div>
+            <div>
+              <h3>启用中流程</h3>
+              <p>{kpis.enabled > 0 ? `${kpis.enabled} 个流程运行正常` : "暂无启用流程"}</p>
+            </div>
+            <div className="pm-v2-commander-metric">{kpis.enabled}<span>启用中</span></div>
+          </div>
+          <div className="pm-v2-commander-card">
+            <div className="pm-v2-commander-icon"><Clock size={18} /></div>
+            <div>
+              <h3>流程绑定状态</h3>
+              <p>{kpis.boundProjects > 0 ? `${kpis.boundProjects} 个项目已绑定` : "暂无项目绑定"}</p>
+            </div>
+            <div className="pm-v2-commander-metric">{kpis.boundProjects}<span>绑定</span></div>
           </div>
         </div>
-        <div className="wmo-stat">
-          <KpiIcon type="bound" />
-          <div>
-            <span>绑定项目</span>
-            <strong>{kpis.boundProjects}</strong>
-          </div>
-        </div>
-        <div className="wmo-stat">
-          <KpiIcon type="pending" />
-          <div>
-            <span>待校验</span>
-            <strong>{kpis.pendingValidation}</strong>
-          </div>
-        </div>
-        <div className="wmo-stat">
-          <KpiIcon type="risk" />
-          <div>
-            <span>高风险</span>
-            <strong>{kpis.highRisk}</strong>
+        <div className="pm-v2-commander-right">
+          <div className="pm-v2-commander-card ai">
+            <div className="pm-v2-commander-icon"><Sparkles size={18} /></div>
+            <div>
+              <h3>AI 建议下一步</h3>
+              <p>{kpis.pendingValidation > 0 ? `有 ${kpis.pendingValidation} 个流程待校验` : "所有流程状态良好"}</p>
+            </div>
+            <button className="pm-v2-btn" onClick={handleValidateAll}>立即校验</button>
           </div>
         </div>
       </div>
 
-      {/* Main Grid: Flow List + Side Panel */}
-      <div className="wmo-grid" style={{ position: "relative" }}>
-        {/* Validating overlay */}
-        {validating && (
-          <div className="wmo-validating-overlay">
-            <Loader2 size={32} className="wmo-loading-spinner" style={{ color: "#5de2a2" }} />
-            <h2>正在校验全部流程...</h2>
-            <p>检查角色绑定和风险缺口</p>
-          </div>
-        )}
+      {/* Validating overlay */}
+      {validating && (
+        <div className="wmo-validating-overlay">
+          <Loader2 size={32} className="wmo-loading-spinner" style={{ color: "#5de2a2" }} />
+          <h2>正在校验全部流程...</h2>
+          <p>检查角色绑定和风险缺口</p>
+        </div>
+      )}
 
+      {/* Flow List + Side Panel Grid */}
+      <div className="wmo-grid" style={{ minHeight: 0, flex: 1, marginTop: 0 }}>
         {/* Left: Flow List Panel */}
-        <div className="wmo-panel">
-          <div className="wmo-panel-header">
-            <h2>流程列表</h2>
-            <span>模板与项目实例统一管理</span>
-          </div>
-          <div className="wmo-category-tabs">
-            <div className="wmo-tabset">
-              {categoryTabs.map((cat) => (
-                <button
-                  key={cat.id}
-                  className={`wmo-cat-tab${activeCategory === cat.id ? " active" : ""}`}
-                  onClick={() => setActiveCategory(cat.id)}
-                >
-                  {cat.name} <small>{getCategoryCount(visibleWorkflows, cat.id)}</small>
-                </button>
-              ))}
+        <div className="pm-v2-panel" style={{ minHeight: 0, display: "flex", flexDirection: "column" }}>
+          <div className="pm-v2-panel-head">
+            <div>
+              <h2>流程列表</h2>
+              <p>{filteredWorkflows.length} 个流程</p>
             </div>
-              <div className="wmo-category-tools">
-                <button className="wmo-btn" onClick={() => setShowCategoryManager(true)} type="button">
-                  <Plus size={12} /> 维护分类
-                </button>
-              <button className="wmo-btn">排序</button>
+            <div className="pm-v2-portfolio-tools">
+              <div className="wmo-tabset">
+                {categoryTabs.map((cat) => (
+                  <button
+                    key={cat.id}
+                    className={`wmo-cat-tab${activeCategory === cat.id ? " active" : ""}`}
+                    onClick={() => setActiveCategory(cat.id)}
+                    style={{ fontSize: 11, padding: "3px 8px" }}
+                  >
+                    {cat.name} <small>{getCategoryCount(visibleWorkflows, cat.id)}</small>
+                  </button>
+                ))}
+              </div>
+              <button className="pm-v2-btn" onClick={() => setShowCategoryManager(true)} type="button" style={{ fontSize: 11 }}>
+                <Plus size={12} /> 维护分类
+              </button>
             </div>
           </div>
-          <div className="wmo-flows">
+          <div className="pm-v2-portfolio">
             {filteredWorkflows.length === 0 ? (
-              <div className="wmo-filtered-empty">
+              <div className="pm-v2-empty">
                 <h3>当前分类暂无流程</h3>
                 <p>切换到其他分类，或在此分类下新建流程</p>
-                <button className="wmo-btn wmo-btn-primary" style={{ marginTop: 8 }}>
+                <button className="pm-v2-btn pm-v2-btn-primary" style={{ marginTop: 8 }}>
                   <Plus size={14} /> 新建流程
                 </button>
               </div>
             ) : (
-              filteredWorkflows.map((flow) => (
-                <WorkflowCard
-                  key={flow.id}
-                  flow={flow}
-                  onEnterDesigner={handleEnterDesigner}
-                  onDelete={handleDeleteFlow}
-                  onToggleStatus={handleToggleFlowStatus}
-                  onUpdateCategory={handleUpdateCategory}
-                  validationIssues={validationResults[flow.id]}
-                />
-              ))
+              <div className="pm-v2-project-grid" style={{ gridTemplateColumns: "repeat(2, 1fr)" }}>
+                {filteredWorkflows.map((flow) => (
+                  <WorkflowCard
+                    key={flow.id}
+                    flow={flow}
+                    onEnterDesigner={handleEnterDesigner}
+                    onDelete={handleDeleteFlow}
+                    onToggleStatus={handleToggleFlowStatus}
+                    onUpdateCategory={handleUpdateCategory}
+                    validationIssues={validationResults[flow.id]}
+                  />
+                ))}
+              </div>
             )}
+            <div className="pm-v2-portfolio-foot">
+              <span>共 {filteredWorkflows.length} 个流程</span>
+              <span>10 条/页</span>
+            </div>
           </div>
         </div>
 
-        {/* Right: Health Panel */}
+        {/* Right: Side Panel */}
         <div className="wmo-sidepanel">
           <div className="wmo-panel-header">
-            <h2>分类与健康面板</h2>
-            <span>AI 诊断</span>
+            <h2>健康面板</h2>
+            <span>实时状态</span>
           </div>
           <div className="wmo-sidepanel-body">
-            {/* Role Binding Gaps */}
-            <div className="wmo-side-card">
-              <h3>角色绑定缺口</h3>
-              <div className="wmo-list">
+            {/* Category Stats */}
+            {visibleHealthCategories.map((cat) => (
+              <div key={cat.id} className="wmo-side-card" style={{ padding: "8px 10px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <h3 style={{ margin: 0, fontSize: 12 }}>{cat.name}</h3>
+                  <span style={{
+                    fontSize: 10, padding: "1px 6px", borderRadius: 3,
+                    background: cat.status === "healthy" ? "rgba(63,185,80,0.12)" : "rgba(210,153,34,0.12)",
+                    color: cat.status === "healthy" ? "#3fb950" : "#d29922",
+                  }}>{cat.status === "healthy" ? "健康" : "注意"}</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+                  <div style={{ flex: 1, height: 4, borderRadius: 2, background: "#1e2a38", overflow: "hidden" }}>
+                    <div style={{ width: `${cat.healthPercent}%`, height: "100%", borderRadius: 2, background: cat.status === "healthy" ? "var(--ok)" : "var(--warn)" }} />
+                  </div>
+                  <span style={{ fontSize: 10, color: "var(--text-muted)" }}>{cat.count} 个</span>
+                </div>
+              </div>
+            ))}
+
+            {/* Risk Gaps */}
+            {healthPanel.roleBindingGaps.length > 0 && (
+              <div className="wmo-side-card" style={{ padding: "8px 10px" }}>
+                <h3 style={{ margin: "0 0 6px", fontSize: 12 }}>角色绑定缺口</h3>
                 {healthPanel.roleBindingGaps.map((gap, i) => (
-                  <div key={i} className="wmo-row">
-                    <span>
-                      {gap.workflowName}未绑定{gap.missingRole}
-                    </span>
-                    <small className={`wmo-status-${gap.status}`}>
-                      {gap.status === "pending" ? "待处理" : "待确认"}
-                    </small>
+                  <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11, padding: "3px 0", borderBottom: i < healthPanel.roleBindingGaps.length - 1 ? "1px solid #1e2a38" : "none" }}>
+                    <span style={{ color: "var(--text-secondary)" }}>{gap.workflowName} - {gap.missingRole}</span>
+                    <span style={{ color: "var(--warn)", fontSize: 10 }}>待处理</span>
                   </div>
                 ))}
               </div>
-            </div>
+            )}
 
             {/* Recent Changes */}
-            <div className="wmo-side-card">
-              <h3>最近变更</h3>
-              <div className="wmo-list">
-                {healthPanel.recentChanges.map((change, i) => (
-                  <div key={i} className="wmo-row">
-                    <span>
-                      {change.workflowName} {change.description}
-                    </span>
-                    <small>{change.timestamp}</small>
-                  </div>
-                ))}
-              </div>
+            <div className="wmo-side-card" style={{ padding: "8px 10px" }}>
+              <h3 style={{ margin: "0 0 6px", fontSize: 12 }}>最近变更</h3>
+              {healthPanel.recentChanges.length > 0 ? healthPanel.recentChanges.map((change, i) => (
+                <div key={i} style={{ fontSize: 11, padding: "3px 0", color: "var(--text-muted)", borderBottom: i < healthPanel.recentChanges.length - 1 ? "1px solid #1e2a38" : "none" }}>
+                  <div style={{ color: "var(--text-secondary)" }}>{change.workflowName}</div>
+                  <div>{change.description} · {change.timestamp}</div>
+                </div>
+              )) : (
+                <p style={{ color: "var(--text-muted)", fontSize: 11, margin: 0 }}>暂无近期变更</p>
+              )}
             </div>
 
-            {/* AI Recommendation */}
-            <div className="wmo-ai-rec">
-              <h3>
-                <span className="wmo-ai-rec-icon">
-                  <Sparkles size={14} />
-                </span>
-                AI 建议
+            {/* AI Tip */}
+            <div className="wmo-side-card" style={{ padding: "8px 10px", background: "linear-gradient(135deg, rgba(75,91,183,0.08), rgba(55,70,140,0.04))", borderColor: "rgba(107,129,255,0.15)" }}>
+              <h3 style={{ margin: "0 0 4px", fontSize: 12, display: "flex", alignItems: "center", gap: 4 }}>
+                <Sparkles size={12} style={{ color: "var(--accent-purple)" }} /> AI 建议
               </h3>
-              <p>{healthPanel.aiRecommendation.message}</p>
+              <p style={{ color: "var(--text-secondary)", fontSize: 11, margin: 0 }}>{healthPanel.aiRecommendation.message}</p>
             </div>
           </div>
         </div>

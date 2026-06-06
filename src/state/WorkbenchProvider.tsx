@@ -334,10 +334,11 @@ export function WorkbenchProvider({ children }: WorkbenchProviderProps) {
       if (!available) return;
 
       try {
-        const [projectsResult, tasksResult, workflowTemplatesResult] = await Promise.all([
+        const [projectsResult, tasksResult, workflowTemplatesResult, rolesResult] = await Promise.all([
           projectApi.list(),
           taskApi.list(),
           workflowApi.listTemplates(),
+          rolesApi.list(),
         ]);
 
         if (projectsResult.ok && projectsResult.data) {
@@ -348,6 +349,9 @@ export function WorkbenchProvider({ children }: WorkbenchProviderProps) {
         }
         if (workflowTemplatesResult.ok && workflowTemplatesResult.data) {
           dispatch(setWorkflowTemplatesAction(workflowTemplatesResult.data));
+        }
+        if (rolesResult.ok && rolesResult.data) {
+          dispatch({ type: 'SET_ROLES', payload: rolesResult.data });
         }
       } catch (error) {
         console.error('[WorkbenchProvider] Failed to refresh data:', error);

@@ -283,7 +283,7 @@
 }
 
 .content:has(.settings-page) {
-  padding: 0 var(--space-xl) var(--space-xl);
+  padding: var(--page-inset, 8px);
   overflow-y: auto;
 }
 

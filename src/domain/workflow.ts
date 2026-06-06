@@ -48,7 +48,7 @@ export interface WorkflowRole {
 
 /**
  * WorkflowStep - 流程阶段
- * Issue #41: 移除 roleId，使用 assignments 数组
+ * Issue #41: 使用 assignments 数组，同时兼容旧格式的 roleId
  *
  * WorkflowStep 表示流程中的一个阶段
  * WorkflowAssignment 表示阶段下的可执行角色责任单元
@@ -59,7 +59,15 @@ export interface WorkflowStep {
   name: string;
   description?: string;
   /** 流程阶段下的角色任务分配 */
-  assignments: WorkflowStepAssignment[];
+  assignments?: WorkflowStepAssignment[];
+  /** @deprecated 使用 assignments[].roleId 替代 */
+  roleId?: string;
+  /** @deprecated 使用 assignments[].modelProviderId 替代 */
+  modelProviderId?: string;
+  /** @deprecated 使用 assignments[].modelName 替代 */
+  modelName?: string;
+  /** @deprecated 使用 assignments[].runnerId 替代 */
+  runnerId?: string;
   inputs: string[];
   outputs: string[];
   gateMode: GateMode;
@@ -123,24 +131,25 @@ export interface LegacyWorkflowStep {
 
 /**
  * 辅助函数：从 step 获取主要角色 ID
- * Issue #41: 用于向后兼容
+ * Issue #41: 用于向后兼容，支持 assignments 和旧格式 roleId
  */
 export function getPrimaryRoleId(step: WorkflowStep): string | undefined {
-  return step.assignments[0]?.roleId;
+  return step.assignments?.[0]?.roleId ?? step.roleId;
 }
 
 /**
  * 辅助函数：从 step 获取主要 Runner ID
  */
 export function getPrimaryRunnerId(step: WorkflowStep): string | undefined {
-  return step.assignments[0]?.runnerId;
+  return step.assignments?.[0]?.runnerId ?? step.runnerId;
 }
 
 /**
  * 辅助函数：从 step 获取主要模型配置
  */
 export function getPrimaryModelConfig(step: WorkflowStep): { modelProviderId: string; modelName: string } | undefined {
-  const assignment = step.assignments[0];
-  if (!assignment) return undefined;
-  return { modelProviderId: assignment.modelProviderId, modelName: assignment.modelName };
+  const assignment = step.assignments?.[0];
+  if (assignment) return { modelProviderId: assignment.modelProviderId, modelName: assignment.modelName };
+  if (step.modelProviderId && step.modelName) return { modelProviderId: step.modelProviderId, modelName: step.modelName };
+  return undefined;
 }

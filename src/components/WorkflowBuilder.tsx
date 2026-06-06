@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, Check, ChevronDown, GitBranch, History, List, Paperclip, Plus, Send, Sparkles, Trash2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, ChevronDown, GitBranch, History, List, Loader2, Paperclip, Plus, Send, Sparkles, Trash2 } from "lucide-react";
 import type { FailureStrategy, WorkbenchData, WorkflowStep, WorkflowTemplate } from "../domain/workbench";
 import { useWorkbenchState } from "../state";
 import { StepEditModal } from "./StepEditModal";
@@ -32,7 +32,7 @@ function AiWorkflowDesignInline({
   onApply: (name: string, steps: WorkflowStep[], roles: { id: string; name: string; description: string; responsibilities?: string[]; deliverables?: string[]; roleMarkdown?: string }[]) => void;
   onDiscard: () => void;
 }) {
-  const [materialsExpanded, setMaterialsExpanded] = useState(true);
+  const [materialsExpanded, setMaterialsExpanded] = useState(false);
   const [composerText, setComposerText] = useState("");
   const [draftGenerated, setDraftGenerated] = useState(false);
   const [selectedDraftIndex, setSelectedDraftIndex] = useState(0);
@@ -67,7 +67,9 @@ function AiWorkflowDesignInline({
   };
   const [editingDraftStepId, setEditingDraftStepId] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
+  const [generatingStep, setGeneratingStep] = useState(-1);
   const materialInputRef = useRef<HTMLInputElement | null>(null);
+  const chatEndRef = useRef<HTMLDivElement | null>(null);
 
   // 流程专属角色（由 AI 生成，不属于全局角色池）
   const [draftRoles, setDraftRoles] = useState<{ id: string; name: string; description: string; responsibilities?: string[]; deliverables?: string[]; roleMarkdown?: string }[]>([]);
@@ -332,6 +334,20 @@ function AiWorkflowDesignInline({
   // 生成流程草案
   const handleGenerateDraft = async () => {
     setGenerating(true);
+    setDraftGenerated(false);
+    setGeneratingStep(0);
+
+    // Progress animation: activate steps one by one
+    const stepLabels = ["收集资料", "分析需求", "识别角色", "生成草案", "差异对比"];
+    const progressInterval = setInterval(() => {
+      setGeneratingStep(prev => {
+        const next = prev + 1;
+        if (next >= stepLabels.length) {
+          clearInterval(progressInterval);
+        }
+        return next;
+      });
+    }, 600);
 
     try {
       // 获取 AI 配置
@@ -398,7 +414,10 @@ ${runnersContext}
   "steps": [
     {
       "name": "步骤名称",
-      "roleId": "role-1",
+      "assignments": [
+        { "roleId": "role-1", "roleName": "角色名称", "goal": "该角色在此步骤的目标" },
+        { "roleId": "role-2", "roleName": "角色名称2", "goal": "该角色在此步骤的目标2" }
+      ],
       "modelProvider": "provider-id",
       "model": "model-name",
       "runner": "runner-id",
@@ -418,7 +437,11 @@ ${runnersContext}
   - 例如讨论了"前端开发"和"后端开发"，就应分别定义"前端开发专家"和"后端开发专家"两个角色，不要合并为"开发工程师"
   - 同一人可承担多个角色
 - **steps**: 步骤数组，按执行顺序排列
-  - **roleId**: 引用 roles 中的 id
+  - **assignments**: 角色分配数组（必填），一个步骤可以有多个角色协作完成。每个 assignment 包含：
+    - **roleId**: 引用 roles 中的 id
+    - **roleName**: 角色名称（与 roleId 对应）
+    - **goal**: 该角色在此步骤中要达成的具体目标
+  - **重要**: 如果讨论中提到某步骤需要多个角色（如"前端开发+后端开发"），必须在 assignments 数组中列出所有角色
   - **modelProvider/model/runner**: 从上面列出的可用资源中选取
   - **gate**: "auto" 或 "manual"
   - **failureStrategy**: "stop"、"retry"、"skip" 或 "fallback"
@@ -455,6 +478,7 @@ ${runnersContext}
           name: string;
           roleId?: string;
           role?: string; // fallback 旧格式
+          assignments?: { roleName: string; roleId?: string; goal?: string }[]; // 新格式多角色
           model?: string;
           modelProvider?: string;
           runner?: string;
@@ -743,20 +767,31 @@ ${runnersContext}
           }
         }
 
-        // 如果没有解析到 roles，从 steps 中的 role/roleId 字段自动构建
+        // 如果没有解析到 roles，从 steps 中的 role/roleId 或 assignments 字段自动构建
         if (parsedRoles.length === 0) {
           const roleMap = new Map<string, DraftRole>();
           let roleCounter = 0;
           steps.forEach(step => {
-            const roleName = step.role || step.roleId || "待分配";
-            if (!roleMap.has(roleName)) {
-              roleCounter++;
-              roleMap.set(roleName, {
-                id: `role-${roleCounter}`,
-                name: roleName,
-                description: `${roleName}相关职责`,
+            const roleNames: string[] = [];
+            // 优先从 assignments 数组提取角色名
+            if (step.assignments && step.assignments.length > 0) {
+              step.assignments.forEach(a => {
+                if (a.roleName) roleNames.push(a.roleName);
               });
+            } else {
+              const roleName = step.role || step.roleId || "待分配";
+              roleNames.push(roleName);
             }
+            roleNames.forEach(roleName => {
+              if (!roleMap.has(roleName)) {
+                roleCounter++;
+                roleMap.set(roleName, {
+                  id: roleName.startsWith("role-") ? roleName : `role-${roleCounter}`,
+                  name: roleName,
+                  description: `${roleName}相关职责`,
+                });
+              }
+            });
           });
           parsedRoles = Array.from(roleMap.values());
         }
@@ -803,57 +838,84 @@ ${runnersContext}
             : defaultProvider;
           const modelLabel = step.model || provider?.defaultModel || "默认模型";
 
-          // 解析 roleId：优先用 AI 返回的 roleId，否则用 role 名匹配
-          let roleId = step.roleId || "";
-          if (!roleId && step.role) {
-            const matched = parsedRoles.find(r => r.name === step.role);
-            roleId = matched ? matched.id : `role-${index + 1}`;
-          }
-          if (!roleId) roleId = `role-${index + 1}`;
-
-          // 解析角色名
-          const roleName = roleLookup.get(roleId)?.name || step.role || "待分配";
-
           // 解析 failureStrategy
           const strategy = validFailureStrategies.includes(step.failureStrategy as any)
             ? (step.failureStrategy as FailureStrategy) : "stop";
 
-          // 生成 stepMarkdown
-          const defaultMarkdown = step.stepMarkdown || [
-            `# ${step.name}`,
-            "",
-            `**执行角色：** ${roleName}`,
-            `**模型：** ${provider?.name ?? "默认"} / ${modelLabel}`,
-            "",
-            "## 输入",
-            ...(step.inputs || (index === 0 ? ["项目目标", "协同资料"] : [`步骤 ${index} 输出`])).map(i => `- ${i}`),
-            "",
-            "## 输出",
-            ...(step.outputs || [`${step.name}结果`]).map(o => `- ${o}`),
-            "",
-            "## 失败策略",
-            strategy === "stop" ? "停止流程" : strategy === "retry" ? "重试当前步骤" : strategy === "skip" ? "跳过步骤" : "回退到前一步",
-          ].join("\n");
-
           const stepInputs = step.inputs || (index === 0 ? ["项目目标", "协同资料"] : [`步骤 ${index} 输出`]);
           const stepOutputs = step.outputs || [`${step.name}结果`];
 
-          newSteps.push({
-            id: `ai-draft-step-${index + 1}`,
-            order: index + 1,
-            name: step.name,
-            assignments: [{
+          // 构建 assignments：优先用新格式 assignments 数组，否则用旧格式单角色
+          const buildAssignments = (): WorkflowStep["assignments"] => {
+            if (step.assignments && step.assignments.length > 0) {
+              return step.assignments.map((a, j) => {
+                let aRoleId = a.roleId || "";
+                if (!aRoleId) {
+                  const matched = parsedRoles.find(r => r.name === a.roleName);
+                  aRoleId = matched ? matched.id : `role-${index + 1}-${j + 1}`;
+                }
+                const aRoleName = roleLookup.get(aRoleId)?.name || a.roleName || "待分配";
+                return {
+                  id: `ai-draft-assignment-${index + 1}-${j + 1}`,
+                  order: j + 1,
+                  roleId: aRoleId,
+                  modelProviderId: provider?.id ?? "",
+                  modelName: modelLabel,
+                  runnerId: step.runner || defaultRunnerId,
+                  goal: a.goal || aRoleName,
+                  acceptanceCriteria: [],
+                  inputs: stepInputs,
+                  outputs: stepOutputs,
+                };
+              });
+            }
+            // 旧格式：单角色
+            let roleId = step.roleId || "";
+            if (!roleId && step.role) {
+              const matched = parsedRoles.find(r => r.name === step.role);
+              roleId = matched ? matched.id : `role-${index + 1}`;
+            }
+            if (!roleId) roleId = `role-${index + 1}`;
+            const roleName = roleLookup.get(roleId)?.name || step.role || "待分配";
+            return [{
               id: `ai-draft-assignment-${index + 1}`,
               order: 1,
               roleId,
               modelProviderId: provider?.id ?? "",
               modelName: modelLabel,
               runnerId: step.runner || defaultRunnerId,
-              goal: step.name,
+              goal: roleName,
               acceptanceCriteria: [],
               inputs: stepInputs,
               outputs: stepOutputs,
-            }],
+            }];
+          };
+
+          const stepAssignments: WorkflowStep["assignments"] = buildAssignments() ?? [];
+          const roleNamesForDisplay = stepAssignments.map(a => roleLookup.get(a.roleId)?.name || "待分配").join("、");
+
+          // 生成 stepMarkdown
+          const defaultMarkdown = step.stepMarkdown || [
+            `# ${step.name}`,
+            "",
+            `**执行角色：** ${roleNamesForDisplay}`,
+            `**模型：** ${provider?.name ?? "默认"} / ${modelLabel}`,
+            "",
+            "## 输入",
+            ...stepInputs.map(i => `- ${i}`),
+            "",
+            "## 输出",
+            ...stepOutputs.map(o => `- ${o}`),
+            "",
+            "## 失败策略",
+            strategy === "stop" ? "停止流程" : strategy === "retry" ? "重试当前步骤" : strategy === "skip" ? "跳过步骤" : "回退到前一步",
+          ].join("\n");
+
+          newSteps.push({
+            id: `ai-draft-step-${index + 1}`,
+            order: index + 1,
+            name: step.name,
+            assignments: stepAssignments,
             inputs: stepInputs,
             outputs: stepOutputs,
             gateMode: step.gate === "manual" ? "manual" : "auto",
@@ -865,7 +927,7 @@ ${runnersContext}
           newDiffs.push({
             type: "add",
             title: step.name,
-            desc: `角色: ${roleName}, 模型: ${modelLabel}, Gate: ${step.gate || "auto"}`,
+            desc: `角色: ${roleNamesForDisplay}, 模型: ${modelLabel}, Gate: ${step.gate || "auto"}`,
           });
         });
 
@@ -890,6 +952,7 @@ ${runnersContext}
     }
 
     setGenerating(false);
+    setGeneratingStep(-1);
   };
 
   // 键盘事件
@@ -899,6 +962,11 @@ ${runnersContext}
       handleSendMessage();
     }
   };
+
+  // Auto-scroll chat to bottom
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages, generating]);
 
   // 统计
   const stats = {
@@ -934,6 +1002,21 @@ ${runnersContext}
                 </div>
               ))
             )}
+            {generating && (
+              <div className="awd-bubble-row">
+                <div className="awd-bubble-icon">AI</div>
+                <div className="awd-bubble">
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                    <Loader2 size={14} className="spin" style={{ color: "var(--primary)" }} />
+                    <span style={{ fontSize: 12, color: "var(--text-primary)" }}>正在分析你的描述...</span>
+                  </div>
+                  <div className="awd-generating-bar">
+                    <span style={{ width: `${((generatingStep + 1) / 5) * 100}%` }} />
+                  </div>
+                </div>
+              </div>
+            )}
+            <div ref={chatEndRef} />
           </div>
           <div className="awd-material-box">
             <button className="awd-material-head" onClick={() => setMaterialsExpanded(!materialsExpanded)}>
@@ -1007,25 +1090,27 @@ ${runnersContext}
               onClick={handleGenerateDraft}
               disabled={generating}
             >
-              <Sparkles size={12} /> {generating ? "生成中..." : "生成草案"}
+              <Sparkles size={12} /> {generating ? "分析中..." : "生成草案"}
             </button>
           </div>
           <div className="awd-steps">
             {["收集资料", "分析需求", "识别角色", "生成草案", "差异对比"].map((s, i) => (
-              <div key={i} className={`awd-step${i <= (draftGenerated ? 4 : generating ? 3 : materials.length > 0 ? 0 : -1) ? " active" : ""}`}>
-                <div className="awd-step-no">{i + 1}</div><span>{s}</span>
+              <div key={i} className={`awd-step${generating ? (i <= generatingStep ? " active" : "") : draftGenerated ? " active" : i <= (materials.length > 0 ? 0 : -1) ? " active" : ""}`}>
+                <div className="awd-step-no">{generating && i === generatingStep ? <span className="awd-step-spin">◎</span> : i + 1}</div><span>{s}</span>
               </div>
             ))}
           </div>
           <div className="awd-insights-compact">
             <div className="awd-insight-card">
-              <div className="awd-insight-title">◎ 目标摘要 <span className="awd-insight-badge">{draftGenerated ? "已分析" : "待分析"}</span></div>
-              <p>{draftGenerated ? "基于上下文资料生成的流程草案，已识别关键步骤和角色分配。" : "点击「生成草案」开始分析..."}</p>
+              <div className="awd-insight-title">◎ 目标摘要 <span className="awd-insight-badge">{generating ? "分析中..." : draftGenerated ? "已分析" : "待分析"}</span></div>
+              <p>{generating ? "正在分析你的描述，提取流程目标与关键信息..." : draftGenerated ? "基于上下文资料生成的流程草案，已识别关键步骤和角色分配。" : "点击「生成草案」开始分析..."}</p>
             </div>
             <div className="awd-insight-card">
-              <div className="awd-insight-title">♙ 角色建议 <span className="awd-insight-badge">{draftGenerated && draftRoles.length > 0 ? `${draftRoles.length} 个角色` : "待分析"}</span></div>
+              <div className="awd-insight-title">♙ 角色建议 <span className="awd-insight-badge">{generating ? "分析中..." : draftGenerated && draftRoles.length > 0 ? `${draftRoles.length} 个角色` : "待分析"}</span></div>
               <div className="awd-insight-roles">
-                {draftGenerated && draftRoles.length > 0 ? (
+                {generating ? (
+                  <p className="awd-empty-hint">正在识别流程所需角色...</p>
+                ) : draftGenerated && draftRoles.length > 0 ? (
                   draftRoles.map((role, i) => (
                     <div
                       key={role.id}
@@ -1049,17 +1134,19 @@ ${runnersContext}
               </div>
             </div>
             <div className="awd-insight-card">
-              <div className="awd-insight-title">◇ 能力授权建议 <span className="awd-insight-badge">{draftGenerated ? "已分析" : "待分析"}</span></div>
+              <div className="awd-insight-title">◇ 能力授权建议 <span className="awd-insight-badge">{generating ? "分析中..." : draftGenerated ? "已分析" : "待分析"}</span></div>
               <div className="awd-cap-grid">
-                <div className={`awd-cap ${draftGenerated ? "green" : ""}`}><strong>MCP</strong><span>{draftGenerated ? "已启用" : "待确认"}</span></div>
-                <div className={`awd-cap ${draftGenerated ? "green" : ""}`}><strong>Skills</strong><span>{draftGenerated ? "已启用" : "待确认"}</span></div>
-                <div className={`awd-cap ${draftGenerated ? "green" : ""}`}><strong>Git</strong><span>{draftGenerated ? "已启用" : "待确认"}</span></div>
-                <div className="awd-cap warn"><strong>Local Shell</strong><span>待确认</span></div>
+                <div className={`awd-cap ${draftGenerated && !generating ? "green" : ""}`}><strong>MCP</strong><span>{generating ? "分析中..." : draftGenerated ? "已启用" : "待确认"}</span></div>
+                <div className={`awd-cap ${draftGenerated && !generating ? "green" : ""}`}><strong>Skills</strong><span>{generating ? "分析中..." : draftGenerated ? "已启用" : "待确认"}</span></div>
+                <div className={`awd-cap ${draftGenerated && !generating ? "green" : ""}`}><strong>Git</strong><span>{generating ? "分析中..." : draftGenerated ? "已启用" : "待确认"}</span></div>
+                <div className="awd-cap warn"><strong>Local Shell</strong><span>{generating ? "分析中..." : "待确认"}</span></div>
               </div>
             </div>
             <div className="awd-insight-card">
-              <div className="awd-insight-title">⚙ 风险与假设 <span className="awd-insight-badge">{draftGenerated ? "已分析" : "待分析"}</span></div>
-              {draftGenerated ? (
+              <div className="awd-insight-title">⚙ 风险与假设 <span className="awd-insight-badge">{generating ? "分析中..." : draftGenerated ? "已分析" : "待分析"}</span></div>
+              {generating ? (
+                <p className="awd-empty-hint">正在评估风险与假设...</p>
+              ) : draftGenerated ? (
                 <ul>
                   <li>依赖第三方服务稳定性</li>
                   <li>模型输出质量波动</li>
@@ -1139,8 +1226,10 @@ ${runnersContext}
                 ) : (
                   draftSteps.map((step, i) => {
                     const stateClass = i === 0 ? "active" : "idle";
-                    const roleId = step.assignments?.[0]?.roleId;
-                    const roleName = roleId ? getRoleName(roleId) : "待分配";
+                    const stepRoleNames = (step.assignments ?? [])
+                      .map(a => a.roleId ? getRoleName(a.roleId) : null)
+                      .filter((name): name is string => name != null);
+                    const primaryRoleName = stepRoleNames[0] ?? "待分配";
                     return (
                       <div key={i} style={{ display: "flex", alignItems: "center", gap: 0, flexShrink: 0 }}>
                         <div
@@ -1163,10 +1252,19 @@ ${runnersContext}
                           </div>
                           <div className="awd-node-v2-body">
                             <div className="awd-node-v2-row">
-                              <div className={`awd-node-v2-avatar ${stateClass}`}>{roleName[0] ?? "未"}</div>
+                              <div className={`awd-node-v2-avatar ${stateClass}`}>{primaryRoleName[0] ?? "未"}</div>
                               <div>
                                 <div className="awd-node-v2-label">角色</div>
-                                <div className="awd-node-v2-val">{roleName}</div>
+                                <div className="awd-node-v2-val" style={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
+                                  {stepRoleNames.length > 0 ? stepRoleNames.map((name, ri) => (
+                                    <span key={ri} style={{
+                                      fontSize: 10, padding: "1px 5px", borderRadius: 3,
+                                      background: "rgba(88,166,255,0.15)", color: "var(--accent-blue)",
+                                    }}>{name}</span>
+                                  )) : (
+                                    <span style={{ color: "var(--text-muted)", fontStyle: "italic" }}>—</span>
+                                  )}
+                                </div>
                               </div>
                             </div>
                             <div className="awd-node-v2-row">
@@ -1508,6 +1606,13 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
   const [renamingTemplateId, setRenamingTemplateId] = useState<string | null>(null);
   const [templateRoleIds, setTemplateRoleIds] = useState<Record<string, string[]>>({});
   const closeStepInspector = () => setSelectedStepIndex(null);
+  const activeTemplateCardRef = useRef<HTMLDivElement>(null);
+  // 自动滚动到选中的模板卡片
+  useEffect(() => {
+    if (activeTemplateCardRef.current) {
+      activeTemplateCardRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [selectedTemplateId]);
   const selectedTemplate = useMemo(
     () => data.workflowTemplates.find((t) => t.id === selectedTemplateId) ?? null,
     [data, selectedTemplateId]
@@ -1670,7 +1775,6 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
 
   // Selected step only drives canvas/minimap highlight. Editing happens in the double-click modal.
   const editingStep = editingStepId ? sortedSteps.find((step) => step.id === editingStepId) ?? null : null;
-  const editingRole = editingRoleId ? data.roles.find((role) => role.id === editingRoleId) ?? null : null;
   const templateStatus = selectedTemplate?.status ?? (data.workflowTemplates[0]?.id === selectedTemplate?.id ? "enabled" : "draft");
   const templateEnabled = templateStatus === "enabled";
   const templateCanToggleStatus = Boolean(selectedTemplate && templateStatus !== "draft");
@@ -1680,7 +1784,16 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
     if (!selectedTemplate) return [];
     const templateRoleMap = new Map((selectedTemplate.roles || []).map(r => [r.id, r]));
     const globalRoleMap = new Map(data.roles.map(r => [r.id, r]));
-    const roleIds = selectedTemplate.steps.map((step) => step.assignments?.[0]?.roleId).filter(Boolean) as string[];
+    // Issue #27: 遍历所有 assignments 收集角色 ID，同时兼容旧格式的 roleId
+    const roleIds = selectedTemplate.steps.flatMap((step) => {
+      // 新格式：assignments 数组
+      const assignmentRoleIds = (step.assignments ?? []).map((asgn) => asgn.roleId).filter(Boolean);
+      // 旧格式：直接 roleId 字段
+      if (step.roleId && assignmentRoleIds.length === 0) {
+        return [step.roleId];
+      }
+      return assignmentRoleIds;
+    }) as string[];
     const extraRoleIds = templateRoleIds[selectedTemplate.id] ?? [];
     const uniqueRoleIds = Array.from(new Set([...roleIds, ...extraRoleIds]));
     return uniqueRoleIds
@@ -1692,11 +1805,17 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
           ? { id: templateRole.id, name: templateRole.name, description: templateRole.description ?? "", roleMarkdown: templateRole.roleMarkdown ?? "", isBuiltIn: false, defaultCapabilities: [] as string[], projectId: null as string | null }
           : globalRole;
         if (!role) return null;
-        const boundSteps = selectedTemplate.steps.filter((step) => step.assignments?.[0]?.roleId === roleId);
+        // Issue #27: 步骤绑定判断要遍历所有 assignments，同时兼容旧格式 roleId
+        const boundSteps = selectedTemplate.steps.filter((step) =>
+          (step.assignments ?? []).some((asgn) => asgn.roleId === roleId) ||
+          (step.roleId === roleId && !(step.assignments?.length))
+        );
         return { role, boundSteps };
       })
       .filter((item): item is { role: NonNullable<typeof item>["role"]; boundSteps: NonNullable<typeof selectedTemplate>["steps"] } => Boolean(item));
   }, [data.roles, selectedTemplate, templateRoleIds]);
+  // editingRole: 从全局角色池和模板角色中查找（修复编辑按钮失效问题）
+  const editingRole = editingRoleId ? (data.roles.find((role) => role.id === editingRoleId) ?? boundRoles.find((item) => item.role.id === editingRoleId)?.role ?? null) : null;
   const workflowTemplateCards = useMemo(
     () => [
       ...data.workflowTemplates.map((template, index) => ({
@@ -1792,11 +1911,23 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
 
   const handleSaveRole = () => {
     if (!editingRole || !roleDraft.name.trim() || templateEnabled) return;
-    updateRole?.(editingRole.id, {
+    const updates = {
       name: roleDraft.name.trim(),
       description: roleDraft.description.trim(),
       roleMarkdown: roleDraft.roleMarkdown,
-    });
+    };
+    // 尝试更新全局角色池
+    const isInGlobalRoles = data.roles.some((r) => r.id === editingRole.id);
+    if (isInGlobalRoles) {
+      updateRole?.(editingRole.id, updates);
+    }
+    // 同时更新模板自带角色
+    if (selectedTemplate?.roles?.some((r) => r.id === editingRole.id)) {
+      const updatedRoles = selectedTemplate.roles.map((r) =>
+        r.id === editingRole.id ? { ...r, ...updates } : r
+      );
+      updateWorkflowTemplate?.(selectedTemplate.id, { roles: updatedRoles });
+    }
     setEditingRoleId(null);
   };
 
@@ -1964,6 +2095,7 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
               {workflowTemplateCards.map((t) => (
                 <div
                   key={t.id}
+                  ref={t.active ? activeTemplateCardRef : undefined}
                   className={`wf-v2-template-card${t.active ? " active" : ""}`}
                   onClick={() => {
                     setSelectedTemplateId(t.id);
@@ -2126,9 +2258,15 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
                   <>
                     <div className="wf-v2-node-track" style={{ zoom: canvasScale }}>
                       {sortedSteps.map((step, i) => {
-                        const roleId = step.assignments?.[0]?.roleId;
                         const runnerId = step.assignments?.[0]?.runnerId;
-                        const role = roleId ? data.roles.find(r => r.id === roleId) ?? null : null;
+                        const stepRoles: { id: string; name: string }[] = [];
+                        for (const a of (step.assignments ?? [])) {
+                          if (!a.roleId) continue;
+                          const globalRole = data.roles.find(r => r.id === a.roleId);
+                          if (globalRole) { stepRoles.push(globalRole); continue; }
+                          const boundRole = boundRoles.find(b => b.role.id === a.roleId)?.role;
+                          if (boundRole) stepRoles.push(boundRole);
+                        }
                         const runnerProfile = runnerId ? data.runnerProfiles?.find(r => r.id === runnerId) ?? null : null;
                         const isActive = i === 2;
                         return (
@@ -2162,7 +2300,18 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
                               <div className="wf-v2-node-details">
                                 <div>
                                   <label>角色</label>
-                                  <span>{role?.name ?? "—"}</span>
+                                  {stepRoles.length > 0 ? (
+                                    <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
+                                      {stepRoles.map((r, ri) => (
+                                        <span key={ri} style={{
+                                          fontSize: 10, padding: "1px 5px", borderRadius: 3,
+                                          background: "rgba(88,166,255,0.15)", color: "var(--accent-blue)",
+                                        }}>{r.name}</span>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <span style={{ color: "var(--text-muted)", fontStyle: "italic" }}>—</span>
+                                  )}
                                 </div>
                                 <div>
                                   <label>Runner</label>

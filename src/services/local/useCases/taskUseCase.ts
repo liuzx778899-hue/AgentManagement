@@ -163,7 +163,7 @@ export async function createTasksFromWorkflow(
   let isFirstAssignment = true;
 
   const tasks: Task[] = template.steps.flatMap((step) =>
-    step.assignments.map((assignment) => {
+    (step.assignments ?? []).map((assignment) => {
       const taskId = generateTaskId();
       assignmentIdToTaskId.set(assignment.id, taskId);
 
@@ -193,7 +193,7 @@ export async function createTasksFromWorkflow(
 
   // 第二遍：解析 dependsOnTaskIds 和 notifyTaskIds
   for (const step of template.steps) {
-    for (const assignment of step.assignments) {
+    for (const assignment of (step.assignments ?? [])) {
       const taskId = assignmentIdToTaskId.get(assignment.id);
       if (!taskId) continue;
 
@@ -226,7 +226,7 @@ export async function createTasksFromWorkflow(
     };
   }
 
-  const totalAssignments = template.steps.reduce((sum, s) => sum + s.assignments.length, 0);
+  const totalAssignments = template.steps.reduce((sum, s) => sum + (s.assignments?.length ?? 0), 0);
 
   return {
     ok: true,

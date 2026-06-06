@@ -82,6 +82,12 @@
 .awd-step { position: relative; z-index: 1; display: grid; justify-items: center; gap: 6px; color: #8d9bb0; font-size: 11px; text-align: center; }
 .awd-step-no { width: 28px; height: 28px; display: grid; place-items: center; border: 1px solid #3a4d69; border-radius: 999px; color: #8ca0ba; background: #0d1723; font-weight: 700; font-size: 12px; }
 .awd-step.active .awd-step-no { border-color: #5d83ff; color: #7899ff; box-shadow: 0 0 0 3px rgba(91,130,255,0.1); }
+.awd-step-spin { display: inline-block; animation: awd-spin 1s linear infinite; }
+@keyframes awd-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+/* Generating progress bar */
+.awd-generating-bar { height: 4px; border-radius: 99px; background: #303a4c; overflow: hidden; }
+.awd-generating-bar span { display: block; height: 100%; background: var(--primary); transition: width .3s ease; border-radius: 99px; }
 
 /* Insight cards */
 .awd-insights { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 0 10px 8px; }

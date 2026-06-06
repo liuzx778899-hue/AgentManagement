@@ -4,11 +4,11 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: var(--page-inset, 8px);
   overflow: hidden;
   min-height: 0;
   background: var(--bg);
-  padding: 5px;
+  padding: var(--page-inset, 8px);
   box-sizing: border-box;
 }
 

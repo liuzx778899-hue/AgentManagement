@@ -341,7 +341,7 @@ export function WorkbenchHome({ data, onNavigate, activeProjectId }: WorkbenchHo
 
   const activeStep = flowSteps.find((step) => `tab-${step.id}` === activeTabId);
   // Issue #41: 从 assignments 获取角色
-  const activeRole = activeStep?.assignments?.[0] ? data.roles.find((role) => role.id === activeStep.assignments[0].roleId) : null;
+  const activeRole = activeStep?.assignments?.[0] ? data.roles.find((role) => role.id === activeStep.assignments?.[0]?.roleId) : null;
   const popoverPositionStyle = popoverAnchor
     ? { left: popoverAnchor.left, top: popoverAnchor.bottom + 8, right: "auto", bottom: "auto", display: "block" }
     : undefined;

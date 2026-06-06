@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import {
   ArrowLeft,
   Activity,
@@ -182,6 +182,8 @@ export function ProjectDetailPage({ data, projectId, onBack, onEnterWorkbench }:
   const [diffModalOpen, setDiffModalOpen] = useState(false);
   const [priorityModalOpen, setPriorityModalOpen] = useState(false);
   const [promptModalOpen, setPromptModalOpen] = useState(false);
+  const promptTextRef = useRef<HTMLTextAreaElement | null>(null);
+  const [savingPrompt, setSavingPrompt] = useState(false);
   const [memoryModalOpen, setMemoryModalOpen] = useState(false);
   const [taskPriorityOverrides, setTaskPriorityOverrides] = useState<Record<string, TaskPriority>>({});
   const [starred, setStarred] = useState(false);
@@ -304,6 +306,33 @@ export function ProjectDetailPage({ data, projectId, onBack, onEnterWorkbench }:
 
   const handleSaveChanges = () => {
     alert("变更已保存（Phase 1 模拟）");
+  };
+
+  const handleSavePrompt = async () => {
+    if (!selected.id || selected.type !== "role") return;
+    const newMarkdown = promptTextRef.current?.value ?? "";
+    setSavingPrompt(true);
+    try {
+      const role = data.roles.find(r => r.id === selected.id);
+      if (!role) return;
+      const res = await fetch("/api/roles", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...role, roleMarkdown: newMarkdown }),
+      });
+      if (res.ok) {
+        // Refresh roles from API
+        const listRes = await fetch("/api/roles");
+        const listData = await listRes.json();
+        if (listData.ok && listData.data) {
+          dispatch({ type: 'SET_ROLES', payload: listData.data });
+        }
+      }
+    } catch (err) {
+      console.error("Failed to save role prompt:", err);
+    }
+    setSavingPrompt(false);
+    setPromptModalOpen(false);
   };
 
   const handleViewDiff = () => {
@@ -466,7 +495,7 @@ export function ProjectDetailPage({ data, projectId, onBack, onEnterWorkbench }:
         level: "high",
         mitigation: "排查失败原因，修复后重试或调整计划",
         owner: template?.steps?.[0]?.assignments?.[0]?.roleId
-          ? (data.roles.find((r) => r.id === template.steps[0].assignments[0].roleId)?.name ?? "负责角色")
+          ? (data.roles.find((r) => r.id === template.steps[0].assignments?.[0]?.roleId)?.name ?? "负责角色")
           : "负责角色",
         status: "open",
       });
@@ -815,8 +844,9 @@ export function ProjectDetailPage({ data, projectId, onBack, onEnterWorkbench }:
                 : task.status === "running" ? 65
                 : task.status === "gate" ? 50
                 : 0;
-              // Get role name from task's roleAssignment
-              const roleNames = Object.values(task.roleAssignment ?? {}).map((rid) =>
+              // Get role name from task's roleAssignment (supports comma-separated multi-role)
+              const roleIds = Object.values(task.roleAssignment ?? {}).flatMap(v => String(v).split(","));
+              const roleNames = [...new Set(roleIds)].map((rid) =>
                 data.roles.find((r) => r.id === rid)?.name ?? rid
               ).join("、") || "未分配";
               const barClass = task.status === "done" ? "" : task.status === "running" ? "blue" : "warn";
@@ -856,7 +886,8 @@ export function ProjectDetailPage({ data, projectId, onBack, onEnterWorkbench }:
 
     const planRows = sortedTasks.map((task) => {
       const priority = getTaskPriorityWithSort(task.id);
-      const roleNames = Object.values(task.roleAssignment ?? {}).map((rid) =>
+      const roleIds860 = Object.values(task.roleAssignment ?? {}).flatMap(v => String(v).split(","));
+      const roleNames = [...new Set(roleIds860)].map((rid) =>
         data.roles.find((r) => r.id === rid)?.name ?? rid
       ).join("、") || "未分配";
       // Get step names from roleAssignment keys (step ids)
@@ -938,7 +969,8 @@ export function ProjectDetailPage({ data, projectId, onBack, onEnterWorkbench }:
       .filter((t): t is NonNullable<typeof t> => t != null);
     const totalTasks = sortedForGantt.length;
     const ganttRows = sortedForGantt.map((task, i) => {
-      const roleNames = Object.values(task.roleAssignment ?? {}).map((rid) =>
+      const roleIds942 = Object.values(task.roleAssignment ?? {}).flatMap(v => String(v).split(","));
+      const roleNames = [...new Set(roleIds942)].map((rid) =>
         data.roles.find((r) => r.id === rid)?.name ?? rid
       ).join("、") || "未分配";
       const className = task.status === "done" ? "ok"
@@ -1346,8 +1378,8 @@ export function ProjectDetailPage({ data, projectId, onBack, onEnterWorkbench }:
       const taskStatus = task?.status as string | undefined;
       const statusLabel = taskStatus === "running" ? "推进中" : taskStatus === "done" ? "已完成" : taskStatus === "gate" ? "等待决策" : taskStatus === "queued" ? "已排队" : taskStatus === "draft" ? "草稿" : "未知";
 
-      // Get role names from task's roleAssignment
-      const assignedRoleNames = task ? Object.values(task.roleAssignment ?? {}).map((rid) =>
+      // Get role names from task's roleAssignment (supports comma-separated multi-role)
+      const assignedRoleNames = task ? [...new Set(Object.values(task.roleAssignment ?? {}).flatMap(v => String(v).split(",")))].map((rid) =>
         data.roles.find((r) => r.id === rid)?.name ?? rid
       ).join("、") || "未分配" : "未知";
 
@@ -1796,7 +1828,7 @@ export function ProjectDetailPage({ data, projectId, onBack, onEnterWorkbench }:
             <div className="pd-goal-head">
               <div>
                 <h3>项目目标</h3>
-                <h4>{p.settings.projectDescription ? p.settings.projectDescription.split("。")[0] : "暂无项目描述"}</h4>
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>{p.settings.projectDescription ? p.settings.projectDescription.split("。")[0] : "暂无项目描述"}</p>
               </div>
               <div className="pd-goal-progress">
                 <div
@@ -2006,13 +2038,14 @@ export function ProjectDetailPage({ data, projectId, onBack, onEnterWorkbench }:
                     resize: "vertical"
                   }}
                   placeholder="输入角色提示词..."
+                  ref={promptTextRef}
                   defaultValue={selected.type === "role" ? (data.roles.find(r => r.id === selected.id)?.roleMarkdown ?? data.roles.find(r => r.id === selected.id)?.description ?? "") : ""}
                 />
               </div>
             </div>
             <footer className="pd-diff-modal-foot">
               <button type="button" onClick={() => setPromptModalOpen(false)}>取消</button>
-              <button type="button" className="primary" onClick={() => { setPromptModalOpen(false); }}>保存</button>
+              <button type="button" className="primary" disabled={savingPrompt} onClick={handleSavePrompt}>{savingPrompt ? "保存中..." : "保存"}</button>
             </footer>
           </section>
         </div>
