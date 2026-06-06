@@ -145,9 +145,10 @@ function workflowTemplateToAsset(template: WorkbenchData["workflowTemplates"][0]
   const roleAvatars: RoleAvatar[] = [];
   const colors: RoleAvatar["color"][] = ["blue", "green", "purple", "orange", "blue", "green", "purple"];
   steps.forEach(s => {
-    if (s.roleId && !seenRoleIds.has(s.roleId)) {
-      seenRoleIds.add(s.roleId);
-      const roleName = getRoleName(s.roleId);
+    const roleId = s.assignments?.[0]?.roleId;
+    if (roleId && !seenRoleIds.has(roleId)) {
+      seenRoleIds.add(roleId);
+      const roleName = getRoleName(roleId);
       // 提取前2个中文字符；若开头是英文则取前2个字母
       const cnChars = (roleName.match(/[\u4e00-\u9fff]/g) || []);
       const initials = cnChars.length >= 2
@@ -164,9 +165,16 @@ function workflowTemplateToAsset(template: WorkbenchData["workflowTemplates"][0]
     version: `v${template.version || 1}`,
     stepCount: steps.length,
     steps: steps.slice(0, 5).map((s, i) => ({ no: `${i + 1}`.padStart(2, "0"), name: s.name })),
-    fullSteps: steps.map(s => ({ id: s.id, name: s.name, roleId: s.roleId, modelProviderId: s.modelProviderId, modelName: s.modelName, runnerId: s.runnerId })),
+    fullSteps: steps.map(s => ({
+      id: s.id,
+      name: s.name,
+      roleId: s.assignments?.[0]?.roleId,
+      modelProviderId: s.assignments?.[0]?.modelProviderId,
+      modelName: s.assignments?.[0]?.modelName,
+      runnerId: s.assignments?.[0]?.runnerId
+    })),
     roleCoverage: roleAvatars.slice(0, 5),
-    runnerCoverage: steps.some(s => s.runnerId) ? 85 : 60,
+    runnerCoverage: steps.some(s => s.assignments?.[0]?.runnerId) ? 85 : 60,
     riskGap: null,
     healthStatus: "healthy" as const,
     healthLabel: "健康",

@@ -35,10 +35,16 @@ export function WorkflowNode({
   onDragOver,
   onDrop,
 }: WorkflowNodeProps) {
-  const role = useMemo(() => data.roles.find((r) => r.id === step.roleId), [data.roles, step.roleId]);
+  // Issue #27/#41: 从 assignments 获取角色和模型
+  const assignments = step.assignments ?? [];
+  const assignment = assignments[0]; // primary assignment for model info
+  const roles = useMemo(
+    () => assignments.map(a => data.roles.find((r) => r.id === a.roleId)).filter((r): r is NonNullable<typeof r> => !!r),
+    [data.roles, assignments]
+  );
   const provider = useMemo(
-    () => data.modelProviders.find((p) => p.id === step.modelProviderId),
-    [data.modelProviders, step.modelProviderId]
+    () => (assignment ? data.modelProviders.find((p) => p.id === assignment.modelProviderId) : undefined),
+    [data.modelProviders, assignment]
   );
 
   const orderLabel = String(index + 1).padStart(2, "0");
@@ -55,11 +61,12 @@ export function WorkflowNode({
     fallback: "回退",
   };
   const failureLabel = failureLabels[step.failureStrategy] ?? step.failureStrategy;
-  const modelLabel = step.modelName.includes("deepseek")
+  const modelName = assignment?.modelName ?? "";
+  const modelLabel = modelName.includes("deepseek")
     ? "v4-pro"
-    : step.modelName.includes("gpt-5.3")
+    : modelName.includes("gpt-5.3")
       ? "gpt-5.3"
-      : step.modelName;
+      : modelName;
 
   const handleDragStart = (e: React.DragEvent) => {
     e.dataTransfer.setData("text/plain", step.id);
@@ -114,7 +121,13 @@ export function WorkflowNode({
           <div className="step-info">
             <div className="step-name">{step.name}</div>
             <div className="step-meta">
-              {role && <span className="badge badge-v">{role.name}</span>}
+              {roles.length <= 1 ? (
+                roles[0] && <span className="badge badge-v">{roles[0].name}</span>
+              ) : (
+                <span className="badge badge-v" title={roles.map(r => r.name).join(', ')}>
+                  {roles.length} 角色
+                </span>
+              )}
               {provider && <span className="badge badge-b">{provider.name} {modelLabel}</span>}
               <span className={`badge ${step.gateMode === "manual" ? "badge-o" : "badge-g"}`}>
                 {step.gateMode === "manual" && <ShieldAlert size={10} />}

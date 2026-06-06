@@ -4,6 +4,16 @@ export interface Task {
   goal: string;
   acceptanceCriteria: string[];
   workflowTemplateId: string;
+  /** 所属流程步骤 ID - Issue #41 */
+  workflowStepId?: string;
+  /** 所属 Assignment ID - Issue #41 */
+  assignmentId?: string;
+  /** 动态优先级（按 step order 计算） - Issue #41 */
+  priority?: number;
+  /** 依赖的任务 ID 列表 - Issue #41 */
+  dependsOnTaskIds?: string[];
+  /** 需要通知的任务 ID 列表 - Issue #41 */
+  notifyTaskIds?: string[];
   roleAssignment: Record<string, string>;
   capabilityAuthorization: string[];
   launchStrategy: "worktree" | "direct";
@@ -16,15 +26,31 @@ export interface Task {
 
 export interface AgentRun {
   id: string;
+  /** 项目 ID - Issue #28 */
+  projectId: string;
   taskId: string;
+  /** 流程模板 ID - Issue #28 */
+  workflowTemplateId: string;
+  /** 所属流程步骤 ID - Issue #41 */
+  workflowStepId?: string;
+  /** 所属 Assignment ID - Issue #41 */
+  assignmentId?: string;
   roleId: string;
   modelProviderId: string;
   modelName: string;
+  /** Runner ID - Issue #41 */
+  runnerId?: string;
+  /** 进程 ID（绑定真实进程）- Issue #41 */
+  processId?: string;
   currentStepId: string;
-  status: "starting" | "running" | "waiting_gate" | "done" | "failed";
+  status: "starting" | "running" | "waiting_gate" | "done" | "failed" | "stale";
   log: string[];
   startedAt: string;
   finishedAt: string | null;
+  /** 退出码 - Issue #41 */
+  exitCode?: number;
+  /** 错误信息 - Issue #41 */
+  errorMessage?: string;
 }
 
 export type TaskStatus = Task['status'];

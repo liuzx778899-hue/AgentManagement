@@ -23,14 +23,19 @@ export function StepEditModal({
   onDelete,
   onClose,
 }: StepEditModalProps) {
+  // Issue #27: 支持多 assignment 查看/编辑
+  const [activeAssignmentIndex, setActiveAssignmentIndex] = useState(0);
+  const assignments = step.assignments ?? [];
+  const activeAssignment = assignments[activeAssignmentIndex] ?? assignments[0];
+
   const [name, setName] = useState(step.name);
-  const [providerId, setProviderId] = useState(step.modelProviderId);
-  const [modelName, setModelName] = useState(step.modelName);
+  const [providerId, setProviderId] = useState(activeAssignment?.modelProviderId ?? '');
+  const [modelName, setModelName] = useState(activeAssignment?.modelName ?? '');
   const [gateMode, setGateMode] = useState<GateMode>(step.gateMode);
   const [failureStrategy, setFailureStrategy] = useState<FailureStrategy>(step.failureStrategy);
   const [inputs, setInputs] = useState(step.inputs.join(", "));
   const [outputs, setOutputs] = useState(step.outputs.join(", "));
-  const [runnerId, setRunnerId] = useState<string>(step.runnerId ?? "");
+  const [runnerId, setRunnerId] = useState<string>(activeAssignment?.runnerId ?? "");
 
   // 角色处理：从当前流程角色中查找
   const getRoleNameFromId = (rid: string) => {
@@ -38,7 +43,7 @@ export function StepEditModal({
     const role = (flowRoles ?? []).find(r => r.id === rid);
     return role?.name ?? rid;
   };
-  const [roleId, setRoleId] = useState(step.roleId || "");
+  const [roleId, setRoleId] = useState(activeAssignment?.roleId || "");
   const roleName = getRoleNameFromId(roleId);
 
   const enabledRunners = useMemo(() => (data.runnerProfiles ?? []).filter((runner) => runner.enabled), [data.runnerProfiles]);
@@ -93,17 +98,50 @@ export function StepEditModal({
 
   const handleSave = () => {
     if (readOnly) return;
+    const parsedInputs = inputs.split(",").map((item) => item.trim()).filter(Boolean);
+    const parsedOutputs = outputs.split(",").map((item) => item.trim()).filter(Boolean);
+
+    // Issue #27: 保留所有 assignments，只更新当前活动的 assignment
+    const updatedAssignments = assignments.map((asgn, i) => {
+      if (i === activeAssignmentIndex) {
+        return {
+          ...asgn,
+          roleId: roleId,
+          modelProviderId: providerId,
+          modelName,
+          runnerId: runnerId || undefined,
+          goal: asgn.goal || name.trim(),
+          inputs: parsedInputs,
+          outputs: parsedOutputs,
+        };
+      }
+      return asgn;
+    });
+
+    // If no assignments exist, create one
+    if (updatedAssignments.length === 0) {
+      updatedAssignments.push({
+        id: `assignment-${Date.now()}`,
+        order: 1,
+        roleId: roleId,
+        modelProviderId: providerId,
+        modelName,
+        runnerId: runnerId || undefined,
+        goal: name.trim(),
+        acceptanceCriteria: [],
+        inputs: parsedInputs,
+        outputs: parsedOutputs,
+      });
+    }
+
     onSave({
       name: name.trim(),
-      roleId: roleId,
-      modelProviderId: providerId,
-      modelName,
+      assignments: updatedAssignments,
       gateMode,
       failureStrategy,
-      inputs: inputs.split(",").map((item) => item.trim()).filter(Boolean),
-      outputs: outputs.split(",").map((item) => item.trim()).filter(Boolean),
+      inputs: parsedInputs,
+      outputs: parsedOutputs,
       stepMarkdown,
-      runnerId: runnerId || undefined,
     });
     onClose();
   };
@@ -130,6 +168,24 @@ export function StepEditModal({
         </div>
 
         <div className="modal-body step-edit-body">
+          {/* Issue #27: Assignment 切换器 */}
+          {assignments.length > 1 && (
+            <div style={{ display: "flex", gap: 4, marginBottom: 12, flexWrap: "wrap" }}>
+              {assignments.map((asgn, i) => {
+                const r = (flowRoles ?? []).find(role => role.id === asgn.roleId);
+                return (
+                  <button
+                    key={asgn.id}
+                    className={`btn btn-sm ${i === activeAssignmentIndex ? "primary" : "ghost"}`}
+                    onClick={() => setActiveAssignmentIndex(i)}
+                    type="button"
+                  >
+                    {r?.name ?? (asgn.roleId || `Assignment ${i + 1}`)}
+                  </button>
+                );
+              })}
+            </div>
+          )}
           <div className="step-edit-main">
             <div className="modal-body-grid step-edit-grid">
               <div className="form-field">

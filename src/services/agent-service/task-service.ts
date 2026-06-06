@@ -128,7 +128,9 @@ export function startTask(id: string): { task: Task; run: AgentRun } | undefined
 
   const run: AgentRun = {
     id: runId,
+    projectId: task.projectId,
     taskId: id,
+    workflowTemplateId: task.workflowTemplateId,
     roleId: Object.values(task.roleAssignment)[0] || 'default-role',
     modelProviderId: 'default-provider',
     modelName: 'default-model',

@@ -143,7 +143,7 @@ export function NewProjectWizard({ data }: NewProjectWizardProps) {
   const currentStepIndex = steps.findIndex((s) => s.key === step);
 
   const selectedWorkflowRoles = useMemo(() => {
-    const roleIds = Array.from(new Set(selectedWorkflow?.steps.map((s) => s.roleId) ?? []));
+    const roleIds = Array.from(new Set(selectedWorkflow?.steps.map((s) => s.assignments?.[0]?.roleId).filter(Boolean) ?? [])) as string[];
     return roleIds
       .map((roleId) => data.roles.find((role) => role.id === roleId))
       .filter((role): role is AgentRole => Boolean(role));
@@ -168,10 +168,10 @@ export function NewProjectWizard({ data }: NewProjectWizardProps) {
 
     const configs: StepConfig[] = template.steps.map((s) => ({
       stepId: s.id,
-      roleId: s.roleId,
-      runnerId: data.runnerProfiles.find((r) => r.enabled)?.id,
-      modelProviderId: s.modelProviderId,
-      modelName: s.modelName,
+      roleId: s.assignments?.[0]?.roleId ?? '',
+      runnerId: s.assignments?.[0]?.runnerId ?? data.runnerProfiles.find((r) => r.enabled)?.id,
+      modelProviderId: s.assignments?.[0]?.modelProviderId ?? '',
+      modelName: s.assignments?.[0]?.modelName ?? '',
       capabilities: [],
     }));
     setStepConfigs(configs);
@@ -521,7 +521,8 @@ export function NewProjectWizard({ data }: NewProjectWizardProps) {
                   {bindingPreviewWorkflow ? (
                     bindingPreviewWorkflow.steps.map((workflowStep, idx) => {
                       const stepConfig = stepConfigs.find((sc) => sc.stepId === workflowStep.id);
-                      const role = data.roles.find((r) => r.id === (stepConfig?.roleId ?? workflowStep.roleId));
+                      const roleId = stepConfig?.roleId ?? workflowStep.assignments?.[0]?.roleId;
+                      const role = roleId ? data.roles.find((r) => r.id === roleId) : null;
                       return (
                         <div key={workflowStep.id} className="npw-binding-step">
                           <span className="npw-binding-index">{String(idx + 1).padStart(2, "0")}</span>
@@ -624,7 +625,8 @@ export function NewProjectWizard({ data }: NewProjectWizardProps) {
                     <div className="ws-steps-flow editable">
                       {previewTemplate.steps.map((s, idx) => {
                         const stepConfig = stepConfigs.find((sc) => sc.stepId === s.id);
-                        const role = stepConfig ? data.roles.find((r) => r.id === stepConfig.roleId) : data.roles.find((r) => r.id === s.roleId);
+                        const roleId = stepConfig?.roleId ?? s.assignments?.[0]?.roleId;
+                        const role = roleId ? data.roles.find((r) => r.id === roleId) : null;
                         return (
                           <div key={s.id} className="ws-flow-step">
                             <div className="ws-flow-step-no">{idx + 1}</div>
@@ -882,7 +884,8 @@ export function NewProjectWizard({ data }: NewProjectWizardProps) {
                   <div className="workflow-step-summary">
                     {selectedWorkflow.steps.map((s, idx) => {
                       const stepConfig = stepConfigs.find((sc) => sc.stepId === s.id);
-                      const role = stepConfig ? data.roles.find((r) => r.id === stepConfig.roleId) : data.roles.find((r) => r.id === s.roleId);
+                      const roleId = stepConfig?.roleId ?? s.assignments?.[0]?.roleId;
+                      const role = roleId ? data.roles.find((r) => r.id === roleId) : null;
                       return (
                         <div key={s.id} className="step-summary-item">
                           <span className="step-no">{idx + 1}</span>

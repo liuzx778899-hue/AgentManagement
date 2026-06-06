@@ -10,7 +10,7 @@ export { LlmAdapter } from './adapters/llmAdapter';
 export * from './useCases';
 
 // Repositories
-export { ProjectRepository, MemoryRepository, WorkflowRepository, RoleRepository, TaskRepository } from './repositories';
+export { ProjectRepository, MemoryRepository, WorkflowRepository, RoleRepository, TaskRepository, AgentRunRepository } from './repositories';
 
 // Security
 export {
@@ -32,7 +32,7 @@ import { GitAdapter } from './adapters/gitAdapter';
 import { FileStoreAdapter } from './adapters/fileStoreAdapter';
 import { ProcessRunnerAdapter } from './adapters/processRunnerAdapter';
 import { LlmAdapter } from './adapters/llmAdapter';
-import { ProjectRepository, MemoryRepository, WorkflowRepository, RoleRepository, TaskRepository } from './repositories';
+import { ProjectRepository, MemoryRepository, WorkflowRepository, RoleRepository, TaskRepository, AgentRunRepository } from './repositories';
 import type { AdapterConfig, RunnerProcess, LogEntry } from '../../types/localEngineering';
 import type { RunnerKind } from '../../domain/runner';
 import type { Project } from '../../domain/project';
@@ -52,6 +52,7 @@ export interface LocalEngineeringServices {
     workflow: WorkflowRepository;
     role: RoleRepository;
     task: TaskRepository;
+    agentRun: AgentRunRepository;
   };
 
   // Runner service methods
@@ -123,6 +124,7 @@ export function createLocalServices(config: Partial<AdapterConfig> = {}): LocalE
       workflow: new WorkflowRepository(fileStore),
       role: new RoleRepository(fileStore),
       task: new TaskRepository(fileStore),
+      agentRun: new AgentRunRepository(fileStore),
     },
   };
 }

@@ -1,10 +1,9 @@
 /**
  * WorkflowAssignment - 流程阶段下的可执行角色责任单元
  *
- * Issue: #27
+ * Issue: #27 #41
  *
  * 当一个 step 需要多个角色并行时，使用 WorkflowAssignment 细分。
- * 单角色场景继续使用 WorkflowStep.roleId。
  */
 
 export interface WorkflowAssignment {
@@ -46,7 +45,7 @@ export type WorkflowEventTrigger =
   | 'gate_passed'
   | 'gate_failed'
   | 'task_blocked'
-  | 'handoff_requested';
+  | 'handoff_requested'; // Issue #27: 开发完成后交接给测试
 
 export type WorkflowEventRouteAction =
   | 'create_task'

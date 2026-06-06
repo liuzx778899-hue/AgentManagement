@@ -25,13 +25,22 @@ export function WorkflowCanvas({ template, data, selectedStepId, onStepClick }: 
 
   const handleAddStep = (afterIndex: number) => {
     const newOrder = afterIndex >= 0 ? afterIndex + 1.5 : sortedSteps.length + 1;
+    const provider = data.modelProviders.find((p) => p.enabled);
     const newStep: WorkflowStep = {
       id: `step-${Date.now()}`,
       order: newOrder,
       name: "新步骤",
-      roleId: data.roles[0]?.id ?? "",
-      modelProviderId: data.modelProviders.find((p) => p.enabled)?.id ?? "",
-      modelName: data.modelProviders.find((p) => p.enabled)?.models[0]?.name ?? "",
+      assignments: [{
+        id: `assignment-${Date.now()}`,
+        order: 1,
+        roleId: data.roles[0]?.id ?? "",
+        modelProviderId: provider?.id ?? "",
+        modelName: provider?.models[0]?.name ?? "",
+        goal: "新步骤",
+        acceptanceCriteria: [],
+        inputs: [],
+        outputs: [],
+      }],
       inputs: [],
       outputs: [],
       gateMode: "auto",

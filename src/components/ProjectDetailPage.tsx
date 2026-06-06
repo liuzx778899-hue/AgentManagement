@@ -465,8 +465,8 @@ export function ProjectDetailPage({ data, projectId, onBack, onEnterWorkbench }:
         impact: "high",
         level: "high",
         mitigation: "排查失败原因，修复后重试或调整计划",
-        owner: template?.steps?.[0]?.roleId
-          ? (data.roles.find((r) => r.id === template.steps[0].roleId)?.name ?? "负责角色")
+        owner: template?.steps?.[0]?.assignments?.[0]?.roleId
+          ? (data.roles.find((r) => r.id === template.steps[0].assignments[0].roleId)?.name ?? "负责角色")
           : "负责角色",
         status: "open",
       });
@@ -612,27 +612,30 @@ export function ProjectDetailPage({ data, projectId, onBack, onEnterWorkbench }:
     const items: RoleDataItem[] = [];
 
     for (const step of template.steps) {
-      if (seenRoleIds.has(step.roleId)) continue;
-      seenRoleIds.add(step.roleId);
+      // Issue #41: 从 assignments 获取角色
+      for (const assignment of step.assignments || []) {
+        if (seenRoleIds.has(assignment.roleId)) continue;
+        seenRoleIds.add(assignment.roleId);
 
-      const role = data.roles.find((r) => r.id === step.roleId);
-      if (!role) continue;
+        const role = data.roles.find((r) => r.id === assignment.roleId);
+        if (!role) continue;
 
-      const memoryCount = data.memories.filter(
-        (m) => m.projectId === projectId && m.roleId === role.id
-      ).length;
+        const memoryCount = data.memories.filter(
+          (m) => m.projectId === projectId && m.roleId === role.id
+        ).length;
 
-      items.push({
-        id: role.id,
-        name: role.name,
-        shortLabel: role.name[0],
-        avatarClass: role.id,
-        description: role.description,
-        promptSummary: role.roleMarkdown?.slice(0, 200) ?? "",
-        capabilities: role.defaultCapabilities ?? [],
-        memoryCount,
-        stepName: step.name,
-      });
+        items.push({
+          id: role.id,
+          name: role.name,
+          shortLabel: role.name[0],
+          avatarClass: role.id,
+          description: role.description,
+          promptSummary: role.roleMarkdown?.slice(0, 200) ?? "",
+          capabilities: role.defaultCapabilities ?? [],
+          memoryCount,
+          stepName: step.name,
+        });
+      }
     }
 
     return items;
@@ -1189,23 +1192,25 @@ export function ProjectDetailPage({ data, projectId, onBack, onEnterWorkbench }:
           <div className="pd-workflow-map">
             {currentTemplate?.steps && currentTemplate.steps.length > 0 ? (
               currentTemplate.steps.map((step, i) => {
-                const role = data.roles.find((r) => r.id === step.roleId);
-                const runnerProf = step.runnerId
-                  ? data.runnerProfiles.find((rp) => rp.id === step.runnerId)
+                // Issue #41: 从 assignments 获取角色和 runner
+                const assignment = step.assignments?.[0];
+                const role = assignment ? data.roles.find((r) => r.id === assignment.roleId) : undefined;
+                const runnerProf = assignment?.runnerId
+                  ? data.runnerProfiles.find((rp) => rp.id === assignment.runnerId)
                   : data.runnerProfiles[i % data.runnerProfiles.length];
                 const runnerName = runnerProf?.displayName ?? "Claude CLI";
                 const stepNum = String(i + 1).padStart(2, "0");
 
                 return (
-                  <div key={step.id} className="pd-step-card" onClick={() => handleSelect("role", step.roleId)}>
+                  <div key={step.id} className="pd-step-card" onClick={() => assignment && handleSelect("role", assignment.roleId)}>
                     <span className="pd-step-num">{stepNum}</span>
                     <strong>{step.name}</strong>
-                    <span className="muted">{role?.name ?? step.roleId}</span>
+                    <span className="muted">{role?.name ?? (assignment?.roleId ?? "未分配")}</span>
                     {/* CLI Runner Info */}
                     <div className="pd-step-runner">
                       <span className="pd-runner-label">Runner:</span>
                       <span className="pd-runner-name">{runnerName}</span>
-                      <span className="pd-runner-model">{step.modelName ?? "claude-sonnet-4-6"}</span>
+                      <span className="pd-runner-model">{assignment?.modelName ?? "claude-sonnet-4-6"}</span>
                     </div>
                   </div>
                 );

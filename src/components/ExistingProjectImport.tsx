@@ -1100,7 +1100,8 @@ export function ExistingProjectImport({ data }: ExistingProjectImportProps) {
                     <h4>流程步骤</h4>
                     <div className="ws-steps-flow">
                       {previewTemplate.steps.map((s, idx) => {
-                        const role = data.roles.find(r => r.id === s.roleId);
+                        const roleId = s.assignments?.[0]?.roleId;
+                        const role = roleId ? data.roles.find(r => r.id === roleId) : null;
                         return (
                           <div key={s.id} className="ws-flow-step">
                             <div className="ws-flow-step-no">{idx + 1}</div>
