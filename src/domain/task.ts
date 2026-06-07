@@ -4,22 +4,21 @@ export interface Task {
   goal: string;
   acceptanceCriteria: string[];
   workflowTemplateId: string;
-  /** 所属流程步骤 ID - Issue #41 */
-  workflowStepId?: string;
-  /** 所属 Assignment ID - Issue #41 */
-  assignmentId?: string;
-  /** 动态优先级（按 step order 计算） - Issue #41 */
-  priority?: number;
-  /** 依赖的任务 ID 列表 - Issue #41 */
-  dependsOnTaskIds?: string[];
-  /** 需要通知的任务 ID 列表 - Issue #41 */
-  notifyTaskIds?: string[];
+  /** 所属流程步骤 ID */
+  workflowStepId: string;
+  /** 所属 Assignment ID */
+  assignmentId: string;
+  /** 动态优先级（按 step order 计算） */
+  priority: number;
+  /** 依赖的任务 ID 列表 */
+  dependsOnTaskIds: string[];
+  /** 需要通知的任务 ID 列表 */
+  notifyTaskIds: string[];
   roleAssignment: Record<string, string>;
   capabilityAuthorization: string[];
   launchStrategy: "worktree" | "direct";
   status: "draft" | "queued" | "running" | "gate" | "done" | "failed";
   activeRunId: string | null;
-  phase?: string;
   createdAt: string;
   updatedAt: string;
 }

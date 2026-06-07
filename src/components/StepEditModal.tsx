@@ -55,8 +55,6 @@ export function StepEditModal({
       (s.assignments ?? []).forEach((a) => {
         if (a.roleId) ids.add(a.roleId);
       });
-      // 兼容旧格式
-      if (s.roleId && !(s.assignments?.length)) ids.add(s.roleId);
     });
     return ids;
   }, [template.steps, step.id]);

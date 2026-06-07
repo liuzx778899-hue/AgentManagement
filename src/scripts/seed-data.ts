@@ -48,7 +48,7 @@ interface SeedAssignment {
   outputs: string[];
   dependsOnAssignmentIds: string[];
   notifyAssignmentIds: string[];
-  eventRoutes: string[];
+  eventRoutes: import("../domain/workflowAssignment").WorkflowEventRoute[];
 }
 
 interface SeedWorkflowTemplate {

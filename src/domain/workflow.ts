@@ -1,3 +1,5 @@
+import type { WorkflowEventRoute } from "./workflowAssignment";
+
 export type GateMode = "auto" | "manual";
 export type FailureStrategy = "stop" | "skip" | "retry" | "fallback";
 
@@ -48,10 +50,9 @@ export interface WorkflowRole {
 
 /**
  * WorkflowStep - 流程阶段
- * Issue #41: 使用 assignments 数组，同时兼容旧格式的 roleId
  *
  * WorkflowStep 表示流程中的一个阶段
- * WorkflowAssignment 表示阶段下的可执行角色责任单元
+ * WorkflowStepAssignment 表示阶段下的可执行角色责任单元
  */
 export interface WorkflowStep {
   id: string;
@@ -60,14 +61,6 @@ export interface WorkflowStep {
   description?: string;
   /** 流程阶段下的角色任务分配 */
   assignments?: WorkflowStepAssignment[];
-  /** @deprecated 使用 assignments[].roleId 替代 */
-  roleId?: string;
-  /** @deprecated 使用 assignments[].modelProviderId 替代 */
-  modelProviderId?: string;
-  /** @deprecated 使用 assignments[].modelName 替代 */
-  modelName?: string;
-  /** @deprecated 使用 assignments[].runnerId 替代 */
-  runnerId?: string;
   inputs: string[];
   outputs: string[];
   gateMode: GateMode;
@@ -79,7 +72,6 @@ export interface WorkflowStep {
 
 /**
  * WorkflowStepAssignment - 流程阶段内的角色任务
- * 简化版本，用于 fixtures 迁移
  */
 export interface WorkflowStepAssignment {
   id: string;
@@ -94,7 +86,7 @@ export interface WorkflowStepAssignment {
   outputs: string[];
   dependsOnAssignmentIds?: string[];
   notifyAssignmentIds?: string[];
-  eventRoutes?: WorkflowEventRouteSimple[];
+  eventRoutes?: WorkflowEventRoute[];
 }
 
 /**
@@ -104,52 +96,4 @@ export interface WorkflowEventRouteSimple {
   trigger: 'task_completed' | 'task_failed' | 'bug_reported' | 'handoff_requested';
   targetAssignmentId?: string;
   action: 'notify' | 'unblock_task' | 'create_task';
-}
-
-// ============ 向后兼容类型 ============
-
-/**
- * @deprecated 使用 WorkflowStepAssignment 替代
- * 保留用于迁移期间的类型检查
- */
-export interface LegacyWorkflowStep {
-  id: string;
-  order: number;
-  name: string;
-  roleId: string;
-  modelProviderId: string;
-  modelName: string;
-  inputs: string[];
-  outputs: string[];
-  gateMode: GateMode;
-  gateType?: 'manual' | 'auto';
-  failureStrategy: FailureStrategy;
-  stepMarkdown?: string;
-  projectOverride: boolean;
-  runnerId?: string;
-}
-
-/**
- * 辅助函数：从 step 获取主要角色 ID
- * Issue #41: 用于向后兼容，支持 assignments 和旧格式 roleId
- */
-export function getPrimaryRoleId(step: WorkflowStep): string | undefined {
-  return step.assignments?.[0]?.roleId ?? step.roleId;
-}
-
-/**
- * 辅助函数：从 step 获取主要 Runner ID
- */
-export function getPrimaryRunnerId(step: WorkflowStep): string | undefined {
-  return step.assignments?.[0]?.runnerId ?? step.runnerId;
-}
-
-/**
- * 辅助函数：从 step 获取主要模型配置
- */
-export function getPrimaryModelConfig(step: WorkflowStep): { modelProviderId: string; modelName: string } | undefined {
-  const assignment = step.assignments?.[0];
-  if (assignment) return { modelProviderId: assignment.modelProviderId, modelName: assignment.modelName };
-  if (step.modelProviderId && step.modelName) return { modelProviderId: step.modelProviderId, modelName: step.modelName };
-  return undefined;
 }

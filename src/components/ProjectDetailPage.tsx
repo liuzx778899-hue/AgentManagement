@@ -884,6 +884,21 @@ export function ProjectDetailPage({ data, projectId, onBack, onEnterWorkbench }:
       .map(id => projectTasks.find(t => t.id === id))
       .filter((t): t is NonNullable<typeof t> => t != null);
 
+    // Build assignment lookup from template steps
+    const assignmentMap = new Map<string, { roleId: string; roleName: string; modelName: string; dependsOnAssignmentIds: string[]; notifyAssignmentIds: string[] }>();
+    for (const step of template?.steps ?? []) {
+      for (const asgn of step.assignments ?? []) {
+        const roleName = data.roles.find(r => r.id === asgn.roleId)?.name ?? asgn.roleId;
+        assignmentMap.set(asgn.id, {
+          roleId: asgn.roleId,
+          roleName,
+          modelName: asgn.modelName || "",
+          dependsOnAssignmentIds: asgn.dependsOnAssignmentIds || [],
+          notifyAssignmentIds: asgn.notifyAssignmentIds || [],
+        });
+      }
+    }
+
     const planRows = sortedTasks.map((task) => {
       const priority = getTaskPriorityWithSort(task.id);
       const roleIds860 = Object.values(task.roleAssignment ?? {}).flatMap(v => String(v).split(","));
@@ -907,13 +922,26 @@ export function ProjectDetailPage({ data, projectId, onBack, onEnterWorkbench }:
         : task.status === "running" ? "blue"
         : task.status === "gate" ? "warn"
         : "warn";
+      // Assignment-level details
+      const assignment = assignmentMap.get(task.assignmentId ?? "");
+      const assignmentRoleName = assignment?.roleName ?? roleNames;
+      const model = assignment?.modelName ?? "";
+      const dependsOn = (task.dependsOnTaskIds ?? []).length > 0
+        ? (task.dependsOnTaskIds ?? []).map(tid => projectTasks.find(pt => pt.id === tid)?.goal ?? tid).join(", ")
+        : "";
+      const notifies = (task.notifyTaskIds ?? []).length > 0
+        ? (task.notifyTaskIds ?? []).map(tid => projectTasks.find(pt => pt.id === tid)?.goal ?? tid).join(", ")
+        : "";
 
       return {
         id: task.id,
         priority,
         task: task.goal,
-        phase: task.phase ?? stepNames ?? p.phase ?? "未设置",
-        role: roleNames,
+        phase: stepNames ?? p.phase ?? "未设置",
+        role: assignmentRoleName,
+        model,
+        dependsOn,
+        notifies,
         progress: barPct,
         status: statusLabel,
         tone,
@@ -932,6 +960,9 @@ export function ProjectDetailPage({ data, projectId, onBack, onEnterWorkbench }:
             <span>任务</span>
             <span>阶段</span>
             <span>负责人</span>
+            <span>模型</span>
+            <span>依赖</span>
+            <span>通知</span>
             <span>进度</span>
             <span>状态</span>
           </div>
@@ -946,6 +977,9 @@ export function ProjectDetailPage({ data, projectId, onBack, onEnterWorkbench }:
               <strong>{row.task}</strong>
               <span>{row.phase}</span>
               <span>{row.role}</span>
+              <span style={{ fontSize: 11, color: "var(--text-secondary)" }}>{row.model}</span>
+              <span style={{ fontSize: 11, color: row.dependsOn ? "var(--warn)" : "var(--text-muted)" }}>{row.dependsOn || "—"}</span>
+              <span style={{ fontSize: 11, color: row.notifies ? "var(--accent-blue)" : "var(--text-muted)" }}>{row.notifies || "—"}</span>
               <span className={`pd-bar-mini ${row.tone === "blue" ? "blue" : row.tone === "warn" ? "warn" : ""}`}>
                 <span style={{ width: `${row.progress}%` }} />
               </span>

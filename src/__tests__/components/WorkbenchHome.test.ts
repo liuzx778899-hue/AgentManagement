@@ -35,6 +35,9 @@ const mockTask: Task = {
   workflowTemplateId: 'wf-1',
   workflowStepId: 'step-1',
   assignmentId: 'assign-1',
+  priority: 10,
+  dependsOnTaskIds: [],
+  notifyTaskIds: [],
   goal: 'Test task',
   acceptanceCriteria: [],
   roleAssignment: {},
@@ -107,7 +110,7 @@ describe('getStepStatus', () => {
   });
 
   it('handles undefined workflowStepId', () => {
-    const tasks: Task[] = [{ ...mockTask, workflowStepId: undefined }];
+    const tasks: Task[] = [{ ...mockTask, workflowStepId: 'unknown-step' }];
     const result = getStepStatus(mockStep, tasks);
     expect(result).toEqual({ cls: 'idle', label: '待开始' });
   });

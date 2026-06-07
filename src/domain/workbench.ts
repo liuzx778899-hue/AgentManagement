@@ -45,8 +45,6 @@ export type { WorkflowEvent, WorkflowEventRouteResult } from "./workflowEvent";
 export type { WorkflowNotification, NotificationStatus } from "./notification";
 export type { StepViewModel, AssignmentViewModel, WorkbenchViewModel } from "./workbenchViewModel";
 
-// Re-export helper functions
-export { getPrimaryRoleId, getPrimaryRunnerId, getPrimaryModelConfig } from "./workflow";
 
 // View type (stays here as it's UI-specific)
 export type WorkbenchView =

@@ -1784,15 +1784,9 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
     if (!selectedTemplate) return [];
     const templateRoleMap = new Map((selectedTemplate.roles || []).map(r => [r.id, r]));
     const globalRoleMap = new Map(data.roles.map(r => [r.id, r]));
-    // Issue #27: 遍历所有 assignments 收集角色 ID，同时兼容旧格式的 roleId
+    // Issue #27: 遍历所有 assignments 收集角色 ID
     const roleIds = selectedTemplate.steps.flatMap((step) => {
-      // 新格式：assignments 数组
-      const assignmentRoleIds = (step.assignments ?? []).map((asgn) => asgn.roleId).filter(Boolean);
-      // 旧格式：直接 roleId 字段
-      if (step.roleId && assignmentRoleIds.length === 0) {
-        return [step.roleId];
-      }
-      return assignmentRoleIds;
+      return (step.assignments ?? []).map((asgn) => asgn.roleId).filter(Boolean);
     }) as string[];
     const extraRoleIds = templateRoleIds[selectedTemplate.id] ?? [];
     const uniqueRoleIds = Array.from(new Set([...roleIds, ...extraRoleIds]));
@@ -1805,10 +1799,9 @@ export function WorkflowBuilder({ data, onBack, selectedTemplateId: initialTempl
           ? { id: templateRole.id, name: templateRole.name, description: templateRole.description ?? "", roleMarkdown: templateRole.roleMarkdown ?? "", isBuiltIn: false, defaultCapabilities: [] as string[], projectId: null as string | null }
           : globalRole;
         if (!role) return null;
-        // Issue #27: 步骤绑定判断要遍历所有 assignments，同时兼容旧格式 roleId
+        // Issue #27: 步骤绑定判断遍历所有 assignments
         const boundSteps = selectedTemplate.steps.filter((step) =>
-          (step.assignments ?? []).some((asgn) => asgn.roleId === roleId) ||
-          (step.roleId === roleId && !(step.assignments?.length))
+          (step.assignments ?? []).some((asgn) => asgn.roleId === roleId)
         );
         return { role, boundSteps };
       })
